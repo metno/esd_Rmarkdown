@@ -1,0 +1,119 @@
+*CixPAG results: 
+-----------------------------------
+title: "Extreme precip and heat waves: empirical-statistical downscaling and analysis"
+author: "Rasmus Benestad"
+date: "April 1, 2016"
+output: pdf_document
+---
+
+CiXPAG will investigate the complex interactions between climate extremes, air pollution and  
+agricultural ecosystems. Climate extremes (e.g., droughts, floods, heatwaves) and air pollution events often co-occur causing substantial losses in agricultural productivity. We do not yet fully understand how these stresses interact and what the impacts of the combined climate - air pollution effects may be for agricultural ecosystems in some of the most vulnerable parts of the world. This lack of knowledge is particularly challenging considering the threats that climate change and food security pose to society.  
+The novel research proposed in CiXPAG will collect new experimental data and develop new  
+modelling techniques to integrate knowledge on changes in climate extremes and air pollution to assess effects on agricultural productivity. Integration of farmers’ knowledge will enable the results to be translated into agricultural adaptation options within the particular socio-economic and political context.  
+CiXPAG addresses several goals of the call - climate change, pollution and ecosystems - and its
+objectives are on the forefront of international research. CiXPAG will build up expertise in a relatively new, but important research field for Norwegian climate research. Generated knowledge and methods can readily be applied to regions beyond the regional focus of this project. CiXPAG is an international collaboration of interdisciplinary experts, and is a gender balanced project with a female project leader.
+
+**Initial analysis**
+
+Analyse three northern cluseters of GHDN rain gauges: maps of mean, historical trends, mean seasonal variations and inter-annual variability in total precipitation, wet-day mean, and wet-day frequency. Monsoon duration. PCA-analysis. Explore teleconnections to MSLP and T2M/super-saturation-pressure.
+
+```{r}  
+## CixPAG:
+library(esd)
+## Retrieve daily precipitation from the GHCN data set:
+load('gdcn.india.rda')
+
+## Inspect the data
+map(gdcn.india,cex=-2,FUN='wetfreq',showaxis=TRUE,
+colbar=list(pal='precip',breaks=seq(0,0.5,by=0.025)))
+```
+
+Select various sub-regions for more detailed analysis
+
+```{r} 
+y1 <- subset(gdcn.india,is=list(lon=c(69,75),lat=c(20,25)))
+y2 <- subset(gdcn.india,is=list(lon=c(75,85),lat=c(15,20)))
+y3 <- subset(gdcn.india,is=list(lon=c(73,78),lat=c(26,37)))
+y4 <- subset(gdcn.india,is=list(lon=c(83,89),lat=c(21,28)))
+y5 <- subset(gdcn.india,is=list(lon=c(89,92),lat=c(23,28)))
+```
+
+Take one of the sub-regions and extract the monsoon season over the period 1901-1970 (these data do not cover the recent decades). Exclude stations with large gaps of missing data.
+
+```{r} 
+y <- subset(y4,it=c(1901,1970))
+y <- subset(y,it=month.abb[6:9])
+nv <- apply(coredata(y),2,'nv')
+print(summary(nv))
+y <- subset(y,is=(nv > quantile(nv,0.3)))
+```
+
+The group of station data series represents the predictand. Estimate the wet-day mean and frequency of each season and allow estimates for seasons with some missing data. At least 90 days are required with valid data to give a seasonal estimate. For the wet-day mean:
+
+```{r}
+mu <- annual(y,'wetmean',nmin=90)
+mu <- pcafill(mu)
+mu.pca <- PCA(mu)
+plot(mu.pca)
+```
+Repeat the aggregation for the wet-day frequency:
+  
+```{r}
+fw <- annual(y,'wetfreq',nmin=90)
+fw <- pcafill(fw)
+fw.pca <- PCA(fw)
+plot(fw.pca)
+```
+**Get the description of large-scale 
+
+```{r}
+## Get predictors
+#t2m <- retrieve('data/ncep/air.mon.mean.nc',lon=c(30,120),lat=c(-10,30))
+t2m <- retrieve('data/reanalysis20c/air.tropo.mon.mean.nc',lon=c(30,120),lat=c(-10,30))
+slp <- retrieve('data/reanalysis20c/prmsl.mon.mean.nc',param='prmsl',lon=c(30,120),lat=c(-10,30))
+## Estimate the vapour saturation pressure (es) over sea and take the mean over the season:
+es <- aggregate(subset(C.C.eq(mask(t2m,land=TRUE)),it=month.abb[5:9]),year,'mean')
+## Take the mean surface temperature
+tas <- aggregate(subset(t2m,it=month.abb[5:9]),year,'mean')
+eof.tas <- EOF(es)
+eof.es <- EOF(tas)
+eof.slp <- EOF(aggregate(subset(slp,it=month.abb[5:9]),year,'mean'))
+index(eof.es) <- year(eof.es)
+index(eof.tas) <- year(eof.tas)
+index(eof.slp) <- year(eof.slp)
+```
+
+Use canonical correlation ananlysis (CCA) to assess the tele-connection between the wet-day mean and the large-scale vapour saturration pressure.
+
+```{r, fig.width=6, fig.height=6}
+mu.cca <- CCA(mu.pca,eof.es)
+plot(mu.cca)
+```
+
+Repeat with the wet-day frequency and SLP, for which a stronger connection is expected:
+
+```{r, fig.width=6, fig.height=6}
+fw.cca <- CCA(fw.pca,eof.slp)
+plot(fw.cca)
+```
+
+The predictand and predictor are ready for being used in downscaling. Do the analysis for the wet-day frequency:
+
+```{r}
+## Not many overlapping years: 1948-1970
+ds.fw<- DS(fw.pca,eof.slp)
+plot(ds.fw)
+```
+
+
+```{r}
+## Not many overlapping years: 1948-1970
+ds.mu <- DS(mu.pca,eof.es,eofs=1:7)
+#ds2 <- DS(mu.pca,eof2,eofs=1:3)
+#ds.fw<- DS(fw.pca,eof.slp)
+plot(ds.mu)
+#plot(ds2)
+#plot(ds.fw)
+```
+
+Gridded daily maximum temperature data (IMD?): explore dependency of number of hot days to mean seasonal temperature and the shape of PDF. Near-normal? Possible to infer heat wave statistics using DSensemble. Aggregated spatial temperrature over India from the CMIP5 runs.

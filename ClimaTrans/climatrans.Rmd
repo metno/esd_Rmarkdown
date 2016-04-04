@@ -1,0 +1,358 @@
+*Climatrans results: Work package 3: Outline of the development trends and climate change impact up to 2050* 
+-----------------------------------
+title: "Extreme precip and heat waves: empirical-statistical downscaling and analysis"
+author: "Rasmus Benestad"
+date: "March 30, 2016"
+output: pdf_document
+    fig_width:  8
+    fig_height: 8
+---
+
+**Background**
+The main objectives of the project are: 1) Assess climate change and environmental impacts in urban areas in India related to the transport sector. 2) Develop mitigation and adaption strategies related to the transport sector in urban areas in India. The objectives are set responding to the following objectives in the KLIMAFORK call: Improve knowledge about the impacts of climate change on the natural environment and society; and Enhance knowledge about how society can and should adapt to the challenges of climate change.
+
+The CLIMATRANS project proposal responds to the research themes-Strategies for reduced human made climate change" and "Strategies for climate change adaption" of the KLMAFORSK call. Assessing risk, uncertainty and irreversibility as inherent to the climate problem, this project will provide knowledge that makes it possible to improve institutional capacity in climate decision-making strategies. The project is interdisciplinary within the realm of social sciences (economics, political science, sociology), and natural sciences (meteorology and civil engineering). It is also a collaboration between Norwegian (Institute of Transport Economics and Norway Meteorological Institute) and four Indian research environments, thereby responding to the INDNOR program.
+
+India’s three largest cities are selected as case cities: New Delhi, Mumbai, and Bangalore.
+
+**WP3: Outline of the development trends and climate change impact up to 2050**
+WP leader: Dr. Fagerli, MET. Main contributors: TERI and TOI. Duration: Months 11-18.
+In WP3 we will attempt to outline the trends (of aspects named in WP2), and project the climate change impact in the case cities in 2050.
+Evaluation of the climate change impact by 2050 (base scenario) will assess the likely impact in the case cities given a base scenario (-business as usual‖) with no new policy interventions implemented.
+Task 1 through 6 will address the same respective issues as in WP2, but with focus on the situation in India in 2050. Partners responsible for the respective tasks in WP3 are the same as the corresponding tasks in WP2. In addition, the following impact assessments will be done:
+Task 7: Climate change impact on the transport infrastructure. (TERI, MET, TOI)
+Task 8: Social impact of climate change on various population groups, health and wellbeing effects, etc. In terms of health effects, the downscaled future climate scenario and the derived transport scenarios for the cities, combined with appropriate emission scenarios for India/Asia, will be used as basis for deriving health effects of ozone and PM (including climate change). The downscaled future climate scenario and the present day emission scenarios will be used to derive increases in health effects only due to climate change. (MET, TERI, TOI)
+7
+Task 9: Economic impact of climate change in the case cities, and for the population (e.g., household income, wealth distribution, poverty levels, etc.)
+
+**Analysis** 
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. To execute this type: 
+
+```{r,eval=FALSE}
+library(rmarkdown); render('climatrans.Rmd',pdf_document())
+```
+
+Load the esd and ncdf packages.
+
+```{r}
+library(esd)
+library(ncdf)
+```
+
+---------------------------------
+
+##*Precipitation*
+
+#### Function used to estimate proportional change (for precipitation):
+
+```{r,eval=FALSE}
+propchange <- function(X,it0=c(1979,2013)) {
+  z <- coredata(X)
+  if (is.null(dim(z)))
+      z <- 100*(z/mean(coredata(subset(X,it=it0)),na.rm=TRUE)) else
+      z <- 100*t(t(z)/apply(coredata(subset(X,it=it0)),2,'mean',na.rm=TRUE))
+  attributes(z) <- NULL
+  z -> coredata(X)  
+  X
+}
+```
+
+Function that converts the surface temperature into saturation vapour pressure:
+
+```{r}
+tas2es <- function(x,mask=FALSE,land=TRUE,season=6:9,FUN='min') {
+  if (mask) x <- mask(x,land=land)
+  es <- subset(C.C.eq(x),it=month.abb[season])
+  es <- aggregate(es,year,FUN=FUN)
+  invisible(es)
+}
+```
+
+#### Pre-processing: adapting the netCDF data to esd: set up station objects: 
+```{r,eval=FALSE}
+## Precipitation
+## time origin: minutes since 1901-01-01 00:00
+ncid <- open.ncdf('~/Dropbox/Public/ClimaTrans/delhi.nc')
+delhi <- get.var.ncdf(ncid,varid='p')
+time <- get.var.ncdf(ncid,varid='time')
+close.ncdf(ncid)
+delhi <- zoo(x=delhi,order.by=as.Date(time/(24*60),origin='1901-01-01'))
+delhi <- as.station(delhi,loc='Delhi',param='precip',unit='mm/day',lon=77.2,lat=28.6,
+                    cntr='India',longname='precipitation',
+                    info='extracted rainfall data from IMD gridded daily data',
+                    ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
+
+ncid <- open.ncdf('~/Dropbox/Public/ClimaTrans/bombay.nc')
+bombay <- get.var.ncdf(ncid,varid='p')
+time <- get.var.ncdf(ncid,varid='time')
+close.ncdf(ncid)
+bombay <- zoo(x=bombay,order.by=as.Date(time/(24*60),origin='1901-01-01'))
+bombay <- as.station(bombay,loc='Bombay',param='precip',unit='mm/day',lon=72.9,lat=19.0,
+                cntr='India',longname='precipitation',
+                info='extracted rainfall data from IMD gridded daily data',
+                ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
+
+ncid <- open.ncdf('~/Dropbox/Public/ClimaTrans/bangalore.nc')
+bangalore <- get.var.ncdf(ncid,varid='p')
+time <- get.var.ncdf(ncid,varid='time')
+close.ncdf(ncid)
+
+bangalore <- zoo(x=bangalore,order.by=as.Date(time/(24*60),origin='1901-01-01'))
+bangalore <- as.station(bangalore,loc='Bangalore',param='precip',unit='mm/day',
+                    lon=77.6,lat=13.0,cntr='India',longname='precipitation',
+                    info='extracted rainfall data from IMD gridded daily data',
+                    ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
+
+## Combine the individual stations into a group of stations
+climatrans.pr <- combine(delhi,bombay,bangalore)
+## Save the results for future use
+save(file='~/Dropbox/Public/ClimaTrans/climatrans.pr.rda',climatrans.pr)
+
+## Maximum temperature
+## time origin: minutes since 1969-01-01 00:00
+ncid <- open.ncdf('~/Dropbox/Public/ClimaTrans/delhi_tmax.nc')
+delhi <- get.var.ncdf(ncid,varid='temp')
+time <- get.var.ncdf(ncid,varid='time')
+close.ncdf(ncid)
+delhi <- zoo(x=delhi,order.by=as.Date(time/(24*60),origin='1969-01-01'))
+tx.delhi <- as.station(delhi,loc='Delhi',param='tmax',unit='degC',lon=77.2,lat=28.6,
+                   cntr='India',longname='daily maximum temperature',
+                   info='extracted from IMD gridded daily data',
+                   ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
+
+ncid <- open.ncdf('~/Dropbox/Public/ClimaTrans/bombay_tmax.nc')
+bombay <- get.var.ncdf(ncid,varid='temp')
+time <- get.var.ncdf(ncid,varid='time')
+close.ncdf(ncid)
+bombay <- zoo(x=bombay,order.by=as.Date(time/(24*60),origin='1969-01-01'))
+tx.bombay <- as.station(bombay,loc='Bombay',param='tmax',unit='degC',lon=72.9,lat=19.0,
+                    cntr='India',longname='daily maximum temperature',
+                    info='extracted from IMD gridded daily data',
+                    ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
+
+ncid <- open.ncdf('~/Dropbox/Public/ClimaTrans/bangalore_tmax.nc')
+bangalore <- get.var.ncdf(ncid,varid='temp')
+time <- get.var.ncdf(ncid,varid='time')
+close.ncdf(ncid)
+bangalore <- zoo(x=bangalore,order.by=as.Date(time/(24*60),origin='1969-01-01'))
+tx.bangalore <- as.station(bangalore,loc='Bangalore',param='tmax',unit='degC',
+                    lon=77.6,lat=13.0,cntr='India',longname='daily maximum temperature',
+                    info='extracted from IMD gridded daily data',
+                    ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
+
+## Combine the individual stations into a group of stations
+climatrans.tx <- combine(tx.delhi,tx.bombay,tx.bangalore)
+## Save the results for future use
+save(file='~/Dropbox/Public/ClimaTrans/climatrans.tx.rda',climatrans.tx)
+```
+
+## Analysis
+
+The analysis and downscaling can be carried out once the data has been converted to esd-station object. First load the precipitation data:
+
+### **Daily station data**
+```{r,echo=TRUE}
+## Load precipitation data extracted from the gridded IMD data set:
+load('~/Dropbox/Public/ClimaTrans/climatrans.pr.rda')
+## Display the structure of the data as
+str(climatrans.pr)
+```
+
+Examine the mean seasonal cycle to see if it responds to systematic forcings - the simples and most obvious being the seasonal variation in the solar inclination and the monsoon season:
+
+```{r, fig.width=6, fig.height=6}
+## Wet-day frequency
+plot(aggregate(climatrans.pr,month,'wetfreq'),new=FALSE)
+```
+
+
+```{r, fig.width=6, fig.height=6}
+## Wet-day mean
+plot(aggregate(climatrans.pr,month,'wetmean'),new=FALSE)
+```
+
+
+```{r, fig.width=6, fig.height=6}
+## Aggregate to mean seasonal cycle and annual mean values
+plot(aggregate(climatrans.pr,month,'sum'),new=FALSE)
+```
+
+Estimate annual aggregated statistics for the months May-October (the wet season):
+
+```{r}
+fw <- aggregate(subset(climatrans.pr,it=month.abb[5:10]),year,'wetfreq')
+mu <- aggregate(subset(climatrans.pr,it=month.abb[5:10]),year,'wetmean')
+q95 <- aggregate(subset(climatrans.pr,it=month.abb[5:10]),year,'quantile',probs=0.95)
+
+## check the relationship between wet-day 95-percentile and wet-day mean
+plot(zoo(mu[,2]),zoo(q95[,2]),pch=19,xlim=c(0,40),ylim=c(0,120),
+     main='Wet-day mean v.s. 95th wet percentile',
+     xlab=expression(paste(mu,' (mm/day)')), ylab=expression(paste(q[95],' (mm/day)')))
+points(zoo(mu[,1]),zoo(q95[,1]),pch=19,col=rgb(1,0,0,0.2))
+points(zoo(mu[,3]),zoo(q95[,3]),pch=19,col=rgb(0,0,1,0.2))
+grid()
+legend(0,120,loc(climatrans.pr),pch=19,col=c(rgb(1,0,0,0.2),'black',rgb(0,0,1,0.2)),bty='n')
+```
+
+Now prepare for the downscaling: Retrieve and process the predictors. For the wet-day mean we try temperature (or sea surface temperature, SST). There are different possibilities. We can estimate the vapour saturation pressure based on the Clausius-Clapeyron equation (`C.C.eq()`) or we can use the temperature directly (the former translates more directly into moisture mass). The aggregation of the temperature over the wet-season may involve the average, minimum or the maximum values. Trial anderror to see what works and what doesn't: 
+
+```{r}
+## Aggregate sub-season values to annual mean values
+if (!exists("es")) {
+  #sst <- retrieve('data/ncep/sst.mon.mean.nc',lon=c(50,100),lat=c(0,40))
+  #es <- aggregate(C.C.eq(subset(sst,it=month.abb[6:9])),year,'max')
+  t2m <- retrieve('data/ncep/air.mon.mean.nc',lon=c(50,100),lat=c(5,30))
+  es <- annual(t2m,'tas2es')
+}
+```
+
+The mean seal-level pressure (SLP) is usually a promising predictor for the wet-day frequency.
+
+```{r}
+if (!exists("slp")) {
+  slp <- retrieve('data/ncep/slp.mon.mean.nc',lon=c(50,100),lat=c(0,40))
+  slp <- aggregate(subset(slp,it=month.abb[6:9]),year,'mean')
+}
+
+```
+
+### **Examine potential large-scale tele-connections: correlation fields** 
+
+```{r}
+## Correlation between the wet-day mean and the temperature-based predictor
+y <- subset(mu,is=2)
+corfield(y,es,colbar=list(pal='t2m',breaks=seq(-1,1,by=0.1)))
+```
+
+```{r}
+## Correlation between the wet-day frequency and the SLP
+z <- subset(fw,is=2)
+corfield(z,slp,colbar=list(pal='t2m',breaks=seq(-1,1,by=0.1)))
+```
+
+Principal component analysis (PCA) can improve the quality of empirical-statistical downscaling (ESD) by reorganising the data so that the large-scale variability is enhanced (<http://dx.doi.org/10.3402/tellusa.v67.28326>).
+
+### **Estimate PCA for the predicands**
+```{r}
+pca.mu <- PCA(mu)
+pca.fw <-PCA(fw)
+```
+
+### **Estimate EOFs for the predictands**
+```{r}
+eof.es <- EOF(es)
+eof.slp <- EOF(slp)
+index(eof.es) <- year(eof.es)
+index(eof.slp) <- year(eof.slp)
+```
+
+### **Plot the EOFs for the temperature-based predictor**
+```{r, fig.width=6, fig.height=6}
+plot(eof.es,new=FALSE)
+```
+
+### **Plot the EOFs for the SLP**
+```{r, fig.width=6, fig.height=6}
+plot(eof.slp,new=FALSE)
+```
+
+## **Do the downscaling**
+
+### 
+```{r,echo=FALSE, fig.width=6, fig.height=6}
+## The function DS uses multiple regression by default
+ds.mu <- DS(pca.mu,eof.es,eofs=1:20)
+ds.fw <- DS(pca.fw,eof.slp,eofs=1:20)
+plot(ds.mu,colbar1=list(breaks=seq(0,1,by=0.1),rev=2),
+     colbar2=list(breaks=seq(-500,500,by=25),rev=TRUE))
+plot(ds.fw)
+```
+
+#### **Compare the histogram of the preciptation data with an exponential distribution**
+```{r}
+z <- climatrans.pr[,3]; z <- z[z > 1]
+hist(z,breaks=seq(0,500,by=2),xlim=c(0,100),freq=FALSE)
+lines(seq(0,250,by=1),dexp(seq(0,250,by=1),rate=1/mean(z)),lwd=3,col='red')
+```
+
+#### **Do the downscaling based on the CMIP5 RCP4.5 ensemble**
+
+Here include the argument \code{xfuns='tas2es'} to use the option \code{annual(tas2es(gcm))} rather than the option \code{annual(gcm,FUN='tas2es')} which will fail. Also  
+
+```{r}
+if (!file.exists('dse.mu.climatrans.rda')) {
+  dse <- DSensemble(pca.mu,predictor=es,FUNX='tas2es',xfuns='tas2es',nmin=1)
+  save(file='dse.mu.climatrans.rda',dse)
+} else load('dse.mu.climatrans.rda')
+dse.stations<-as.station(dse)
+```
+
+
+
+#### *Maximum temperature*
+
+Check the long-term change: historic trend in the mean
+
+```{r}
+  load('~/Dropbox/Public/ClimaTrans/climatrans.tx.rda')
+  plot(as.4seasons(anomaly(climatrans.tx)))
+```
+
+Downscale the seasonal seasonal mean maximum temperature 
+
+
+```{r}
+  predictor <- retrieve('data/ncep/air.mon.mean.nc',
+                        param='air',lon=c(60,90),lat=c(10,35))
+
+  dev.new()
+  trh <- c(40,30,32)
+  for (i in 1:3) {
+    y <- subset(climatrans.tx,is=i)
+    if (!file.exists(paste('dse.tx.climatrans.',loc(y),'.rda',sep=''))) {
+      dse.tx <- DSensemble.t2m(y,biascorrect=TRUE,type='ncdf4',
+                           predictor=predictor,nmin=60,verbose=FALSE)
+      save(file=paste('dse.tx.climatrans.',loc(y),'.rda',sep=''),dse.tx)
+    } else load(paste('dse.tx.climatrans.',loc(y),'.rda',sep=''))
+
+    ## The function hotsummerdays estimates the number of hot days based on
+    ## the assumption that the temperature is close to being normally distributed
+    hw <- hotsummerdays(x=y,dse=dse.tx,threshold=trh[i],plot=FALSE)
+    plot(hw)
+  }
+```
+
+Check the correlation between the seasonal percentiles and the seasonal mean temperature, assuming the temperature is normally distributed.
+
+```{r}
+  txq95 <- diagnose(subset(climatrans.tx,is=1))
+```
+
+Check whether the maximum temperature is close to being normally distributed
+
+```{r}
+## New Delhi:	
+  new.delhi.tx <- subset(climatrans.tx,is=1)
+## Bangalore:
+  bangalore.tx <- subset(climatrans.tx,is=3)
+## Bombay:     
+  bombay.tx <- subset(climatrans.tx,is=2)
+  
+  y <- new.delhi.tx
+  par(mfcol=c(2,2))
+  qqnorm(coredata(subset(y,it='djf')),col='grey',main='DJF')
+  qqline(coredata(subset(y,it='djf')))
+  qqnorm(coredata(subset(y,it='mam')),col='grey',main='MAM')
+  qqline(coredata(subset(y,it='mam')))
+  qqnorm(coredata(subset(y,it='jja')),col='grey',main='JJA')
+  qqline(coredata(subset(y,it='jja')))
+  qqnorm(coredata(subset(y,it='son')),col='grey',main='SON')
+  qqline(coredata(subset(y,it='son')))
+```
+
+Check the long-term change: historic trend in the seasonal spread (standard deviation)
+
+```{r}
+  load('~/Dropbox/Public/ClimaTrans/climatrans.tx.rda')
+  plot(as.4seasons(anomaly(climatrans.tx),FUN='sd'))
+```
