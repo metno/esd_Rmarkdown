@@ -26,6 +26,8 @@ Task 8: Social impact of climate change on various population groups, health and
 Task 9: Economic impact of climate change in the case cities, and for the population (e.g., household income, wealth distribution, poverty levels, etc.)
 
 **Analysis** 
+The downscaling of the wet-day mean precipitation used the surface temperature as predictor.
+
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. To execute this type: 
 
 ```{r,eval=FALSE}
@@ -43,27 +45,16 @@ library(ncdf)
 
 ##*Precipitation*
 
-#### Function used to estimate proportional change (for precipitation):
 
-```{r,eval=FALSE}
-propchange <- function(X,it0=c(1979,2013)) {
-  z <- coredata(X)
-  if (is.null(dim(z)))
-      z <- 100*(z/mean(coredata(subset(X,it=it0)),na.rm=TRUE)) else
-      z <- 100*t(t(z)/apply(coredata(subset(X,it=it0)),2,'mean',na.rm=TRUE))
-  attributes(z) <- NULL
-  z -> coredata(X)  
-  X
-}
-```
 
 Function that converts the surface temperature into saturation vapour pressure:
 
 ```{r}
-tas2es <- function(x,mask=FALSE,land=TRUE,season=6:9,FUN='min') {
+tas2es <- function(x,mask=TRUE,land=TRUE,season=5:10,FUN='min') {
   if (mask) x <- mask(x,land=land)
   es <- subset(C.C.eq(x),it=month.abb[season])
   es <- aggregate(es,year,FUN=FUN)
+  index(es) <- year(es)
   invisible(es)
 }
 ```
@@ -106,7 +97,7 @@ bangalore <- as.station(bangalore,loc='Bangalore',param='precip',unit='mm/day',
 ## Combine the individual stations into a group of stations
 climatrans.pr <- combine(delhi,bombay,bangalore)
 ## Save the results for future use
-save(file='~/Dropbox/Public/ClimaTrans/climatrans.pr.rda',climatrans.pr)
+save(file='climatrans.pr.rda',climatrans.pr)
 
 ## Maximum temperature
 ## time origin: minutes since 1969-01-01 00:00
@@ -143,7 +134,7 @@ tx.bangalore <- as.station(bangalore,loc='Bangalore',param='tmax',unit='degC',
 ## Combine the individual stations into a group of stations
 climatrans.tx <- combine(tx.delhi,tx.bombay,tx.bangalore)
 ## Save the results for future use
-save(file='~/Dropbox/Public/ClimaTrans/climatrans.tx.rda',climatrans.tx)
+save(file='climatrans.tx.rda',climatrans.tx)
 ```
 
 ## Analysis
@@ -153,10 +144,13 @@ The analysis and downscaling can be carried out once the data has been converted
 ### **Daily station data**
 ```{r,echo=TRUE}
 ## Load precipitation data extracted from the gridded IMD data set:
-load('~/Dropbox/Public/ClimaTrans/climatrans.pr.rda')
+load('climatrans.pr.rda')
 ## Display the structure of the data as
 str(climatrans.pr)
 ```
+##**Sensitivity tests**
+
+How do the precipitation respond to varying forcings/conditions? Such iformation may provide useful clues as to how the precipitation is expected to change in the future.
 
 Examine the mean seasonal cycle to see if it responds to systematic forcings - the simples and most obvious being the seasonal variation in the solar inclination and the monsoon season:
 
@@ -165,7 +159,6 @@ Examine the mean seasonal cycle to see if it responds to systematic forcings - t
 plot(aggregate(climatrans.pr,month,'wetfreq'),new=FALSE)
 ```
 
-
 ```{r, fig.width=6, fig.height=6}
 ## Wet-day mean
 plot(aggregate(climatrans.pr,month,'wetmean'),new=FALSE)
@@ -173,16 +166,37 @@ plot(aggregate(climatrans.pr,month,'wetmean'),new=FALSE)
 
 
 ```{r, fig.width=6, fig.height=6}
-## Aggregate to mean seasonal cycle and annual mean values
+## Monthly precipitation totals
 plot(aggregate(climatrans.pr,month,'sum'),new=FALSE)
+```
+
+Estimate the long-term trends:
+
+```{r, fig.width=6, fig.height=6}
+## Wet-day frequency
+plot(annual(climatrans.pr,'wetfreq'),new=FALSE)
+for(i in 1:3) lines(trend(subset(annual(climatrans.pr,'wetfreq'),is=i)))
+```
+
+```{r, fig.width=6, fig.height=6}
+## Wet-day mean
+plot(annual(climatrans.pr,'wetmean'),new=FALSE)
+for(i in 1:3) lines(trend(subset(annual(climatrans.pr,'wetfreq'),is=i)))
+```
+
+```{r, fig.width=6, fig.height=6}
+## Aggregate to mean seasonal cycle and annual mean values
+plot(annual(climatrans.pr,'sum'),new=FALSE)
+for(i in 1:3) lines(trend(subset(annual(climatrans.pr,'wetfreq'),is=i)))
 ```
 
 Estimate annual aggregated statistics for the months May-October (the wet season):
 
 ```{r}
-fw <- aggregate(subset(climatrans.pr,it=month.abb[5:10]),year,'wetfreq')
-mu <- aggregate(subset(climatrans.pr,it=month.abb[5:10]),year,'wetmean')
-q95 <- aggregate(subset(climatrans.pr,it=month.abb[5:10]),year,'quantile',probs=0.95)
+season<-5:10
+fw <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetfreq')
+mu <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetmean')
+q95 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'quantile',probs=0.95)
 
 ## check the relationship between wet-day 95-percentile and wet-day mean
 plot(zoo(mu[,2]),zoo(q95[,2]),pch=19,xlim=c(0,40),ylim=c(0,120),
@@ -200,9 +214,9 @@ Now prepare for the downscaling: Retrieve and process the predictors. For the we
 ## Aggregate sub-season values to annual mean values
 if (!exists("es")) {
   #sst <- retrieve('data/ncep/sst.mon.mean.nc',lon=c(50,100),lat=c(0,40))
-  #es <- aggregate(C.C.eq(subset(sst,it=month.abb[6:9])),year,'max')
-  t2m <- retrieve('data/ncep/air.mon.mean.nc',lon=c(50,100),lat=c(5,30))
-  es <- annual(t2m,'tas2es')
+  #es <- aggregate(C.C.eq(subset(sst,it=month.abb[season])),year,'max')
+  t2m <- retrieve('data/ncep/air.mon.mean.nc',lon=c(60,100),lat=c(0,23))
+  es <- aggregate(tas2es(t2m,season=season),year,'mean')
 }
 ```
 
@@ -210,8 +224,8 @@ The mean seal-level pressure (SLP) is usually a promising predictor for the wet-
 
 ```{r}
 if (!exists("slp")) {
-  slp <- retrieve('data/ncep/slp.mon.mean.nc',lon=c(50,100),lat=c(0,40))
-  slp <- aggregate(subset(slp,it=month.abb[6:9]),year,'mean')
+  slp <- retrieve('data/ncep/slp.mon.mean.nc',lon=c(60,100),lat=c(0,23))
+  slp <- aggregate(subset(slp,it=month.abb[season]),year,'mean')
 }
 
 ```
@@ -264,8 +278,8 @@ plot(eof.slp,new=FALSE)
 ds.mu <- DS(pca.mu,eof.es,eofs=1:20)
 ds.fw <- DS(pca.fw,eof.slp,eofs=1:20)
 plot(ds.mu,colbar1=list(breaks=seq(0,1,by=0.1),rev=2),
-     colbar2=list(breaks=seq(-500,500,by=25),rev=TRUE))
-plot(ds.fw)
+     colbar2=list(breaks=seq(-500,500,by=25),rev=TRUE),new=FALSE)
+plot(ds.fw,new=FALSE)
 ```
 
 #### **Compare the histogram of the preciptation data with an exponential distribution**
@@ -277,24 +291,30 @@ lines(seq(0,250,by=1),dexp(seq(0,250,by=1),rate=1/mean(z)),lwd=3,col='red')
 
 #### **Do the downscaling based on the CMIP5 RCP4.5 ensemble**
 
-Here include the argument \code{xfuns='tas2es'} to use the option \code{annual(tas2es(gcm))} rather than the option \code{annual(gcm,FUN='tas2es')} which will fail. Also  
+Here include the argument xfuns='tas2es' to use the option annual(tas2es(gcm)) rather than the option annual(gcm,FUN='tas2es') which will fail. Also  
 
 ```{r}
 if (!file.exists('dse.mu.climatrans.rda')) {
-  dse <- DSensemble(pca.mu,predictor=es,FUNX='tas2es',xfuns='tas2es',nmin=1)
-  save(file='dse.mu.climatrans.rda',dse)
+  index(pca.mu) <- as.Date(paste(year(pca.mu),'01-01',sep='-'))
+  index(pca.fw) <- as.Date(paste(year(pca.fw),'01-01',sep='-'))
+  dse.mu <- DSensemble(pca.mu,predictor=es,FUNX='tas2es',xfuns='tas2es',plot=TRUE)
+  dse.fw <- DSensemble(pca.fw,predictor=slp,pattern="psl_Amon_ens_",plot=TRUE)
+  save(file='dse.mu.climatrans.rda',dse.mu,dse.fw)
 } else load('dse.mu.climatrans.rda')
-dse.stations<-as.station(dse)
+mu.stations<-as.station(dse.mu)
+fw.stations<-as.station(dse.fw)
+mu.delhi <- mu.stations[[1]]
+fw.delhi <- fw.stations[[1]]
+plot(mu.delhi,new=FALSE)
+plot(fw.delhi,new=FALSE)
 ```
-
-
 
 #### *Maximum temperature*
 
 Check the long-term change: historic trend in the mean
 
 ```{r}
-  load('~/Dropbox/Public/ClimaTrans/climatrans.tx.rda')
+  load('climatrans.tx.rda')
   plot(as.4seasons(anomaly(climatrans.tx)))
 ```
 
@@ -302,8 +322,7 @@ Downscale the seasonal seasonal mean maximum temperature
 
 
 ```{r}
-  predictor <- retrieve('data/ncep/air.mon.mean.nc',
-                        param='air',lon=c(60,90),lat=c(10,35))
+  predictor <- retrieve('air.mon.mean.nc',param='air',lon=c(60,90),lat=c(10,35))
 
   dev.new()
   trh <- c(40,30,32)
@@ -353,6 +372,6 @@ Check whether the maximum temperature is close to being normally distributed
 Check the long-term change: historic trend in the seasonal spread (standard deviation)
 
 ```{r}
-  load('~/Dropbox/Public/ClimaTrans/climatrans.tx.rda')
+  load('climatrans.tx.rda')
   plot(as.4seasons(anomaly(climatrans.tx),FUN='sd'))
 ```

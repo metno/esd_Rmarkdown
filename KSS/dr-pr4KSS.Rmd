@@ -1,0 +1,161 @@
+*Downscale precipitation for the Norwegian climate services (KSS)*
+-----------------------------------
+title: Downscling wet-day frequency and wet-day mean precipitation
+author: "Rasmus Benestad"
+date: "April 5, 2016"
+output: pdf_document
+    fig_width:  8
+    fig_height: 8
+---
+
+This analysis is based on publications on how to downscale wet-day mean precipitation iteratively from several predictors (representing different moisture sources) and mean sea-level pressure to capture the wet-day frequency <http://dx.doi.org/10.3402/tellusa.v67.25954> and making use of a group of stations together with principal component analysis (PCA) to maximise the use of available information <http://dx.doi.org/10.3402/tellusa.v67.28326>.
+
+**Analysis** 
+The downscaling of the wet-day mean precipitation used the surface temperature as predictor.
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. To execute this type: 
+
+```{r,eval=FALSE}
+library(rmarkdown); render('climatrans.Rmd',pdf_document())
+```
+
+Load the esd and ncdf packages.
+
+```{r}
+library(esd)
+```
+
+---------------------------------
+
+Function that converts the surface temperature into saturation vapour pressure:
+
+
+
+##*Predictands*
+
+```{r}
+fname.predictand <- 'mufw.nordic.rda'
+if (!file.exists(fname.predictand)) {
+  ## Read daily precipitation from the ECA&D data set
+  ## Long stations within the Nordic countries++
+  ss <- select.station(param='precip',src='ecad',
+                       lon=c(5,35),lat=c(55,72),nmin=60)
+  precip <- station(ss)
+  ## Remove stations with large holes of missing data and limit the data
+  ## to a common interval with good data coverage
+  
+  diagnose(precip)
+  precip <- subset(precip,it=c(1961,2013))
+  nv <- apply(coredata(precip),2,nv)
+  precip <- subset(precip,is=(nv > 50*365.25))
+  mu.c <- annual(subset(precip,it=month.abb[c(1:3,10:12)]),'wetmean',nmin=180)
+  mu.w <- annual(subset(precip,it=month.abb[c(4:9)]),'wetmean',nmin=180)
+  fw.c <- annual(subset(precip,it=month.abb[c(1:3,10:12)]),'wetfreq',nmin=180)
+  fw.w <- annual(subset(precip,it=month.abb[c(4:9)]),'wetfreq',nmin=180)
+  save(file=fname.predictand,mu.c,mu.w,fw.c,fw.w)
+} else load(fname.predictand)
+```
+
+**Process the predictands. Interploate for missing data, as PCA cannot be applied to data matrices with missing data: 
+
+```{r}
+## Fill in small gaps of missing data using PCA-based regression
+mu.c <- pcafill(mu.c)
+mu.w <- pcafill(mu.w)
+fw.c <- pcafill(fw.c)
+fw.w <- pcafill(fw.w)
+```
+PCAs can be computed once the data matrices are complete. The PCAs will give an impression about the main features in the precipitation statistics from the region. The amount of precipitation varies systematically from place to place, with higher amounts over the west coast of Norway. Hence the PCA will emphasise the variations over western Norway. But the PCA can also be applied to relative changes (in percentage), where all locations weigh the same (more emphasis is now placed on the region with denser observations).
+
+```{r}
+## Estimate the PCAs - first for data in terms of mm/day
+pca.mu.c <- PCA(mu.c)
+pca.mu.w <- PCA(mu.w)
+pca.fw.c <- PCA(fw.c)
+pca.fw.w <- PCA(fw.w)
+## Also estimate PCA for precipitation variations in terms of %
+pca.mu.C <- PCA(propchange(mu.c))
+pca.mu.W <- PCA(propchange(mu.w))
+pca.fw.C <- PCA(propchange(fw.c))
+pca.fw.W <- PCA(propchange(fw.w))
+```
+
+```{r}
+## The main mode of variability for the absolute precipitation intencity
+plot(pca.mu.c)
+```
+
+```{r}
+## The main mode of variability for the relative precipitation intencity
+plot(pca.mu.C)
+```
+
+```{r}
+## Trend analysis
+cols <- rainbow(4)
+plot.zoo(pca.mu.c[,1:4],plot.type='single',col=cols)
+for (i in 1:4) lines(trend(pca.mu.c[,i]),col=cols[i])
+```
+
+```{r}
+## Trend analysis
+cols <- rainbow(4)
+plot.zoo(pca.fw.c[,1:4],plot.type='single',col=cols)
+for (i in 1:4) lines(trend(pca.fw.c[,i]),col=cols[i])
+```
+
+
+
+##**Predictors**
+
+Now prepare for the downscaling: Retrieve and process the predictors. For the wet-day mean we try temperature (or sea surface temperature, SST). There are different possibilities. We can estimate the vapour saturation pressure based on the Clausius-Clapeyron equation (`C.C.eq()`) or we can use the temperature directly (the former translates more directly into moisture mass). The aggregation of the temperature over the wet-season may involve the average, minimum or the maximum values. Trial anderror to see what works and what doesn't: 
+
+```{r}
+## Aggregate sub-season values to annual mean values
+if (!exists("es.c")) {
+  slp <- retrieve('slp.mon.mean.nc',lon=c(-30,50),lat=c(30,75))
+  slp.w <- annual(subset(slp,it=month.abb[4:9]),'mean',nmin=6)
+  slp.c <- annual(subset(slp,it=month.abb[c(1:3,10:12)]),'mean',nmin=6)
+  t2m <- retrieve('air.mon.mean.nc',lon=c(-30,50),lat=c(30,75))
+  t2m.w <- annual(subset(t2m,it=month.abb[4:9]),'mean',nmin=6)
+  t2m.c <- annual(subset(t2m,it=month.abb[c(1:3,10:12)]),'mean',nmin=6)
+  es.w <- annual(subset(C.C.eq(t2m),it=month.abb[4:9]),'mean',nmin=6)
+  es.w <- mask(es.w,land=TRUE)
+  es.c <- annual(subset(C.C.eq(t2m),it=month.abb[c(1:3,10:12)]),'mean',nmin=6)
+  es.c <- mask(es.w,land=TRUE)
+}
+## Represent the predictors in terms of EOFs
+eof.t2m.w <- EOF(t2m.w)
+eof.t2m.c <- EOF(t2m.c)
+eof.slp.w <- EOF(slp.w)
+eof.slp.c <- EOF(slp.c)
+eof.es.w <- EOF(es.w)
+eof.es.c <- EOF(es.c)
+```
+
+Explorative downscaling analysis: need to fine some connections to the large-scale temperatures and then find the residuals from this. The residuals are then used in a secondary downscaling analysis against another set of predictors.
+
+```{r}
+## Downscaling analysis
+  ds.mu.c <- DS(pca.mu.c,eof.es.c)
+  plot(ds.mu.c)
+```
+
+We have now identified one connection between the large-scale conitions - vapour saturation pressure over the North Atlantic (a main moisture source) and the wet-day mean. There may be other fators affecting thestatistics too, and we can search for remaining structure in the data in terms of spatio-temporal variability. If the reminder looks onisy (e.g. 'flat' eigenvalues), then the remainder may be assumed to be from local effects and can be represented by a noise model.
+
+```{r}
+## Examine the PCA of residuals to see if there are any structures left
+  mu.c.2 <- as.residual(as.station(ds.mu.c))
+  mu.c.2 <- attrcp(mu.c,mu.c.2); class(mu.c.2) <- class(mu.c)
+  pca.mu.c.2 <- PCA(mu.c.2)
+  plot(pca.mu.c.2)
+```
+
+```{r}
+## Downscaling analysis
+  dse.mu.c <- DSensemble(pca.mu.c,predictor=es.c,
+                         it=month.abb[c(1:3,10:12)],
+                         FUNX='C.C.eq',plot=TRUE,verbose=FALSE)
+
+```
+
