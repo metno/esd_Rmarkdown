@@ -141,7 +141,7 @@ Explorative downscaling analysis: need to fine some connections to the large-sca
   plot(ds.mu.c)
 ```
 
-We have now identified one connection between the large-scale conitions - vapour saturation pressure over the North Atlantic (a main moisture source) and the wet-day mean. There may be other fators affecting thestatistics too, and we can search for remaining structure in the data in terms of spatio-temporal variability. If the reminder looks onisy (e.g. 'flat' eigenvalues), then the remainder may be assumed to be from local effects and can be represented by a noise model.
+We have now identified one connection between the large-scale conitions - vapour saturation pressure over the North Atlantic (a main moisture source) and the wet-day mean. There may be other fators affecting thestatistics too, and we can search for remaining structure in the data in terms of spatio-temporal variability. If the reminder looks onisy (e.g. 'flat' eigenvalues), then the remainder may be assumed to be from local effects and can be represented by a noise model.dr
 
 ```{r}
 ## Examine the PCA of residuals to see if there are any structures left
