@@ -1,0 +1,32 @@
+**EU-Circle case study 3
+-----------------------------------
+title: Coastal Flooding (surface water, highway, sewer and watercourse flooding) across Torbay, UK
+author: "Rasmus Benestad"
+date: "April 6, 2016"
+output: pdf_document
+    fig_width:  8
+    fig_height: 8
+---
+
+Torbay is located in South Devon (UK) and covers an area of approximately 62 km2 . The area has suffered from flooding over many years from a number of different sources, including surface water run-off, highway flooding, sewer flooding, main river and ordinary watercourse flooding during intense rainfall events. In addition the coastal areas of Torbay  suffer coastal flooding due to overtopping of the sea defences during high tides that coincide with easterly winds. It should be noted that the surface water, highway, sewer, main river and watercourse flooding is exacerbated in the low lying areas around the coast of Torquay, Paignton and Brixham during high tidal cycles when the capacity of the surface water outfalls discharging to coastal waters is impeded. In addition to the property flooding, during all of these flood events numerous roads have flooded to some extent, with some of the roads having to be closed to traffic until the flood water has subsided.
+
+The main coast road linking Torquay to Paignton and Brixham has to be closed on a regular basis due to overtopping of the sea wall during high tides that coincide with easterly wind conditions. These closures result in long traffic diversions and delays. In addition, as a result of surface water flooding from watercourses and main rivers during intense rainfall events the main inland route linking Torquay, Paignton and Brixham has also been closed for periods resulting in no major roads being available between the towns until flooding has subsided. During the last major flooding event, which occurred on 24 th October 1999, over 200 properties across all three towns were affected by flooding. Approximately 50% of these properties were commercial properties including shops, restaurants, hotels, bars and a cinema. In addition to the property flooding both the major roads linking Torquay to Paignton and Brixham were closed for a significant period making travel within the Bay extremely difficult and affecting emergency response.
+
+Obviously climate change can affect local flood risk in several ways. Impacts will depend on local conditions and vulnerability. Wetter winters and more of this rain falling in wet spells will increase river and watercourse flooding. More intense rainfall causes more surface run-off, increasing localised flooding and erosion. In turn this will increase pressure on drains, sewers and water quality. Rising sea levels, as a result of climate change, will increase local flood risk both in coastal regions from increased risk of overtopping of the sea wall and inland from main rivers and watercourses due to the interaction with drains, sewers and smaller watercourses. As sea level is predicted to rise by over 1m in Torbay over the next 100 years the frequency and impact of overtopping of the sea defences will increase resulting in more infrastructure and properties being affected by flooding.
+
+**Analysis** 
+The downscaling of the wet-day mean precipitation used the surface temperature as predictor.
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. To execute this type: 
+
+```{r,eval=FALSE}
+library(rmarkdown); render('eu-circle_case-study-3.Rmd',pdf_document())
+```
+
+Load the esd and ncdf packages.
+
+```{r}
+library(esd)
+```
+
+---------------------------------

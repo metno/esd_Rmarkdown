@@ -43,11 +43,9 @@ library(ncdf)
 
 ---------------------------------
 
-##*Precipitation*
+##*Functions*
 
-
-
-Function that converts the surface temperature into saturation vapour pressure:
+Define a function that converts the surface temperature into saturation vapour pressure:
 
 ```{r}
 tas2es <- function(x,mask=TRUE,land=TRUE,season=5:10,FUN='min') {
@@ -58,6 +56,27 @@ tas2es <- function(x,mask=TRUE,land=TRUE,season=5:10,FUN='min') {
   invisible(es)
 }
 ```
+
+Function to estimate probabilty for daily amount of exceeding a threshold x0 given that the distribution follows an exponential distribution and the records of the wet-day mean precipitation and frequency.
+
+```{r}
+PrexpPr <- function(mu,fw,x0=10) {
+  Pr <- zoo(coredata(fw)*exp(-x0/coredata(mu)),order.by=year(fw))
+
+  Pr.mu <- zoo(mean(coredata(fw))*exp(-x0/coredata(mu)),order.by=year(fw))
+  Pr.fw <- zoo(coredata(fw)*exp(-x0/mean(coredata(mu))),order.by=year(fw))
+  attr(Pr,'prob.f(mu)') <- Pr.mu
+  attr(Pr,'prob.f(fw)') <- Pr.fw
+  Pr <- attrcp(mu,Pr)
+  attr(Pr,'variable') <- 'Pr'
+  attr(Pr,'unit') <- 'probability'
+  attr(Pr,'longname') <- paste('Probability of exceeding',x0)
+  class(Pr) <- class(mu)
+  invisible(Pr)
+}
+```
+##*Precipitation*
+
 
 #### Pre-processing: adapting the netCDF data to esd: set up station objects: 
 ```{r,eval=FALSE}
@@ -90,9 +109,9 @@ close.ncdf(ncid)
 
 bangalore <- zoo(x=bangalore,order.by=as.Date(time/(24*60),origin='1901-01-01'))
 bangalore <- as.station(bangalore,loc='Bangalore',param='precip',unit='mm/day',
-                    lon=77.6,lat=13.0,cntr='India',longname='precipitation',
-                    info='extracted rainfall data from IMD gridded daily data',
-                    ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
+                lon=77.6,lat=13.0,cntr='India',longname='precipitation',
+                info='extracted rainfall data from IMD gridded daily data',
+                ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
 
 ## Combine the individual stations into a group of stations
 climatrans.pr <- combine(delhi,bombay,bangalore)
@@ -107,9 +126,9 @@ time <- get.var.ncdf(ncid,varid='time')
 close.ncdf(ncid)
 delhi <- zoo(x=delhi,order.by=as.Date(time/(24*60),origin='1969-01-01'))
 tx.delhi <- as.station(delhi,loc='Delhi',param='tmax',unit='degC',lon=77.2,lat=28.6,
-                   cntr='India',longname='daily maximum temperature',
-                   info='extracted from IMD gridded daily data',
-                   ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
+               cntr='India',longname='daily maximum temperature',
+               info='extracted from IMD gridded daily data',
+               ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
 
 ncid <- open.ncdf('~/Dropbox/Public/ClimaTrans/bombay_tmax.nc')
 bombay <- get.var.ncdf(ncid,varid='temp')
@@ -117,9 +136,9 @@ time <- get.var.ncdf(ncid,varid='time')
 close.ncdf(ncid)
 bombay <- zoo(x=bombay,order.by=as.Date(time/(24*60),origin='1969-01-01'))
 tx.bombay <- as.station(bombay,loc='Bombay',param='tmax',unit='degC',lon=72.9,lat=19.0,
-                    cntr='India',longname='daily maximum temperature',
-                    info='extracted from IMD gridded daily data',
-                    ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
+                cntr='India',longname='daily maximum temperature',
+                info='extracted from IMD gridded daily data',
+                ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
 
 ncid <- open.ncdf('~/Dropbox/Public/ClimaTrans/bangalore_tmax.nc')
 bangalore <- get.var.ncdf(ncid,varid='temp')
@@ -127,9 +146,9 @@ time <- get.var.ncdf(ncid,varid='time')
 close.ncdf(ncid)
 bangalore <- zoo(x=bangalore,order.by=as.Date(time/(24*60),origin='1969-01-01'))
 tx.bangalore <- as.station(bangalore,loc='Bangalore',param='tmax',unit='degC',
-                    lon=77.6,lat=13.0,cntr='India',longname='daily maximum temperature',
-                    info='extracted from IMD gridded daily data',
-                    ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
+                lon=77.6,lat=13.0,cntr='India',longname='daily maximum temperature',
+                info='extracted from IMD gridded daily data',
+                ref='Madhusoodanan M.S. ("Madhusoodanan M.S." <madhusoodanan@gmail.com>)')
 
 ## Combine the individual stations into a group of stations
 climatrans.tx <- combine(tx.delhi,tx.bombay,tx.bangalore)
@@ -170,19 +189,64 @@ plot(aggregate(climatrans.pr,month,'wetmean'),new=FALSE)
 plot(aggregate(climatrans.pr,month,'sum'),new=FALSE)
 ```
 
-Estimate the long-term trends:
+Estimate annual aggregated statistics for the months May-October (the wet/Monsoon season): 
+
+```{r}
+season<-5:10
+fw <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetfreq')
+mu <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetmean')
+q95 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'quantile',probs=0.95)
+```
+
+Compare the data to the exponential distribution - if the data is exponentially distributed, then the wet-day mean precipitation $\mu$ and the 95-percentile $q_{95}$ are propportional by $q_p = -ln(1-p)\mu$.
+
+
+```{r}
+## check the relationship between wet-day 95-percentile and wet-day mean
+plot(-log(0.05)*zoo(mu[,2]),zoo(q95[,2]),pch=19,xlim=c(0,120),ylim=c(0,120),
+     main='Wet-day mean v.s. 95th wet percentile',
+     xlab=expression(paste(-ln(1-0.95)*mu,' (mm/day)')), ylab=expression(paste(q[95],' (mm/day)')))
+points(-log(0.05)*zoo(mu[,1]),zoo(q95[,1]),pch=19,col=rgb(1,0,0,0.2))
+points(-log(0.05)*zoo(mu[,3]),zoo(q95[,3]),pch=19,col=rgb(0,0,1,0.2))
+grid()
+legend(0,120,loc(climatrans.pr),pch=19,col=c(rgb(1,0,0,0.2),'black',rgb(0,0,1,0.2)),bty='n')
+```
+
+Compare the histogram of the preciptation data with an exponential distribution
+```{r}
+z <- climatrans.pr[,3]; z <- z[z > 1]
+hist(z,breaks=seq(0,500,by=2),xlim=c(0,100),freq=FALSE)
+lines(seq(0,250,by=1),dexp(seq(0,250,by=1),rate=1/mean(z)),lwd=3,col='red')
+```
+
+##**Historical long-term trends**
+
+Estimate the long-term trends in the precipitation statistics at the three megacities: first the wet-day frequency $f_w$ - does the number of rainy days change over time? 
 
 ```{r, fig.width=6, fig.height=6}
 ## Wet-day frequency
-plot(annual(climatrans.pr,'wetfreq'),new=FALSE)
-for(i in 1:3) lines(trend(subset(annual(climatrans.pr,'wetfreq'),is=i)))
+plot(fw,new=FALSE)
+for(i in 1:3) lines(trend(subset(fw,is=i)))
 ```
+
+Does the wet-day mean precipitation $\mu$ change over time? 
 
 ```{r, fig.width=6, fig.height=6}
 ## Wet-day mean
-plot(annual(climatrans.pr,'wetmean'),new=FALSE)
-for(i in 1:3) lines(trend(subset(annual(climatrans.pr,'wetfreq'),is=i)))
+plot(mu,new=FALSE)
+for(i in 1:3) lines(trend(subset(mu,is=i)))
 ```
+
+If the 24-hr preciptation amounts is exponential (when it rains), then the probability of exceeding a threshold is $Pr(X>x_0) = f_w e^{-x_0/\mu}$. Since we know both  
+
+```{r, fig.width=6, fig.height=6}
+## Wet-day mean
+Pr <- PrexpPr(mu,fw,x0=50) 
+plot(Pr,new=FALSE,errorbar=FALSE)
+for(i in 1:3) lines(trend(subset(Pr,is=i)))
+```
+
+Also, it's interesting to see how the annual total precipitation amount changes over time:
 
 ```{r, fig.width=6, fig.height=6}
 ## Aggregate to mean seasonal cycle and annual mean values
@@ -190,31 +254,13 @@ plot(annual(climatrans.pr,'sum'),new=FALSE)
 for(i in 1:3) lines(trend(subset(annual(climatrans.pr,'wetfreq'),is=i)))
 ```
 
-Estimate annual aggregated statistics for the months May-October (the wet season):
-
-```{r}
-season<-5:10
-fw <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetfreq')
-mu <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetmean')
-q95 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'quantile',probs=0.95)
-
-## check the relationship between wet-day 95-percentile and wet-day mean
-plot(zoo(mu[,2]),zoo(q95[,2]),pch=19,xlim=c(0,40),ylim=c(0,120),
-     main='Wet-day mean v.s. 95th wet percentile',
-     xlab=expression(paste(mu,' (mm/day)')), ylab=expression(paste(q[95],' (mm/day)')))
-points(zoo(mu[,1]),zoo(q95[,1]),pch=19,col=rgb(1,0,0,0.2))
-points(zoo(mu[,3]),zoo(q95[,3]),pch=19,col=rgb(0,0,1,0.2))
-grid()
-legend(0,120,loc(climatrans.pr),pch=19,col=c(rgb(1,0,0,0.2),'black',rgb(0,0,1,0.2)),bty='n')
-```
+##**Predictors**
 
 Now prepare for the downscaling: Retrieve and process the predictors. For the wet-day mean we try temperature (or sea surface temperature, SST). There are different possibilities. We can estimate the vapour saturation pressure based on the Clausius-Clapeyron equation (`C.C.eq()`) or we can use the temperature directly (the former translates more directly into moisture mass). The aggregation of the temperature over the wet-season may involve the average, minimum or the maximum values. Trial anderror to see what works and what doesn't: 
 
 ```{r}
 ## Aggregate sub-season values to annual mean values
 if (!exists("es")) {
-  #sst <- retrieve('data/ncep/sst.mon.mean.nc',lon=c(50,100),lat=c(0,40))
-  #es <- aggregate(C.C.eq(subset(sst,it=month.abb[season])),year,'max')
   t2m <- retrieve('data/ncep/air.mon.mean.nc',lon=c(60,100),lat=c(0,23))
   es <- aggregate(tas2es(t2m,season=season),year,'mean')
 }
@@ -282,11 +328,26 @@ plot(ds.mu,colbar1=list(breaks=seq(0,1,by=0.1),rev=2),
 plot(ds.fw,new=FALSE)
 ```
 
-#### **Compare the histogram of the preciptation data with an exponential distribution**
+## **Examine the residuals from the downscaling**
+
+First check the residuals for the wet-day mean precipitation:
+
 ```{r}
-z <- climatrans.pr[,3]; z <- z[z > 1]
-hist(z,breaks=seq(0,500,by=2),xlim=c(0,100),freq=FALSE)
-lines(seq(0,250,by=1),dexp(seq(0,250,by=1),rate=1/mean(z)),lwd=3,col='red')
+## Examine the PCA of residuals for the cold monthsto see if there are any structures left
+  mu.2 <- as.residual(as.station(ds.mu))
+  mu.2 <- attrcp(mu,mu.2); class(mu.2) <- class(mu)
+  pca.mu.2 <- PCA(mu.2)
+  plot(pca.mu.2)
+```
+
+The residuals for the wet-day frequency:
+
+```{r}
+## Examine the PCA of residuals for the cold monthsto see if there are any structures left
+  fw.2 <- as.residual(as.station(ds.fw))
+  fw.2 <- attrcp(fw,fw.2); class(fw.2) <- class(fw)
+  pca.fw.2 <- PCA(fw.2)
+  plot(pca.fw.2)
 ```
 
 #### **Do the downscaling based on the CMIP5 RCP4.5 ensemble**
@@ -303,28 +364,28 @@ if (!file.exists('dse.mu.climatrans.rda')) {
 } else load('dse.mu.climatrans.rda')
 mu.stations<-as.station(dse.mu)
 fw.stations<-as.station(dse.fw)
-mu.delhi <- mu.stations[[1]]
-fw.delhi <- fw.stations[[1]]
-plot(mu.delhi,new=FALSE)
-plot(fw.delhi,new=FALSE)
+
+## Plot the downscaled results for the three megacities:
+for (i in 1:3) {
+  plot(mu.stations[[i]],new=FALSE)
+  plot(fw.stations[[i]],new=FALSE)
+}
 ```
 
 #### *Maximum temperature*
 
-Check the long-term change: historic trend in the mean
+Check the long-term change: historic trend in the mean - include all seasons, but to get a clearer ipression, plot the anomalies (i.e. exclude the mean seasonal cycle).
 
 ```{r}
   load('climatrans.tx.rda')
   plot(as.4seasons(anomaly(climatrans.tx)))
 ```
 
-Downscale the seasonal seasonal mean maximum temperature 
-
+Downscale the seasonal seasonal mean maximum temperature and then use the mean temperature to estimate the number of hot days assuming that the daily distribution is approximately Gaussian for a given season. 
 
 ```{r}
   predictor <- retrieve('air.mon.mean.nc',param='air',lon=c(60,90),lat=c(10,35))
 
-  dev.new()
   trh <- c(40,30,32)
   for (i in 1:3) {
     y <- subset(climatrans.tx,is=i)
@@ -337,7 +398,7 @@ Downscale the seasonal seasonal mean maximum temperature
     ## The function hotsummerdays estimates the number of hot days based on
     ## the assumption that the temperature is close to being normally distributed
     hw <- hotsummerdays(x=y,dse=dse.tx,threshold=trh[i],plot=FALSE)
-    plot(hw)
+    plot(hw,new=FALSE)
   }
 ```
 
@@ -369,9 +430,8 @@ Check whether the maximum temperature is close to being normally distributed
   qqline(coredata(subset(y,it='son')))
 ```
 
-Check the long-term change: historic trend in the seasonal spread (standard deviation)
+Check the long-term change: historic trend in the seasonal spread (standard deviation) - the above estimates assumed that the spread is constant. The number of hot days will be even higher if the spread increases over time.
 
 ```{r}
-  load('climatrans.tx.rda')
-  plot(as.4seasons(anomaly(climatrans.tx),FUN='sd'))
+  plot(as.4seasons(anomaly(climatrans.tx),FUN='sd'),new=FALSE)
 ```

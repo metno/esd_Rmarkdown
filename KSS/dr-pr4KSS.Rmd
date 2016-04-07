@@ -16,7 +16,7 @@ The downscaling of the wet-day mean precipitation used the surface temperature a
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. To execute this type: 
 
 ```{r,eval=FALSE}
-library(rmarkdown); render('climatrans.Rmd',pdf_document())
+library(rmarkdown); render('dr-pr4KSS.Rmd',pdf_document())
 ```
 
 Load the esd and ncdf packages.
@@ -54,6 +54,32 @@ if (!file.exists(fname.predictand)) {
   fw.w <- annual(subset(precip,it=month.abb[c(4:9)]),'wetfreq',nmin=180)
   save(file=fname.predictand,mu.c,mu.w,fw.c,fw.w)
 } else load(fname.predictand)
+```
+
+```{r}
+## Show maps of trend
+map(mu.c,FUN='trend',new=FALSE,colbar=list(pal='t2m',breaks=seq(-1,1,by=0.1),rev=TRUE))
+title(expression(paste('Trend in ',mu,' (mm/day per decade) for cold months')))
+map(mu.w,FUN='trend',new=FALSE,colbar=list(pal='t2m',breaks=seq(-0.5,0.5,by=0.1),rev=TRUE))
+title(expression(paste('Trend in ',mu,' (mm/day per decade) for warm months')))
+map(100*fw.c,FUN='trend',new=FALSE,colbar=list(pal='t2m',breaks=seq(-2,2,by=0.1),rev=TRUE))
+title(expression(paste('Trend in ',f[w],' (% per decade) for cold months')))
+map(100*fw.w,FUN='trend',new=FALSE,colbar=list(pal='t2m',breaks=seq(-1,1,by=0.1),rev=TRUE))
+title(expression(paste('Trend in ',f[w],' (mm/day per decade) for cold months')))
+```
+
+Variance of an exponentially distributed variable is $\mu^2$:
+
+```{r}
+## Show maps of trend
+mu.c2 <- mu.c
+coredata(mu.c2) <- coredata(mu.c)^2
+map(mu.c2,FUN='trend',new=FALSE,colbar=list(pal='t2m',breaks=seq(-25,25,by=1),rev=TRUE))
+title(expression(paste('Trend in ',mu^2,' (variance per decade) for cold months')))
+mu.w2 <- mu.w
+coredata(mu.w2) <- coredata(mu.w)^2
+map(mu.w2,FUN='trend',new=FALSE,colbar=list(pal='t2m',breaks=seq(-10,10,by=1),rev=TRUE))
+title(expression(paste('Trend in ',mu^2,' (variance per decade) for warm months')))
 ```
 
 **Process the predictands. Interploate for missing data, as PCA cannot be applied to data matrices with missing data: 
@@ -136,15 +162,47 @@ eof.es.c <- EOF(es.c)
 Explorative downscaling analysis: need to fine some connections to the large-scale temperatures and then find the residuals from this. The residuals are then used in a secondary downscaling analysis against another set of predictors.
 
 ```{r}
-## Downscaling analysis
+## Downscaling analysis for the cold months
   ds.mu.c <- DS(pca.mu.c,eof.es.c)
   plot(ds.mu.c)
 ```
 
+```{r}
+## Downscaling analysis for the warm months
+  ds.mu.w <- DS(pca.mu.w,eof.es.w)
+  plot(ds.mu.w)
+```
+
+```{r}
+## Downscaling analysis for the cold months
+  ds.mu.C <- DS(pca.mu.C,eof.es.c)
+  plot(ds.mu.C)
+```
+
+```{r}
+## Downscaling analysis for the warm months
+  ds.mu.W <- DS(pca.mu.W,eof.es.w)
+  plot(ds.mu.W)
+```
+
+```{r}
+## Downscaling analysis for the cold months
+  ds.fw.c <- DS(pca.fw.c,eof.slp.c)
+  plot(ds.mu.c)
+```
+
+```{r}
+## Downscaling analysis for the warm months
+  ds.fw.w <- DS(pca.fw.w,eof.slp.w)
+  plot(ds.mu.w)
+```
+
+##**The residuals of the multiple regression analysis**
+
 We have now identified one connection between the large-scale conitions - vapour saturation pressure over the North Atlantic (a main moisture source) and the wet-day mean. There may be other fators affecting thestatistics too, and we can search for remaining structure in the data in terms of spatio-temporal variability. If the reminder looks onisy (e.g. 'flat' eigenvalues), then the remainder may be assumed to be from local effects and can be represented by a noise model.dr
 
 ```{r}
-## Examine the PCA of residuals to see if there are any structures left
+## Examine the PCA of residuals for the cold monthsto see if there are any structures left
   mu.c.2 <- as.residual(as.station(ds.mu.c))
   mu.c.2 <- attrcp(mu.c,mu.c.2); class(mu.c.2) <- class(mu.c)
   pca.mu.c.2 <- PCA(mu.c.2)
@@ -152,10 +210,72 @@ We have now identified one connection between the large-scale conitions - vapour
 ```
 
 ```{r}
+## Examine the PCA of residuals for the warm months to see if there are any structures left
+  mu.w.2 <- as.residual(as.station(ds.mu.w))
+  mu.w.2 <- attrcp(mu.w,mu.w.2); class(mu.w.2) <- class(mu.w)
+  pca.mu.w.2 <- PCA(mu.w.2)
+  plot(pca.mu.w.2)
+```
+
+
+```{r}
+## Examine the PCA of residuals for the cold monthsto see if there are any structures left
+  fw.c.2 <- as.residual(as.station(ds.fw.c))
+  fw.c.2 <- attrcp(fw.c,fw.c.2); class(fw.c.2) <- class(fw.c)
+  pca.fw.c.2 <- PCA(fw.c.2)
+  plot(pca.fw.c.2)
+```
+
+```{r}
+## Examine the PCA of residuals for the warm months to see if there are any structures left
+  fw.w.2 <- as.residual(as.station(ds.fw.w))
+  fw.w.2 <- attrcp(fw.w,fw.w.2); class(fw.w.2) <- class(fw.w)
+  pca.fw.w.2 <- PCA(fw.w.2)
+  plot(pca.fw.w.2)
+```
+
+
+```{r}
+## Examine the time series of the residuals
+  plot.zoo(pca.mu.w.2,type='single')
+```
+
+```{r}
+## Examine the ACF for the leading PC of the residuals
+  plot(acf(pca.mu.w.2[,1]))
+```
+
+```{r}
+## Examine the power spectrum for the leading PC of the residuals
+  plot(spectrum(pca.mu.w.2[,1]))
+```
+
+```{r}
+## Examine the distribution of the leading PC of the residuals
+  plot(qqnorm(coredata(pca.mu.w.2[,1])))
+  qqline(coredata(pca.mu.w.2[,1])))
+```
+
+
+
+```{r}
+fndseres <- 'dse.nordic.precip.rda'
+if (!file.exists(fndseres)) {
 ## Downscaling analysis
   dse.mu.c <- DSensemble(pca.mu.c,predictor=es.c,
                          it=month.abb[c(1:3,10:12)],
                          FUNX='C.C.eq',plot=TRUE,verbose=FALSE)
+  dse.fw.c <- DSensemble(pca.fw.c,predictor=slp.c,
+                         it=month.abb[c(1:3,10:12)],
+                         FUNX='C.C.eq',plot=TRUE,verbose=FALSE)
+  dse.mu.w <- DSensemble(pca.mu.w,predictor=es.w,
+                         it=month.abb[4:9],
+                         FUNX='C.C.eq',plot=TRUE,verbose=FALSE)
+  dse.fw.w <- DSensemble(pca.fw.w,predictor=slp.w,
+                         it=month.abb[4:9],
+                         FUNX='C.C.eq',plot=TRUE,verbose=FALSE)
+  save(file=fndseres,dse.mu.c,dse.fw.c,dse.mu.w,dse.fw.w)
+} else load(fndseres)
 
 ```
 

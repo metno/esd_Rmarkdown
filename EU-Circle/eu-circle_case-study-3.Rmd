@@ -1,0 +1,102 @@
+**EU-Circle case study 3
+-----------------------------------
+title: Coastal Flooding (surface water, highway, sewer and watercourse flooding) across Torbay, UK
+author: "Rasmus Benestad"
+date: "April 6, 2016"
+output: pdf_document
+    fig_width:  8
+    fig_height: 8
+---
+
+Torbay is located in South Devon (UK) and covers an area of approximately 62 km2 . The area has suffered from flooding over many years from a number of different sources, including surface water run-off, highway flooding, sewer flooding, main river and ordinary watercourse flooding during intense rainfall events. In addition the coastal areas of Torbay  suffer coastal flooding due to overtopping of the sea defences during high tides that coincide with easterly winds. It should be noted that the surface water, highway, sewer, main river and watercourse flooding is exacerbated in the low lying areas around the coast of Torquay, Paignton and Brixham during high tidal cycles when the capacity of the surface water outfalls discharging to coastal waters is impeded. In addition to the property flooding, during all of these flood events numerous roads have flooded to some extent, with some of the roads having to be closed to traffic until the flood water has subsided.
+
+The main coast road linking Torquay to Paignton and Brixham has to be closed on a regular basis due to overtopping of the sea wall during high tides that coincide with easterly wind conditions. These closures result in long traffic diversions and delays. In addition, as a result of surface water flooding from watercourses and main rivers during intense rainfall events the main inland route linking Torquay, Paignton and Brixham has also been closed for periods resulting in no major roads being available between the towns until flooding has subsided. During the last major flooding event, which occurred on 24 th October 1999, over 200 properties across all three towns were affected by flooding. Approximately 50% of these properties were commercial properties including shops, restaurants, hotels, bars and a cinema. In addition to the property flooding both the major roads linking Torquay to Paignton and Brixham were closed for a significant period making travel within the Bay extremely difficult and affecting emergency response.
+
+Obviously climate change can affect local flood risk in several ways. Impacts will depend on local conditions and vulnerability. Wetter winters and more of this rain falling in wet spells will increase river and watercourse flooding. More intense rainfall causes more surface run-off, increasing localised flooding and erosion. In turn this will increase pressure on drains, sewers and water quality. Rising sea levels, as a result of climate change, will increase local flood risk both in coastal regions from increased risk of overtopping of the sea wall and inland from main rivers and watercourses due to the interaction with drains, sewers and smaller watercourses. As sea level is predicted to rise by over 1m in Torbay over the next 100 years the frequency and impact of overtopping of the sea defences will increase resulting in more infrastructure and properties being affected by flooding.
+
+**Analysis** 
+The downscaling of the wet-day mean precipitation used the surface temperature as predictor.
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. To execute this type: 
+
+```{r,eval=FALSE}
+library(rmarkdown); render('eu-circle_case-study-3.Rmd',pdf_document())
+```
+
+Load the esd and ncdf packages.
+
+```{r}
+library(esd)
+```
+
+---------------------------------
+```{r,eval=FALSE}
+## Get MIDAS preciptation data that has laready been retrieved 
+## from the MIDAS data base (UK Met Office)
+source('readmidas.R')
+```
+
+Function to estimate probabilty for daily amount of exceeding a threshold x0 given that the distribution follows an exponential distribution and the records of the wet-day mean precipitation and frequency.
+
+```{r}
+PrexpPr <- function(mu,fw,x0=10) {
+  Pr <- zoo(coredata(fw)*exp(-x0/coredata(mu)),order.by=year(fw))
+
+  Pr.mu <- zoo(mean(coredata(fw))*exp(-x0/coredata(mu)),order.by=year(fw))
+  Pr.fw <- zoo(coredata(fw)*exp(-x0/mean(coredata(mu))),order.by=year(fw))
+  attr(Pr,'prob.f(mu)') <- Pr.mu
+  attr(Pr,'prob.f(fw)') <- Pr.fw
+  Pr <- attrcp(mu,Pr)
+  attr(Pr,'variable') <- 'Pr'
+  attr(Pr,'unit') <- 'probability'
+  attr(Pr,'longname') <- paste('Probability of exceeding',x0)
+  class(Pr) <- class(mu)
+  invisible(Pr)
+}
+```
+
+Load the data and weed out stations with lots of missing values
+
+```{r}
+load('pr.eu-circle-torbay.rda') 
+
+## First weeding of stations with many missing values
+nok <- apply(coredata(pr),2,'nv')
+x <- subset(pr,is=(nok> 15000))
+
+## Estimate the annual wet-day mean precipitaiton
+mu <- subset(annual(x,'wetmean',nmin=180),it=c(1961,2011))
+## Estimate the annual wet-day mean frequency
+fw <- subset(annual(x,'wetfreq',nmin=180),it=c(1961,2011))
+
+## Second weeding of stations with many missing values in annual 
+## aggregate
+nok <- apply(coredata(mu),2,'nv')
+mu <- subset(mu,is=(nok> 45))
+fw<- subset(fw,is=(nok> 45))
+
+## Check the records
+diagnose(mu)
+
+##Fill in the remaining gaps using a PCA-based interpolation scheme 
+pcafill(mu) -> mu
+pcafill(fw) -> fw
+```
+
+Examine the long-term trends in the wet-day mean precipitation
+
+```{r}
+plot(mu,new=FALSE); grid()
+for (i in 1:dim(mu)[2]) lines(trend(mu[,i]))
+```
+
+```{r}
+plot(fw); grid()
+for (i in 1:dim(mu)[2]) lines(trend(mu[,i]))
+```
+
+```{r}
+Pr.gt.10 <- PrexpPr(mu,fw,x0=10)
+plot(Pr.gt.10); grid()
+for (i in 1:dim(mu)[2]) lines(trend(Pr.gt.10[,i]))
+```
