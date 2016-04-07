@@ -8,7 +8,7 @@ output: pdf_document
 
 First pre-amble that checks whether the esd-package is installed and installs it if needed.
   
-```{r}
+```{r,echo=TRUE}
 rm(list=ls())
 #xlim <- c(-10,40); ylim <- c(35,70)
 xlim <- c(0,35); ylim <- c(45,70)
@@ -33,6 +33,9 @@ if (install.esd) {
 
 ## Start the esd-library:
 library(esd)
+## Information about the system and session
+Sys.info()
+sessionInfo()
 ```
 
 Below are definition of a number of functions used in the data processing and analysis. The first are simple functions used in ploting.

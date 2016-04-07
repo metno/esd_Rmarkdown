@@ -25,8 +25,12 @@ library(rmarkdown); render('eu-circle_case-study-3.Rmd',pdf_document())
 
 Load the esd and ncdf packages.
 
-```{r}
+```{r,echo=TRUE}  
+## Load the necessary R-package
 library(esd)
+## Information about the system and session
+Sys.info()
+sessionInfo()
 ```
 
 ---------------------------------

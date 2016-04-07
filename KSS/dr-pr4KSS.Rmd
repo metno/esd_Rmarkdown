@@ -21,8 +21,12 @@ library(rmarkdown); render('dr-pr4KSS.Rmd',pdf_document())
 
 Load the esd and ncdf packages.
 
-```{r}
+```{r,echo=TRUE}  
+## Load the necessary R-package
 library(esd)
+## Information about the system and session
+Sys.info()
+sessionInfo()
 ```
 
 ---------------------------------

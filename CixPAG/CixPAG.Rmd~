@@ -17,23 +17,15 @@ objectives are on the forefront of international research. CiXPAG will build up 
 
 Analyse three northern cluseters of GHDN rain gauges: maps of mean, historical trends, mean seasonal variations and inter-annual variability in total precipitation, wet-day mean, and wet-day frequency. Monsoon duration. PCA-analysis. Explore teleconnections to MSLP and T2M/super-saturation-pressure.
 
-```{r,echo=TRUE}  
-## Load the necessary R-package
+```{r}  
+## CixPAG:
 library(esd)
-## Information about the system and session
-Sys.info()
-sessionInfo()
-```
-
-##**Predictand data**
-
-```{r}
 ## Retrieve daily precipitation from the GHCN data set:
 load('gdcn.india.rda')
 
 ## Inspect the data
 map(gdcn.india,cex=-2,FUN='wetfreq',showaxis=TRUE,
-colbar=list(pal='precip',breaks=seq(0,0.5,by=0.025)),new=FALSE)
+colbar=list(pal='precip',breaks=seq(0,0.5,by=0.025)))
 ```
 
 Select various sub-regions for more detailed analysis
