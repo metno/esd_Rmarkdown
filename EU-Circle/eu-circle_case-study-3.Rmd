@@ -37,7 +37,7 @@ sessionInfo()
 ```{r,eval=FALSE}
 ## Get MIDAS preciptation data that has laready been retrieved 
 ## from the MIDAS data base (UK Met Office)
-source('readmidas.R')
+
 ```
 
 Function to estimate probabilty for daily amount of exceeding a threshold x0 given that the distribution follows an exponential distribution and the records of the wet-day mean precipitation and frequency.
