@@ -29,7 +29,6 @@ Load the esd and ncdf packages.
 ## Load the necessary R-package
 library(esd)
 ## Information about the system and session
-Sys.info()
 sessionInfo()
 ```
 

@@ -36,9 +36,12 @@ library(rmarkdown); render('climatrans.Rmd',pdf_document())
 
 Load the esd and ncdf packages.
 
-```{r}
+```{r,echo=TRUE}
 library(esd)
 library(ncdf)
+## Information about the system and session
+Sys.info()
+sessionInfo()
 ```
 
 ---------------------------------

@@ -33,8 +33,7 @@ if (install.esd) {
 
 ## Start the esd-library:
 library(esd)
-## Information about the system and session
-Sys.info()
+## Information about the session
 sessionInfo()
 ```
 

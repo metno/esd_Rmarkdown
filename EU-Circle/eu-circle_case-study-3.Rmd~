@@ -25,8 +25,82 @@ library(rmarkdown); render('eu-circle_case-study-3.Rmd',pdf_document())
 
 Load the esd and ncdf packages.
 
-```{r}
+```{r,echo=TRUE}  
+## Load the necessary R-package
 library(esd)
+## Information about the system and session
+Sys.info()
+sessionInfo()
 ```
 
 ---------------------------------
+```{r,eval=FALSE}
+## Get MIDAS preciptation data that has laready been retrieved 
+## from the MIDAS data base (UK Met Office)
+
+```
+
+Function to estimate probabilty for daily amount of exceeding a threshold x0 given that the distribution follows an exponential distribution and the records of the wet-day mean precipitation and frequency.
+
+```{r}
+PrexpPr <- function(mu,fw,x0=10) {
+  Pr <- zoo(coredata(fw)*exp(-x0/coredata(mu)),order.by=year(fw))
+
+  Pr.mu <- zoo(mean(coredata(fw))*exp(-x0/coredata(mu)),order.by=year(fw))
+  Pr.fw <- zoo(coredata(fw)*exp(-x0/mean(coredata(mu))),order.by=year(fw))
+  attr(Pr,'prob.f(mu)') <- Pr.mu
+  attr(Pr,'prob.f(fw)') <- Pr.fw
+  Pr <- attrcp(mu,Pr)
+  attr(Pr,'variable') <- 'Pr'
+  attr(Pr,'unit') <- 'probability'
+  attr(Pr,'longname') <- paste('Probability of exceeding',x0)
+  class(Pr) <- class(mu)
+  invisible(Pr)
+}
+```
+
+Load the data and weed out stations with lots of missing values
+
+```{r}
+load('pr.eu-circle-torbay.rda') 
+
+## First weeding of stations with many missing values
+nok <- apply(coredata(pr),2,'nv')
+x <- subset(pr,is=(nok> 15000))
+
+## Estimate the annual wet-day mean precipitaiton
+mu <- subset(annual(x,'wetmean',nmin=180),it=c(1961,2011))
+## Estimate the annual wet-day mean frequency
+fw <- subset(annual(x,'wetfreq',nmin=180),it=c(1961,2011))
+
+## Second weeding of stations with many missing values in annual 
+## aggregate
+nok <- apply(coredata(mu),2,'nv')
+mu <- subset(mu,is=(nok> 45))
+fw<- subset(fw,is=(nok> 45))
+
+## Check the records
+diagnose(mu)
+
+##Fill in the remaining gaps using a PCA-based interpolation scheme 
+pcafill(mu) -> mu
+pcafill(fw) -> fw
+```
+
+Examine the long-term trends in the wet-day mean precipitation
+
+```{r}
+plot(mu,new=FALSE); grid()
+for (i in 1:dim(mu)[2]) lines(trend(mu[,i]))
+```
+
+```{r}
+plot(fw); grid()
+for (i in 1:dim(mu)[2]) lines(trend(mu[,i]))
+```
+
+```{r}
+Pr.gt.10 <- PrexpPr(mu,fw,x0=10)
+plot(Pr.gt.10); grid()
+for (i in 1:dim(mu)[2]) lines(trend(Pr.gt.10[,i]))
+```
