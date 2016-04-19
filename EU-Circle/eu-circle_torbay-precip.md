@@ -61,20 +61,27 @@ map(fw,FUN='trend',
 
 The trend analysis for the wet-day frequency suggest a general increase in the number of wet-days over the perdiod 1960--2015 while the intencity .
 
-The predictors can be organised as EOFs to simplify the analysis and make use of properties as the products being orthogonal:
+The predictors can be organised as EOFs to simplify the analysis and make use of properties as the products being orthogonal. Here are the EOFS for the annual wet-day mean precipitation \(\mu\)
 
 ``` r
 ## The area mean wet-day mean precipitation
 eof.mu <- EOF(mu)
 ## The area mean wet-day frequency
 plot(eof.mu)
+```
+
+![](eu-circle_torbay-precip_files/figure-markdown_github/EOFs-in-precip-mu-1.png)<!-- -->
+
+and the annual wet-day frequency \(f_w\)
+
+``` r
 ## Show maps of trends for the wet-day mean precipitation
 eof.fw <- EOF(fw)
 ## Map of trends in wet-day frequency:
 plot(eof.fw)
 ```
 
-![](eu-circle_torbay-precip_files/figure-markdown_github/EOFs-in-precip-1.png)<!-- -->
+![](eu-circle_torbay-precip_files/figure-markdown_github/EOFs-in-precip-fw-1.png)<!-- -->
 
 The diagnostics of the EOFs suggest that the leading mode explains a high proportion of the variability on an annual time scale.
 
