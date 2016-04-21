@@ -155,7 +155,7 @@ if (!exists("es.c")) {
   es.c <- mask(es.w,land=TRUE)
 }
 ## Represent the predictors in terms of EOFs
-eof.t2m.w <- EOF(t2m.w)
+eof.t2m.w <- EOF(t2m.w)d
 eof.t2m.c <- EOF(t2m.c)
 eof.slp.w <- EOF(slp.w)
 eof.slp.c <- EOF(slp.c)

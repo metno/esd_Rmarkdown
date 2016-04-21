@@ -1,0 +1,333 @@
+**EU-Circle case study 3
+-----------------------------------
+title: Coastal Flooding (surface water, highway, sewer and watercourse flooding) across Torbay, UK
+author: "Rasmus Benestad"
+date: "April 6, 2016"
+output: pdf_document
+    fig_width:  8
+    fig_height: 8
+---
+
+Torbay is located in South Devon (UK) and covers an area of approximately 62 km2 . The area has suffered from flooding over many years from a number of different sources, including surface water run-off, highway flooding, sewer flooding, main river and ordinary watercourse flooding during intense rainfall events. In addition the coastal areas of Torbay  suffer coastal flooding due to overtopping of the sea defences during high tides that coincide with easterly winds. It should be noted that the surface water, highway, sewer, main river and watercourse flooding is exacerbated in the low lying areas around the coast of Torquay, Paignton and Brixham during high tidal cycles when the capacity of the surface water outfalls discharging to coastal waters is impeded. In addition to the property flooding, during all of these flood events numerous roads have flooded to some extent, with some of the roads having to be closed to traffic until the flood water has subsided.
+
+The main coast road linking Torquay to Paignton and Brixham has to be closed on a regular basis due to overtopping of the sea wall during high tides that coincide with easterly wind conditions. These closures result in long traffic diversions and delays. In addition, as a result of surface water flooding from watercourses and main rivers during intense rainfall events the main inland route linking Torquay, Paignton and Brixham has also been closed for periods resulting in no major roads being available between the towns until flooding has subsided. During the last major flooding event, which occurred on 24 th October 1999, over 200 properties across all three towns were affected by flooding. Approximately 50% of these properties were commercial properties including shops, restaurants, hotels, bars and a cinema. In addition to the property flooding both the major roads linking Torquay to Paignton and Brixham were closed for a significant period making travel within the Bay extremely difficult and affecting emergency response.
+
+Obviously climate change can affect local flood risk in several ways. Impacts will depend on local conditions and vulnerability. Wetter winters and more of this rain falling in wet spells will increase river and watercourse flooding. More intense rainfall causes more surface run-off, increasing localised flooding and erosion. In turn this will increase pressure on drains, sewers and water quality. Rising sea levels, as a result of climate change, will increase local flood risk both in coastal regions from increased risk of overtopping of the sea wall and inland from main rivers and watercourses due to the interaction with drains, sewers and smaller watercourses. As sea level is predicted to rise by over 1m in Torbay over the next 100 years the frequency and impact of overtopping of the sea defences will increase resulting in more infrastructure and properties being affected by flooding.
+
+**Analysis** 
+The downscaling of the wet-day mean precipitation used the surface temperature as predictor.
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. To execute this type: 
+
+```{r,eval=FALSE}
+library(rmarkdown); render('eu-circle_case-study-3.Rmd',pdf_document())
+```
+
+Load the esd and ncdf packages.
+
+```{r,echo=TRUE}  
+## Load the necessary R-package
+library(esd)
+## Information about the system and session
+sessionInfo()
+```
+
+---------------------------------
+```{r,eval=FALSE}
+## Get MIDAS preciptation data that has laready been retrieved 
+## from the MIDAS data base (UK Met Office)
+
+```
+
+Function to estimate probabilty for daily amount of exceeding a threshold x0 given that the distribution follows an exponential distribution and the records of the wet-day mean precipitation and frequency.
+
+```{r}
+PrexpPr <- function(mu,fw,x0=10) {
+  Pr <- zoo(coredata(fw)*exp(-x0/coredata(mu)),order.by=year(fw))
+
+  Pr.mu <- zoo(mean(coredata(fw))*exp(-x0/coredata(mu)),order.by=year(fw))
+  Pr.fw <- zoo(coredata(fw)*exp(-x0/mean(coredata(mu))),order.by=year(fw))
+  attr(Pr,'prob.f(mu)') <- Pr.mu
+  attr(Pr,'prob.f(fw)') <- Pr.fw
+  Pr <- attrcp(mu,Pr)
+  attr(Pr,'variable') <- 'Pr'
+  attr(Pr,'unit') <- 'probability'
+  attr(Pr,'longname') <- paste('Probability of exceeding',x0)
+  class(Pr) <- class(mu)
+  invisible(Pr)
+}
+```
+
+Load the data and weed out stations with lots of missing values
+
+```{r}
+load('pr.eu-circle-torbay.rda') 
+pr <- subset(pr,it=c(1960,2013))
+
+## First weeding of stations with many missing values
+nok <- apply(coredata(pr),2,'nv')
+x <- subset(pr,is=(nok> 15000))
+
+## Estimate the annual wet-day mean precipitaiton
+mu <- subset(annual(x,'wetmean',nmin=100),it=c(1961,2011))
+## Estimate the annual wet-day mean frequency
+fw <- subset(annual(x,'wetfreq',nmin=100),it=c(1961,2011))
+
+## Second weeding of stations with many missing values in annual 
+## aggregate
+nok <- apply(coredata(mu),2,'nv')
+mu <- subset(mu,is=(nok>= 44))
+fw<- subset(fw,is=(nok>= 44))
+
+## Check the records
+diagnose(mu)
+
+##Fill in the remaining gaps using a PCA-based interpolation scheme 
+pcafill(mu) -> mu
+pcafill(fw) -> fw
+```
+
+Examine the long-term trends in the wet-day mean precipitation
+
+```{r}
+plot(mu,new=FALSE); grid()
+for (i in 1:dim(mu)[2]) lines(trend(mu[,i]))
+```
+
+```{r}
+plot(fw); grid()
+for (i in 1:dim(mu)[2]) lines(trend(mu[,i]))
+```
+
+```{r}
+Pr.gt.10 <- PrexpPr(mu,fw,x0=10)
+plot(Pr.gt.10); grid()
+for (i in 1:dim(mu)[2]) lines(trend(Pr.gt.10[,i]))
+```
+
+## Useful information in the mean seasonal cycle?
+
+another attempt to search for systematic influences on the precipitation statistics ($\mu$) is to examine the mean seasonal cycle. This type of approach may 
+
+```{r}
+## Estimate the mean seasonal cycle in the wet-day mean precipitaiton
+MU <- aggregate(x,month,FUN='wetmean')
+## Estimate the mean seasonal cycle in wet-day mean frequency
+FW <- aggregate(x,month,FUN='wetfreq')
+## Estimate the mean seasonal cycle in wet-day mean frequency
+MP <- aggregate(x,month,FUN='mean')
+```
+
+```{r}
+## Show the mean seasonal cycle in the wet-day mean precipitation
+plot(MU)
+```
+
+There is some indication of a mean seasonal cycle in $\mu$, with minimum values in late winter spring and higher values in late summer and autumn.
+
+```{r}
+## Show the mean seasonal cycle in the wet-day frequency
+plot(FW)
+```
+
+There is a clear seasonal cycle in the wet-day occurrence - more rainy days in the uatumn.
+
+```{r}
+## Show the mean seasonal cycle in the total precipitation
+MP <- 30*MP
+attr(MP,'unit') <- 'mm/month'
+plot(MP)
+```
+
+Most of the rain falls during winter.
+
+```{r}
+## Estimate the PCA for the annual cycle to identify the general features:
+pca.MU <- PCA(MU,n=10)
+plot(pca.MU)
+```
+
+Most stations have the same features when it comes to a mean seasonal cycle in $\mu$, with the leading PCA accounting for 80\% of the variance.
+
+## Downscaling based on mean seasonal variations
+
+```{r}
+if (!file.exists('dse.mu.eu-circle-worstcase.rda')) {
+  dse.mu <- DSensemble.mu.worstcase(x,biascorrect=TRUE,mask=TRUE,
+                                    lon=c(-80,20),lat=c(10,60),rel.cord=FALSE)
+  save(file='dse.mu.eu-circle-worstcase.rda',dse.mu)
+} else load('dse.mu.eu-circle-worstcase.rda')
+plot(dse.mu[[1]])
+```
+
+## Sea-level
+
+Analyse the sea-level trends and connection to global temperatures to assess future outcome. First the stations from the GLOSS dataset (global monthly data):
+
+```{r}
+gloss <- aggregate(station.gloss(),year,FUN='max',na.rm=TRUE)
+gloss <- subset(gloss,is=list(lon=c(-20,20),lat=c(45,55)))
+plot(gloss)
+```
+
+Single station with hourly data from Newlyn:
+
+```{r}
+newlyn <- station.newlyn()
+newlyn <- aggregate(newlyn,year,FUN='max',na.rm=TRUE)
+plot(newlyn)
+```
+
+French tidal stations along the northern/eastern coast (SONEL):
+
+```{r}
+sonel <- aggregate(station.sonel(),year,FUN='max',na.rm=TRUE)
+plot(sonel)
+```
+
+Combine the records from different sources
+
+```{r}
+index(newlyn) <- year(newlyn)
+index(sonel) <- year(sonal)
+index(gloss) <- year(gloss)
+Z <- combine.stations(newlyn,sonel,gloss)
+nv <- apply(coredata(Z),2,FUN='nv')
+Z <- subset(Z,is=(nv > 50))
+Z <- subset(Z,it=c(1950,2015))
+plot(Z); grid()
+```
+
+Check for data availability
+
+```{r}
+diagnose(Z)
+```
+
+Make a map of the trend in the local sea-level - mm/decade
+
+```{r trend-map}
+zc <- coredata(Z)
+zc[is.infinite(zc)] <- NA
+zc -> coredata(Z)
+map(Z,FUN='trend',cex=-2)
+```
+
+## Wind
+
+Estimate wind windspeed from SLP measurements. Make use of the gridded EOBS data as the documentation for MIDAS data is poor and it's difficult to read the data and organise it, due to very large ASCII files and the way the data is stored. 
+
+```{r trend-map}
+slp.eobs <- retrieve('data.ECAD/pp_0.25deg_reg_v12.0.nc',lon=c(-6,0),lat=c(48,52))
+slp.eobs <- 10000*slp.eobs ## The data have some funny scaling factor
+attr(slp.eobs,'unit') <- 'Pa'
+map(slp.eobs,FUN='trend')
+```
+
+Pick three grid points from which we can estiamte the geostropic wind 
+
+```{r trend-map}
+triangle <- subset(Z,is=c(2,3,7))
+## The stations are not situated quite where there is valid slp data in the EOBS dataset
+## It's only their coordinates that is used for interpolating SLP for three stations
+## Using station objects as is-object makes the results a station object
+attr(triangle,'longitude') <- c(-4,-2,-1.25)
+attr(triangle,'latitude') <- c(50.50,51,49)
+pp.eobs <- regrid(slp.eobs,is=triangle)
+## Use triagulation for stations to estimate the wind
+uv <- geostrophicwind(pp.eobs)
+plot(annual(uv,nmin=300),main='zonal and meridional wind components',
+     sub='Estimated from triangulation of mean sea-level pressure from EOBS')
+```
+
+The estimated annual mean geostrophic wind reveals that something changed between 2006 and 2010. The change seems to have taken place over 4 years.
+
+```{r trend-event-2006}
+plot(annual(uv,nmin=300),main='zonal and meridional wind components',
+     xlim=c(2000,2010))
+```
+
+This event also is seen in the upper tail of the wind speed distribution. There are four features concerning these wind speed estimates: a downward trend from moderate high wind speeds in the 1950s, two years with a large drop in values in the 1970s, a number of years with high values around year 2010, and a slight increasing trend in the upper wind speeds over the record.  
+
+```{r wind-speed-trend}
+## Trend in upper wind speed
+ff <- sqrt(uv[,1]^2 + uv[,2]^2)
+plot(annual(ff,"quantile",probs=0.98),lwd=2,
+     main='Wind speed: annual 98-percentile (m/s)')
+lines(trend(annual(ff,"quantile",probs=0.98)),lty=2)
+grid()
+trend.coef(annual(ff,"quantile",probs=0.98))
+trend.err(annual(ff,"quantile",probs=0.98))
+```
+
+
+The trend is not siginificant at the 5-percentage level.
+
+```{r wind-direction-trend}
+## Trend in upper wind direction
+dd <- zoo(180/pi*atan2(coredata(uv)[,1],coredata(uv)[,2]),order.by=index(uv))
+plot(annual(dd,FUN='mean'),lwd=2,ylim=c(-180,180),
+     main='Annual mean wind direction (degrees)')
+axis(4,at=c(-180,-90,0,90,180),labels=c('S','E','N','W','S'))
+for (j in c(-180,-90,0,90,180)) lines(range(index(dd)),rep(j,2),lty=3)
+```
+
+The change in 2006-2010 is also visible in the wind direction. This could be an event caused by a change in circulation, but it cluld also be due to changes in instrumentation, data used in the gridding or observational practices. It is possible to examine whether there were changes in the criculation by using ESD to compare the windspeeds with SLP from reanalyses.
+
+```{r zonal-wind-check-get-slp}
+## Trend in upper wind direction
+SLP <- retrieve('slp.mon.mean.nc',lon=c(-50,30),lat=c(40,60))
+eof.slp<- EOF(annual(SLP))
+```
+
+Apply the downscaling to the meridional wind component:
+
+```{r zonal-wind-check1}
+## Trend in upper wind direction
+uam <- annual(subset(uv,is=2),nmin=300)
+ds.u1 <- DS(uam,eof.slp,eofs=1:20)
+plot(ds.u1)
+```
+
+The results suggest a mismatch between the reanalysis and the EOBS data, and the change after 2005 is not corroberated by other sources. We can therefore say that this feature is suspect.
+
+```{r zonal-wind-check2}
+## Trend in upper wind direction
+ds.u2 <- DS(subset(uam,it=c(1950,2005)),eof.slp,eofs=1:20)
+plot(ds.u2)
+```
+
+When the test is repeated for the shorter period excluding data after 2005, there is a reasonably good match between the EOBS data and the reanalysis. The trend analysis can be repeated with this event excluded
+
+```{r wind-speed-trend-2}
+## Trend in upper wind speed
+plot(subset(annual(ff,"quantile",probs=0.98),it=c(1950,2005)),lwd=2,
+     main='Wind speed: annual 98-percentile (m/s)')
+lines(trend(subset(annual(ff,"quantile",probs=0.98),it=c(1950,2005))),lty=2)
+grid()
+```
+
+The exclusion of the suspicious event also affects the long-term trend estiamte - now it's zero with a slight reduction.
+
+```{r wind-speed-distribution}
+## 
+require(MASS)
+hist(coredata(subset(ff,it=c(1950,2005))),lwd=2,breaks=seq(0,70,by=1),
+     main='Wind speed  (m/s)',freq=FALSE,col=colscal(71))
+grid()
+## Maximum-likelihood fitting of the Weibull distribution - two parameters: shape and scale
+f<-fitdistr(ff[is.finite(ff)], 'weibull')
+lines(dweibull(seq(0,70,by=1),shape=f$estimate[1],scale=f$estimate[2]),lwd=3,col=rgb(1,0,0,0.3))
+```
+
+```{r reanalysis-wind-speed}
+## 
+UV <- geostrophicwind(SLP)
+```
+
+
+```{r wind-rose}
+## wind rose
+windrose(uv)
+```
+
