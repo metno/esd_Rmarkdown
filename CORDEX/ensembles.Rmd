@@ -125,7 +125,7 @@ for (i in 1:n) {
                as.character(IPCC.AR5.Table.9.A.1$z.Co.ord)[ii][1],
                as.character(IPCC.AR5.Table.9.A.1$Ocean.Biogeochemistry.Component.Name)[ii][1],
                as.character(IPCC.AR5.Table.9.A.1$Sea.Ice.Component.Name)[ii][1])
-    print(x)
+    #print(x)
     X[i,] <- x
   }  else print(paste('no match for ',gcmnm[i]))
 }
