@@ -21,7 +21,7 @@ This is what we expect to see with good correspondence between predictand and pr
 
 ``` r
 djf.e <- subset(as.4seasons(ferder),it='Jan')
-corfield(djf.e,DJF.E,colbar=list(rev=FALSE),new=FALSE)
+corfield(djf.e,DJF.E,colbar=list(breaks=seq(-1,1,by=0.1),rev=FALSE),new=FALSE)
 ```
 
 ![](tmintest_files/figure-markdown_github/unnamed-chunk-2-1.png)<!-- -->
@@ -46,7 +46,7 @@ y <- subset(Y,is='Mwanza')
 djf <- subset(as.4seasons(y),it='Jan')
 ## fix a little bug
 attr(djf,'unit') <- 'degC'
-corfield(djf,DJF,colbar=list(rev=FALSE),new=FALSE)
+corfield(djf,DJF,colbar=list(breaks=seq(-1,1,by=0.1),rev=FALSE),new=FALSE)
 ```
 
 ![](tmintest_files/figure-markdown_github/unnamed-chunk-4-1.png)<!-- -->
@@ -70,10 +70,8 @@ y2 <- subset(y2,is=1)
 djf2 <- subset(as.4seasons(y2),it='Jan')
 ## fix a little bug
 attr(djf2,'unit') <- 'degC'
-corfield(djf2,DJF,colbar=list(rev=FALSE),new=FALSE)
+corfield(djf2,DJF,colbar=list(breaks=seq(-1,1,by=0.1),rev=FALSE),new=FALSE)
 ```
-
-![](tmintest_files/figure-markdown_github/unnamed-chunk-6-1.png)<!-- -->
 
 ``` r
 djf.i2 <- regrid(DJF,is=y2)
@@ -82,3 +80,60 @@ lines(stand(djf.i2),lwd=3)
 ```
 
 ![](tmintest_files/figure-markdown_github/unnamed-chunk-7-1.png)<!-- -->
+
+Songea was the station with the best scores in the March-May season
+
+``` r
+y3 <- subset(Y,is='Songea')
+y3 <- subset(y3,is=1)
+mam <- subset(as.4seasons(y3),it='Apr')
+## fix a little bug
+attr(mam,'unit') <- 'degC'
+corfield(mam,MAM,colbar=list(breaks=seq(-1,1,by=0.1),rev=FALSE),new=FALSE)
+```
+
+![](tmintest_files/figure-markdown_github/unnamed-chunk-8-1.png)<!-- -->
+
+``` r
+mam.i <- regrid(MAM,is=y3)
+plot(stand(mam),new=FALSE)
+lines(stand(mam.i),lwd=3)     
+```
+
+![](tmintest_files/figure-markdown_github/unnamed-chunk-9-1.png)<!-- -->
+
+Have a look at the group of stations
+------------------------------------
+
+The use of principal component analysis (PCA) can reveal problems with some stations, since it will estimate patterns of covariance. We can apply PCA to the MAM season aggregated minimum temperature:
+
+``` r
+tmin <- subset(Y,is=1:13)
+tmin <- subset(as.4seasons(tmin,nmin=60),it='Jan')
+diagnose(tmin)
+```
+
+![](tmintest_files/figure-markdown_github/unnamed-chunk-10-1.png)<!-- -->
+
+``` r
+tmin <- pcafill(tmin)
+```
+
+Here is a plot of the evolution of the MAM mean minimum temperature:
+
+``` r
+plot(tmin,new=FALSE)
+```
+
+![](tmintest_files/figure-markdown_github/unnamed-chunk-11-1.png)<!-- -->
+
+The PCA suggests that there is one main pattern of variability, explaining 76% of the variance. The temperatures tend to increase over time, except for Mwanza (represented with the dark blue symbols which indicates negative weights). The other stations have similar weights, with most pronounced variability/trend near the coast.
+
+``` r
+plot(PCA(tmin),new=FALSE)
+```
+
+    ## Warning in plot.xy(xy.coords(x, y), type = type, ...): "plot" is not a
+    ## graphical parameter
+
+![](tmintest_files/figure-markdown_github/unnamed-chunk-12-1.png)<!-- -->
