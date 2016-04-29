@@ -72,7 +72,7 @@ Take a copy of the original data and mess it up by introducing deliberate errors
 ## number of bad data point in time
 n.t <- 4000
 #3 Number of bad data points in space
-n.s <- 50
+n.s <- 25
 ```
 
 
