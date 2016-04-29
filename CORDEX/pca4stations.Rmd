@@ -36,25 +36,36 @@ Estimate annual aggregates:
 ```{r}
 mu <- annual(Pr,'wetmean')
 fw <- annual(Pr,'wetfreq')
-map(mu,FUN='trend',new=FALSE)
+map(mu,FUN='trend',new=FALSE,colbar=list(breaks=seq(-0.5,0.5,by=0.05),pal='t2m',rev=TRUE))
 ```
 
-Plot the original daily data
+The map suggests that the original data contains some randomness, as the trend in the wet-day mean precipitation $\mu$ does not indicate clear large-scale features, but contains siginicant random small-scale variations. This is not surprising, as $\mu$ seems to be more strongly influenced by local factors (e.g. convective rain) than e.g. the wet-day frequency $f_w$.
+
+```{r}
+map(mu,FUN='trend',new=FALSE,colbar=list(breaks=seq(-0.35,0.35,by=0.01),pal='t2m',rev=TRUE))
+```
+
+There are some trend outliers even for $f_w$, which look questionable. Due to capture/sampling limitations? Rain gauges only have diameters of the order of cm whereas the phenomenon they sample has scales of the order of km.
+
+We can plot the original daily data to get some idea of what it looks like
 
 ```{r}
 plot(Pr,new=FALSE)
+grid()
 ```
 
-The wet-day mean precipitation $\mu$
+The daily data contains a lot of information and it's hard to see relevant information. We can see large diffrences between the different stations and that there are some events with much higher amounts than others. similar plot of the annual wet-day mean precipitation $\mu$ can give a clearer picture of the long-term changes
 
 ```{r}
-plot(mu,new=FALSE)
+plot(mu,errorbar=FALSE,new=FALSE)
+grid()
 ```
 
-The wet-day frequency $f_w$
+The annual wet-day frequency $f_w$
 
 ```{r}
 plot(fw,new=FALSE)
+grid()
 ```
 
 Apply a principal component analysis (PCA) to the annual aggregates: 
@@ -75,6 +86,7 @@ n.t <- 4000
 n.s <- 25
 ```
 
+Apply the degrading:
 
 ```{r}
 X <- Pr
@@ -92,12 +104,12 @@ S2R <- sample(1:d[2],3)
 X[,S2R] <- rexp(d[1],rate=c(1,0.1,0.5))
 ```
 
-Estimate synthetic annual aggregates for $\mu$ and $f_w$.
+Now, estimate synthetic annual aggregates for $\mu$ and $f_w$. Also make a new map of the trends in $\mu$ where the data has been degraded. The results from the trend analysis may not be so sensitive to the degraded data when only a selection of random numbers have been altered. 
 
 ```{r}
 mu.s <- annual(X,'wetmean')
 fw.s <- annual(X,'wetfreq')
-map(mu,FUN='trend',new=FALSE)
+map(mu.s,FUN='trend',new=FALSE,colbar=list(breaks=seq(-0.5,0.5,by=0.05),pal='t2m',rev=TRUE))
 ```
 
 Plot the degraded data:
@@ -120,33 +132,33 @@ plot(fw.s,new=FALSE)
 
 ##**analysis of the original and degraded data**
 
-Apply PCA to the degraded data:
+We apply PCA to the degraded data to get a better picture of the spatial and temporal structures - we expect the covariance to be reduced and there should be less coherence between the different stations.
 
 ```{r}
 pca.smu <- PCA(mu.s)
 pca.sfw <- PCA(fw.s)
 ```
 
-Plot the leading PCA mode of the original $\mu$
+Plot the leading PCA mode of the original $\mu$. The eigen-value spectrum (upper right panel) can provide an indication about the data quality. There are some coherent and pronounced variations when the leading modes are associated with a high proportion of the variance, and this is what we expect from parameters aggregated over reasonably long time scales. Hence, high variance associated with the leading mode suggests that there is some real information embedded in the data.
 
 ```{r}
 plot(pca.mu,new=FALSE)
 ```
 
-Plot the leading PCA mode of the degraded $\mu$
+We can compare the original results with leading PCA mode of the degraded $\mu$. Now the eigen-value spectrum is flatter, and the leading mode accounts for less of the variance. The spatial pattern is also more complex, without features that are associated with known geography. Also the time series contains less autocorrelation.  
 
 ```{r}
 
 plot(pca.smu,new=FALSE)
 ```
 
-Plot the leading PCA mode of the original $\mu$
+Plot the leading PCA mode of the original $f_w$
 
 ```{r}
 plot(pca.fw,new=FALSE)
 ```
 
-Plot the leading PCA mode of the degraded $\mu$
+Plot the leading PCA mode of the degraded $f_w$
 
 ```{r}
 
