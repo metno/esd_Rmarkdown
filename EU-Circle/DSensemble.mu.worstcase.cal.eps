@@ -1,0 +1,801 @@
+%!PS-Adobe-3.0 EPSF-3.0
+%%DocumentNeededResources: font Helvetica
+%%+ font Helvetica-Bold
+%%+ font Helvetica-Oblique
+%%+ font Helvetica-BoldOblique
+%%+ font Symbol
+%%Title: R Graphics Output
+%%Creator: R Software
+%%Pages: (atend)
+%%BoundingBox: 0 0 504 360
+%%EndComments
+%%BeginProlog
+/bp  { gs sRGB gs } def
+% begin .ps.prolog
+/gs  { gsave } bind def
+/gr  { grestore } bind def
+/ep  { showpage gr gr } bind def
+/m   { moveto } bind def
+/l  { rlineto } bind def
+/np  { newpath } bind def
+/cp  { closepath } bind def
+/f   { fill } bind def
+/o   { stroke } bind def
+/c   { newpath 0 360 arc } bind def
+/r   { 4 2 roll moveto 1 copy 3 -1 roll exch 0 exch rlineto 0 rlineto -1 mul 0 exch rlineto closepath } bind def
+/p1  { stroke } bind def
+/p2  { gsave bg fill grestore newpath } bind def
+/p3  { gsave bg fill grestore stroke } bind def
+/p6  { gsave bg eofill grestore newpath } bind def
+/p7  { gsave bg eofill grestore stroke } bind def
+/t   { 5 -2 roll moveto gsave rotate
+       1 index stringwidth pop
+       mul neg 0 rmoveto show grestore } bind def
+/ta  { 4 -2 roll moveto gsave rotate show } bind def
+/tb  { 2 -1 roll 0 rmoveto show } bind def
+/cl  { grestore gsave newpath 3 index 3 index moveto 1 index
+       4 -1 roll lineto  exch 1 index lineto lineto
+       closepath clip newpath } bind def
+/rgb { setrgbcolor } bind def
+/s   { scalefont setfont } bind def
+% end   .ps.prolog
+/sRGB { [ /CIEBasedABC
+          << /DecodeLMN
+               [ { dup 0.03928 le
+                        {12.92321 div}
+                        {0.055 add 1.055 div 2.4 exp }
+                     ifelse
+                 } bind dup dup
+               ]
+             /MatrixLMN [0.412457 0.212673 0.019334
+                         0.357576 0.715152 0.119192
+                         0.180437 0.072175 0.950301]
+             /WhitePoint [0.9505 1.0 1.0890]
+           >>
+         ] setcolorspace } bind def
+/srgb { setcolor } bind def
+%%IncludeResource: font Helvetica
+/Helvetica findfont
+dup length dict begin
+  {1 index /FID ne {def} {pop pop} ifelse} forall
+  /Encoding ISOLatin1Encoding def
+  currentdict
+  end
+/Font1 exch definefont pop
+%%IncludeResource: font Helvetica-Bold
+/Helvetica-Bold findfont
+dup length dict begin
+  {1 index /FID ne {def} {pop pop} ifelse} forall
+  /Encoding ISOLatin1Encoding def
+  currentdict
+  end
+/Font2 exch definefont pop
+%%IncludeResource: font Helvetica-Oblique
+/Helvetica-Oblique findfont
+dup length dict begin
+  {1 index /FID ne {def} {pop pop} ifelse} forall
+  /Encoding ISOLatin1Encoding def
+  currentdict
+  end
+/Font3 exch definefont pop
+%%IncludeResource: font Helvetica-BoldOblique
+/Helvetica-BoldOblique findfont
+dup length dict begin
+  {1 index /FID ne {def} {pop pop} ifelse} forall
+  /Encoding ISOLatin1Encoding def
+  currentdict
+  end
+/Font4 exch definefont pop
+%%IncludeResource: font Symbol
+/Symbol findfont
+dup length dict begin
+  {1 index /FID ne {def} {pop pop} ifelse} forall
+  currentdict
+  end
+/Font5 exch definefont pop
+%%EndProlog
+%%Page: 1 1
+bp
+/bg { 1 1 1 srgb } def
+0.00 0.00 504.00 360.00 r p2
+59.04 73.44 473.76 300.96 cl
+/bg { 0.7451 0.7451 0.7451 srgb } def
+0.7451 0.7451 0.7451 srgb
+0.75 setlinewidth
+[] 0 setdash
+1 setlinecap
+1 setlinejoin
+10.00 setmiterlimit
+89.89 204.87 4.05 c p3
+74.40 88.51 4.05 c p3
+90.27 115.33 4.05 c p3
+131.82 96.67 4.05 c p3
+207.18 81.87 4.05 c p3
+311.73 210.61 4.05 c p3
+411.51 146.43 4.05 c p3
+458.40 137.00 4.05 c p3
+417.52 212.65 4.05 c p3
+325.61 258.15 4.05 c p3
+225.75 292.53 4.05 c p3
+141.27 247.82 4.05 c p3
+0.00 0.00 504.00 360.00 cl
+0 0 0 srgb
+0.75 setlinewidth
+[] 0 setdash
+1 setlinecap
+1 setlinejoin
+10.00 setmiterlimit
+np
+95.23 73.44 m
+348.36 0 l
+o
+np
+95.23 73.44 m
+0 -7.20 l
+o
+np
+153.29 73.44 m
+0 -7.20 l
+o
+np
+211.35 73.44 m
+0 -7.20 l
+o
+np
+269.41 73.44 m
+0 -7.20 l
+o
+np
+327.47 73.44 m
+0 -7.20 l
+o
+np
+385.53 73.44 m
+0 -7.20 l
+o
+np
+443.59 73.44 m
+0 -7.20 l
+o
+/Font1 findfont 12 s
+95.23 47.52 (1300) .5 0 t
+153.29 47.52 (1400) .5 0 t
+211.35 47.52 (1500) .5 0 t
+269.41 47.52 (1600) .5 0 t
+327.47 47.52 (1700) .5 0 t
+385.53 47.52 (1800) .5 0 t
+443.59 47.52 (1900) .5 0 t
+np
+59.04 108.71 m
+0 148.79 l
+o
+np
+59.04 108.71 m
+-7.20 0 l
+o
+np
+59.04 158.31 m
+-7.20 0 l
+o
+np
+59.04 207.91 m
+-7.20 0 l
+o
+np
+59.04 257.50 m
+-7.20 0 l
+o
+41.76 108.71 (6.0) .5 90 t
+41.76 158.31 (6.5) .5 90 t
+41.76 207.91 (7.0) .5 90 t
+41.76 257.50 (7.5) .5 90 t
+0.00 0.00 504.00 360.00 cl
+/Font2 findfont 14 s
+0 0 0 srgb
+127.32 325.45 (W) 0 ta
+-0.840 (or) tb
+-0.210 (st-case based on seasonal v) tb
+-0.280 (ariations) tb gr
+/Font1 findfont 8 s
+0.4000 0.4000 0.4000 srgb
+159.36 4.32 (JERSEY) 0 ta
+-0.480 (: GRANDS V) tb
+-0.640 (A) tb
+-0.400 (UX RESR \(-2.09E/49.2N; 18m.a.s) tb
+-0.120 (.l.\)) tb gr
+181.14 4.32 (JERSEY) 0 ta
+-0.480 (: ST HELIER  \(-2.1E/49.2N; 54m.a.s) tb
+-0.120 (.l.\)) tb gr
+150.47 4.32 (JERSEY) 0 ta
+-0.480 (: TRINITY) tb
+-1.120 (, ST) tb
+-0.960 (A) tb
+-0.960 (TES F) tb
+-0.640 (ARM \(-2.09E/49.24N; 104m.a.s) tb
+-0.120 (.l.\)) tb gr
+165.14 4.32 (JERSEY) 0 ta
+-0.480 (: MILLBR) tb
+-0.160 (OOK RESR \(-2.13E/49.2N; 16m.a.s) tb
+-0.120 (.l.\)) tb gr
+168.03 4.32 (JERSEY) 0 ta
+-0.480 (: HANDOIS RESR \(-2.13E/49.23N; 76m.a.s) tb
+-0.120 (.l.\)) tb gr
+142.24 4.32 (JERSEY) 0 ta
+-0.480 (: ST BRELADE, LA SERGENTE  \(-2.22E/49.19N; 58m.a.s) tb
+-0.120 (.l.\)) tb gr
+194.93 4.32 (D) 0 ta
+-0.320 (ALE FOR) tb
+-0.240 (T  \(-5.15E/51.7N; 33m.a.s) tb
+-0.120 (.l.\)) tb gr
+195.82 4.32 (ORIEL) 0 ta
+-0.880 (T) tb
+-0.320 (ON \(-4.96E/51.65N; 60m.a.s) tb
+-0.120 (.l.\)) tb gr
+165.36 4.32 (SW) 0 ta
+-0.400 (ANSEA, VICT) tb
+-0.320 (ORIA P) tb
+-0.960 (ARK \(-3.96E/51.61N; 8m.a.s) tb
+-0.120 (.l.\)) tb gr
+162.48 4.32 (CR) 0 ta
+-0.320 (UMBLAND PLANT) tb
+-0.960 (A) tb
+-0.960 (TION \(-2.76E/51.72N; 162m.a.s) tb
+-0.120 (.l.\)) tb gr
+164.48 4.32 (CLIFT) 0 ta
+-0.320 (ON, O) tb
+-0.160 (AKFIELD R) tb
+-0.160 (O) tb
+-0.160 (AD \(-2.61E/51.46N; 61m.a.s) tb
+-0.120 (.l.\)) tb gr
+165.59 4.32 (BARR) 0 ta
+-0.160 (O) tb
+-0.240 (W GURNEY RESR \(-2.66E/51.41N; 103m.a.s) tb
+-0.120 (.l.\)) tb gr
+183.60 4.32 (TYTHERINGT) 0 ta
+-0.320 (ON \(-2.51E/51.47N; NAm.a.s) tb
+-0.120 (.l.\)) tb gr
+178.70 4.32 (SHERBORNE RESR \(-2.59E/51.3N; 111m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+179.81 4.32 (DO) 0 ta
+-0.240 (WNSIDE ABBEY \(-2.5E/51.25N; 183m.a.s) tb
+-0.120 (.l.\)) tb gr
+183.37 4.32 (CHILCOMPT) 0 ta
+-0.320 (ON  \(-2.51E/51.27N; 125m.a.s) tb
+-0.120 (.l.\)) tb gr
+199.82 4.32 (LA) 0 ta
+-0.240 (COCK \(-2.11E/51.43N; 49m.a.s) tb
+-0.120 (.l.\)) tb gr
+186.70 4.32 (PINKNEY P) 0 ta
+-0.960 (ARK \(-2.2E/51.58N; 101m.a.s) tb
+-0.120 (.l.\)) tb gr
+173.59 4.32 (BADMINT) 0 ta
+-0.320 (ON HOUSE  \(-2.28E/51.54N; 123m.a.s) tb
+-0.120 (.l.\)) tb gr
+181.82 4.32 (NOR) 0 ta
+-0.240 (T) tb
+-0.320 (ON MANOR \(-2.06E/51.52N; NAm.a.s) tb
+-0.120 (.l.\)) tb gr
+181.59 4.32 (CLEVEDON P ST) 0 ta
+-0.960 (A \(-2.82E/51.44N; 21m.a.s) tb
+-0.120 (.l.\)) tb gr
+184.26 4.32 (BARLEY W) 0 ta
+-0.160 (OOD  \(-2.76E/51.39N; NAm.a.s) tb
+-0.120 (.l.\)) tb gr
+173.81 4.32 (STREET) 0 ta
+-0.960 (, HINDHA) tb
+-0.800 (YES  \(-2.74E/51.12N; 24m.a.s) tb
+-0.120 (.l.\)) tb gr
+178.04 4.32 (EXETER SOUTHAM \(-2.09E/51.58N; NAm.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+205.15 4.32 (B) 0 ta
+-0.080 (UDE \(-4.54E/50.83N; 15m.a.s) tb
+-0.120 (.l.\)) tb gr
+196.04 4.32 (TREVINCE \(-5.17E/50.22N; 69m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+179.58 4.32 (PENTILLIE CASTLE \(-4.25E/50.46N; 46m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+180.48 4.32 (PREWLEY W WKS  \(-4.06E/50.7N; 322m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+183.60 4.32 (DEANCOMBE F) 0 ta
+-0.640 (ARM \(-4E/50.5N; 246m.a.s) tb
+-0.120 (.l.\)) tb gr
+178.92 4.32 (SIW) 0 ta
+-0.400 (ARDS CR) tb
+-0.160 (OSS  \(-3.98E/50.51N; 360m.a.s) tb
+-0.120 (.l.\)) tb gr
+178.92 4.32 (SIW) 0 ta
+-0.400 (ARDS CR) tb
+-0.160 (OSS  \(-4.04E/50.51N; 312m.a.s) tb
+-0.120 (.l.\)) tb gr
+179.15 4.32 (LEA) 0 ta
+-0.960 (THER T) tb
+-0.320 (OR F) tb
+-0.640 (ARM \(-4E/50.51N; 510m.a.s) tb
+-0.120 (.l.\)) tb gr
+170.25 4.32 (A) 0 ta
+-0.560 (V) tb
+-0.320 (ONWICK, BLA) tb
+-0.240 (CK HALL \(-3.81E/50.4N; 95m.a.s) tb
+-0.120 (.l.\)) tb gr
+192.70 4.32 (A) 0 ta
+-0.560 (V) tb
+-0.320 (ON D) tb
+-0.320 (AM \(-3.86E/50.47N; 312m.a.s) tb
+-0.120 (.l.\)) tb gr
+187.82 4.32 (SWINCOMBE  \(-3.93E/50.53N; 317m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+179.81 4.32 (BEARDO) 0 ta
+-0.240 (WN HILL  \(-3.97E/50.57N; 482m.a.s) tb
+-0.120 (.l.\)) tb gr
+199.37 4.32 (YELLAM \(-3.69E/50.63N; NAm.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+191.60 4.32 (TEIGNMOUTH \(-3.49E/50.54N; 3m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+176.03 4.32 (LUSCOMBE CASTLE  \(-3.49E/50.58N; 52m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+194.93 4.32 (SIDMOUTH \(-3.24E/50.68N; 10m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+186.70 4.32 (FORDE ABBEY  \(-2.91E/50.84N; 70m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+195.15 4.32 (CLA) 0 ta
+-0.400 (WT) tb
+-0.320 (ON  \(-4.34E/50.77N; 28m.a.s) tb
+-0.120 (.l.\)) tb gr
+189.59 4.32 (POOLE S WKS  \(-1.99E/50.74N; 5m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+199.59 4.32 (LARKHILL \(-1.8E/51.2N; 132m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+159.15 4.32 (PL) 0 ta
+-1.120 (YMOUTH, MOUNTBA) tb
+-0.960 (TTEN  \(-3.49E/51.26N; NAm.a.s) tb
+-0.120 (.l.\)) tb gr
+173.81 4.32 (R) 0 ta
+-0.160 (O) tb
+-0.320 (THERFIELD P) tb
+-0.960 (ARK \(-1.01E/51.09N; 232m.a.s) tb
+-0.120 (.l.\)) tb gr
+166.69 4.32 (KINGSCLERE, ISLE HILL  \(-3.67E/51.32N; 290m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+179.37 4.32 (EAST SHEFFORD  \(-1.45E/51.46N; 118m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+188.04 4.32 (ALDBOURNE  \(-1.62E/51.48N; 138m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+175.15 4.32 (Y) 0 ta
+-0.880 (A) tb
+-0.960 (TTENDON COUR) tb
+-0.240 (T  \(-1.2E/51.46N; 104m.a.s) tb
+-0.120 (.l.\)) tb gr
+188.04 4.32 (W) 0 ta
+-0.400 (ALLINGFORD  \(-1.11E/51.6N; 47m.a.s) tb
+-0.120 (.l.\)) tb gr
+153.14 4.32 (W) 0 ta
+-0.400 (ANT) tb
+-0.960 (A) tb
+-0.240 (GE, KITFORD GARDENS \(-1.39E/51.58N; 122m.a.s) tb
+-0.120 (.l.\)) tb gr
+190.26 4.32 (OSNEY LOCK \(-1.27E/51.75N; 57m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+160.03 4.32 (LECHLADE, ST JOHNS LOCK  \(-1.68E/51.69N; 72m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+158.26 4.32 (SWINDON, T) 0 ta
+-0.320 (O) tb
+-0.240 (WN GARDENS  \(-1.78E/51.55N; 146m.a.s) tb
+-0.120 (.l.\)) tb gr
+184.26 4.32 (CIRENCESTER  \(-1.99E/51.71N; 133m.a.s) 0 ta
+-0.120 (.l.\)) tb gr
+/Font1 findfont 12 s
+0 0 0 srgb
+248.30 21.20 (e) 0 0 t
+/Font1 findfont 8 s
+254.97 19.01 (s) 0 0 t
+/Font1 findfont 12 s
+258.97 21.20 ( \(P) 0 ta
+-0.480 (a\)) tb gr
+/Font5 findfont 12 s
+10.28 156.92 (m) 0 90 t
+/Font1 findfont 12 s
+10.28 163.84 ( \(mm/da) 90 ta
+-0.360 (y\)) tb gr
+59.04 73.44 473.76 300.96 cl
+0.7451 0.7451 0.7451 srgb
+0.75 setlinewidth
+[] 0 setdash
+1 setlinecap
+1 setlinejoin
+10.00 setmiterlimit
+np
+89.89 204.87 m
+0 71.90 l
+o
+np
+74.40 88.51 m
+0 62.36 l
+o
+np
+90.27 115.33 m
+0 61.78 l
+o
+np
+131.82 96.67 m
+0 60.84 l
+o
+np
+207.18 81.87 m
+0 59.03 l
+o
+np
+311.73 210.61 m
+0 72.97 l
+o
+np
+411.51 146.43 m
+0 65.60 l
+o
+np
+458.40 137.00 m
+0 64.18 l
+o
+np
+417.52 212.65 m
+0 72.93 l
+o
+np
+325.61 258.15 m
+0 76.15 l
+o
+np
+225.75 292.53 m
+0 67.47 l
+o
+np
+141.27 247.82 m
+0 76.19 l
+o
+np
+89.89 204.87 m
+0 -71.90 l
+o
+np
+74.40 88.51 m
+0 -62.36 l
+o
+np
+90.27 115.33 m
+0 -61.78 l
+o
+np
+131.82 96.67 m
+0 -60.83 l
+o
+np
+207.18 81.87 m
+0 -59.03 l
+o
+np
+311.73 210.61 m
+0 -72.97 l
+o
+np
+411.51 146.43 m
+0 -65.60 l
+o
+np
+458.40 137.00 m
+0 -64.17 l
+o
+np
+417.52 212.65 m
+0 -72.94 l
+o
+np
+325.61 258.15 m
+0 -76.14 l
+o
+np
+225.75 292.53 m
+0 -81.49 l
+o
+np
+141.27 247.82 m
+0 -76.19 l
+o
+np
+89.89 204.87 m
+5.98 0 l
+o
+np
+74.40 88.51 m
+6.63 0 l
+o
+np
+90.27 115.33 m
+6.80 0 l
+o
+np
+131.82 96.67 m
+6.87 0 l
+o
+np
+207.18 81.87 m
+7.60 0 l
+o
+np
+311.73 210.61 m
+8.94 0 l
+o
+np
+411.51 146.43 m
+9.71 0 l
+o
+np
+458.40 137.00 m
+10.56 0 l
+o
+np
+417.52 212.65 m
+9.03 0 l
+o
+np
+325.61 258.15 m
+8.33 0 l
+o
+np
+225.75 292.53 m
+7.00 0 l
+o
+np
+141.27 247.82 m
+7.20 0 l
+o
+np
+89.89 204.87 m
+-5.97 0 l
+o
+np
+74.40 88.51 m
+-6.63 0 l
+o
+np
+90.27 115.33 m
+-6.81 0 l
+o
+np
+131.82 96.67 m
+-6.86 0 l
+o
+np
+207.18 81.87 m
+-7.60 0 l
+o
+np
+311.73 210.61 m
+-8.95 0 l
+o
+np
+411.51 146.43 m
+-9.72 0 l
+o
+np
+458.40 137.00 m
+-10.56 0 l
+o
+np
+417.52 212.65 m
+-9.02 0 l
+o
+np
+325.61 258.15 m
+-8.33 0 l
+o
+np
+225.75 292.53 m
+-6.99 0 l
+o
+np
+141.27 247.82 m
+-7.19 0 l
+o
+/bg { 0.7451 0.7451 0.7451 srgb } def
+89.89 204.87 4.05 c p3
+74.40 88.51 4.05 c p3
+90.27 115.33 4.05 c p3
+131.82 96.67 4.05 c p3
+207.18 81.87 4.05 c p3
+311.73 210.61 4.05 c p3
+411.51 146.43 4.05 c p3
+458.40 137.00 4.05 c p3
+417.52 212.65 4.05 c p3
+325.61 258.15 4.05 c p3
+225.75 292.53 4.05 c p3
+141.27 247.82 4.05 c p3
+0.8275 0.8275 0.8275 srgb
+0.75 setlinewidth
+[ 0.00 3.00] 0 setdash
+np
+95.23 73.44 m
+0 227.52 l
+o
+np
+153.29 73.44 m
+0 227.52 l
+o
+np
+211.35 73.44 m
+0 227.52 l
+o
+np
+269.41 73.44 m
+0 227.52 l
+o
+np
+327.47 73.44 m
+0 227.52 l
+o
+np
+385.53 73.44 m
+0 227.52 l
+o
+np
+443.59 73.44 m
+0 227.52 l
+o
+np
+59.04 108.71 m
+414.72 0 l
+o
+np
+59.04 158.31 m
+414.72 0 l
+o
+np
+59.04 207.91 m
+414.72 0 l
+o
+np
+59.04 257.50 m
+414.72 0 l
+o
+0 0 0 srgb
+0.75 setlinewidth
+[] 0 setdash
+np
+59.04 153.73 m
+414.72 47.19 l
+o
+/Font1 findfont 8 s
+0.7451 0.7451 0.7451 srgb
+81.60 290.62 (Correlation= 0.22 \( p-v) 0 ta
+-0.200 (alue= 49.16 %\)) tb gr
+81.60 282.19 (Regression: y= 5.6295 + 7e-04 x \(R2= 0.05 \)) 0 0 t
+252.00 36.00 488.88 180.00 cl
+0.6000 0.3020 0 srgb
+1.50 setlinewidth
+[] 0 setdash
+1 setlinecap
+1 setlinejoin
+10.00 setmiterlimit
+np
+316.51 110.30 m
+12.42 -0.43 l
+12.43 0.44 l
+12.42 1.15 l
+12.42 2.10 l
+12.43 2.90 l
+12.42 2.77 l
+12.43 1.30 l
+12.42 -1.13 l
+12.42 -2.56 l
+12.43 -2.77 l
+12.42 -2.35 l
+o
+0.00 0.00 504.00 360.00 cl
+0 0 0 srgb
+0.75 setlinewidth
+[] 0 setdash
+1 setlinecap
+1 setlinejoin
+10.00 setmiterlimit
+np
+328.93 109.44 m
+124.24 0 l
+o
+np
+328.93 109.44 m
+0 -7.20 l
+o
+np
+353.78 109.44 m
+0 -7.20 l
+o
+np
+378.63 109.44 m
+0 -7.20 l
+o
+np
+403.48 109.44 m
+0 -7.20 l
+o
+np
+428.32 109.44 m
+0 -7.20 l
+o
+np
+453.17 109.44 m
+0 -7.20 l
+o
+/Font1 findfont 8 s
+0.7451 0.7451 0.7451 srgb
+328.93 83.52 (2) .5 0 t
+353.78 83.52 (4) .5 0 t
+378.63 83.52 (6) .5 0 t
+403.48 83.52 (8) .5 0 t
+428.32 83.52 (10) .5 0 t
+453.17 83.52 (12) .5 0 t
+252.00 36.00 488.88 180.00 cl
+0.00 0.00 504.00 360.00 cl
+0.7451 0.7451 0.7451 srgb
+0.75 setlinewidth
+[] 0 setdash
+1 setlinecap
+1 setlinejoin
+10.00 setmiterlimit
+np
+328.93 109.44 m
+124.24 0 l
+o
+np
+328.93 109.44 m
+0 -7.20 l
+o
+np
+353.78 109.44 m
+0 -7.20 l
+o
+np
+378.63 109.44 m
+0 -7.20 l
+o
+np
+403.48 109.44 m
+0 -7.20 l
+o
+np
+428.32 109.44 m
+0 -7.20 l
+o
+np
+453.17 109.44 m
+0 -7.20 l
+o
+/Font1 findfont 8 s
+328.93 83.52 (2) .5 0 t
+353.78 83.52 (4) .5 0 t
+378.63 83.52 (6) .5 0 t
+403.48 83.52 (8) .5 0 t
+428.32 83.52 (10) .5 0 t
+453.17 83.52 (12) .5 0 t
+252.00 36.00 488.88 180.00 cl
+0 0.3020 0.6000 srgb
+1.50 setlinewidth
+[] 0 setdash
+1 setlinecap
+1 setlinejoin
+10.00 setmiterlimit
+np
+316.51 116.12 m
+12.42 -6.26 l
+12.43 1.44 l
+12.42 -1.00 l
+12.42 -0.79 l
+12.43 6.92 l
+12.42 -3.45 l
+12.43 -0.51 l
+12.42 4.07 l
+12.42 2.44 l
+12.43 1.85 l
+12.42 -2.40 l
+o
+ep
+%%Trailer
+%%Pages: 1
+%%EOF

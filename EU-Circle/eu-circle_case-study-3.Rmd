@@ -36,7 +36,7 @@ sessionInfo()
 ```{r,eval=FALSE}
 ## Get MIDAS preciptation data that has laready been retrieved 
 ## from the MIDAS data base (UK Met Office)
-
+load('pr.eu-circle-torbay.rda')
 ```
 
 Function to estimate probabilty for daily amount of exceeding a threshold x0 given that the distribution follows an exponential distribution and the records of the wet-day mean precipitation and frequency.
@@ -78,11 +78,35 @@ fw <- subset(annual(x,'wetfreq',nmin=100),it=c(1961,2011))
 nok <- apply(coredata(mu),2,'nv')
 mu <- subset(mu,is=(nok>= 44))
 fw<- subset(fw,is=(nok>= 44))
+```
 
+Fill in missing values, but since there are too many missing values, we need to get some more data from the region. This is ok since we are working with annual aggregated values, which may imply larer spatial scales. In any case, these are used to assist the interpolation for the MIDAS sations.
+
+```{r}
+ ss <- select.station(param='precip',src='ecad',cntr=c('United Kingdom','France'),lat=c(45,55),lon=c(-10,0),nmin=50)
+pr.ecad <- station(ss)
+mu.ecad <- subset(annual(pr.ecad,'wetmean',nmin=100),it=c(1961,2011))
+fw.ecad <- subset(annual(pr.ecad,'wetfreq',nmin=100),it=c(1961,2011))
+## Second weeding of stations with many missing values in annual 
+## aggregate
+nok <- apply(coredata(mu.ecad),2,'nv')
+mu.ecad <- subset(mu.ecad,is=(nok>= 50))
+fw.ecad<- subset(fw.ecad,is=(nok>= 50))
+diagnose(mu.ecad)
+```
+
+supplement these to the MIDAS data:
+
+```{r}
+mu <- combine.stations(mu,mu.ecad)
+fw <- combine.stations(fw,fw.ecad)
+```
+
+
+```{r}
+##Fill in the remaining gaps using a PCA-based interpolation scheme 
 ## Check the records
 diagnose(mu)
-
-##Fill in the remaining gaps using a PCA-based interpolation scheme 
 pcafill(mu) -> mu
 pcafill(fw) -> fw
 ```
@@ -147,14 +171,16 @@ pca.MU <- PCA(MU,n=10)
 plot(pca.MU)
 ```
 
-Most stations have the same features when it comes to a mean seasonal cycle in $\mu$, with the leading PCA accounting for 80\% of the variance.
+Most stations have the same features when it comes to a mean seasonal cycle in $\mu$, with the leading PCA accounting for 80% of the variance.
 
 ## Downscaling based on mean seasonal variations
+
+Estimating upper-limits can be an additional approach to exploring the effect of temperature on the precipitation intensity. This is a cruder means for quantifying and may provide further information when more traditional methods give limited information. 
 
 ```{r}
 if (!file.exists('dse.mu.eu-circle-worstcase.rda')) {
   dse.mu <- DSensemble.mu.worstcase(x,biascorrect=TRUE,mask=TRUE,
-                                    lon=c(-80,20),lat=c(10,60),rel.cord=FALSE)
+                                    lon=c(-80,20),lat=c(10,60),rel.cord=FALSE,verbose=TRUE)
   save(file='dse.mu.eu-circle-worstcase.rda',dse.mu)
 } else load('dse.mu.eu-circle-worstcase.rda')
 plot(dse.mu[[1]])

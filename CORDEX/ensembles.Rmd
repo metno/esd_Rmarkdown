@@ -1,0 +1,170 @@
+---
+title: "ensembles"
+author: "Rasmus Benestad"
+date: "April 27, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## **Simulated global mean temperartue**
+
+Combine the simulated global mean temperature with information about the model configurations taken from Table 9-a-1 in the IPCC WG 1 2013 report ("AR5): 
+
+```{r}
+library('esd')
+data("IPCC.AR5.Table.9.A.1")
+data("global.t2m.gcm")
+gcmnm <- unlist(lapply(attr(global.t2m.gcm$global.t2m.cmip5.rcp45,'meta'),function(x) x$GCM))
+n <- length(gcmnm); m <- 12
+X <- matrix(rep(NA,n*m),n,m)
+
+IPCC.AR5.Table.9.A.1$Atmosphere.Component.Name <- as.character(IPCC.AR5.Table.9.A.1$Atmosphere.Component.Name)
+IPCC.AR5.Table.9.A.1$Ocean.Component.Name <- as.character(IPCC.AR5.Table.9.A.1$Ocean.Component.Name)
+```
+
+Index some of the entries which do not contain useful information. 
+
+```{r}
+iam <- is.element(substr(IPCC.AR5.Table.9.A.1$Atmosphere.Component.Name,1,8),'Included') |
+       is.element(IPCC.AR5.Table.9.A.1$Atmosphere.Component.Name,'<NA>')
+IPCC.AR5.Table.9.A.1$Atmosphere.Component.Name[iam] <- IPCC.AR5.Table.9.A.1$Model.Name[iam]
+iom <- is.element(IPCC.AR5.Table.9.A.1$Ocean.Component.Name,'Included')
+IPCC.AR5.Table.9.A.1$Ocean.Component.Name[iom] <- IPCC.AR5.Table.9.A.1$Model.Name[iom]
+```
+
+There are many different similar settings with different names. Try to organise and sort the different types under fewer and simpler categories. Here is a mix of conventions and ways to refer to the resolution.
+
+```{r}
+fixagcmnm <- grep('Included',as.character(IPCC.AR5.Table.9.A.1$Atmosphere.Component.Name))
+IPCC.AR5.Table.9.A.1$Atmosphere.Component.Name[fixagcmnm] <- IPCC.AR5.Table.9.A.1$Model.Name[fixagcmnm]
+```
+
+
+```{r}
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- as.character(IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub(' ','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub('-','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub(',','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub('longitude','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub('latitude','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub('Nominally','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub('equivalentto','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub('FiniteVolume','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub('Averagedcellsize','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub('in','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub('and','',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- gsub('TL','T',IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+Tres<- c('T42','T31','T159','T63','T159','T959','T213','T319','N48','N49','C180','C360','R42','N96')
+for (ires in Tres) {
+  ii <- grep(ires,IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+  IPCC.AR5.Table.9.A.1$Horizontal.Grid[ii] <- ires
+}
+IPCC.AR5.Table.9.A.1$Horizontal.Grid <- as.factor(IPCC.AR5.Table.9.A.1$Horizontal.Grid)
+```
+
+Fix the GCM names:
+
+```{r}
+IPCC.AR5.Table.9.A.1$Model.Name <- as.character(IPCC.AR5.Table.9.A.1$Model.Name)
+IPCC.AR5.Table.9.A.1$Model.Name <- gsub('-','.',IPCC.AR5.Table.9.A.1$Model.Name)
+IPCC.AR5.Table.9.A.1$Model.Name <- gsub('_','.',IPCC.AR5.Table.9.A.1$Model.Name)
+IPCC.AR5.Table.9.A.1$Model.Name <- gsub(' v1.0','',IPCC.AR5.Table.9.A.1$Model.Name)
+IPCC.AR5.Table.9.A.1$Model.Name <- gsub('(m)','.m',IPCC.AR5.Table.9.A.1$Model.Name,perl=TRUE,fixed=TRUE)
+cesm1 <- grep('CESM1',IPCC.AR5.Table.9.A.1$Model.Name)
+IPCC.AR5.Table.9.A.1$Model.Name[cesm1] <- 'CESM1'
+IPCC.AR5.Table.9.A.1$Model.Name <- as.factor(IPCC.AR5.Table.9.A.1$Model.Name)
+gcmnm <- gsub('-','.',gcmnm)
+gcmnm <- gsub('_','.',gcmnm)
+cesm1 <- grep('CESM1',gcmnm)
+gcmnm[cesm1] <- 'CESM1'
+cnrm5 <- grep('CNRM.CM5',gcmnm)
+gcmnm[cnrm5] <- 'CNRM.CM51'
+inmcm4 <- grep('inmcm4',gcmnm)
+gcmnm[inmcm4] <- 'INM.CM4'
+```
+
+
+Also need to tidy up some of the description concerning the ocean models
+
+```{r}
+IPCC.AR5.Table.9.A.1$z.Co.ord <- as.character(IPCC.AR5.Table.9.A.1$z.Co.ord)
+IPCC.AR5.Table.9.A.1$z.Co.ord <- gsub('-coordinate','',IPCC.AR5.Table.9.A.1$z.Co.ord)
+IPCC.AR5.Table.9.A.1$z.Co.ord <- gsub('hybrid','',IPCC.AR5.Table.9.A.1$z.Co.ord)
+IPCC.AR5.Table.9.A.1$z.Co.ord <- gsub('sigma-z','sigma',IPCC.AR5.Table.9.A.1$z.Co.ord)
+IPCC.AR5.Table.9.A.1$z.Co.ord <- gsub(' ','',IPCC.AR5.Table.9.A.1$z.Co.ord)
+IPCC.AR5.Table.9.A.1$z.Co.ord <- gsub('Isopycnic','isopycnic',IPCC.AR5.Table.9.A.1$z.Co.ord)
+IPCC.AR5.Table.9.A.1$z.Co.ord <- gsub('zisopycnic','isopycnic',IPCC.AR5.Table.9.A.1$z.Co.ord)
+IPCC.AR5.Table.9.A.1$z.Co.ord <- as.factor(IPCC.AR5.Table.9.A.1$z.Co.ord)
+```
+
+
+Make a data.frame that organises the model information for each simulation.
+
+```{r, echo=FALSE}
+for (i in 1:n) {
+  ii <- is.element(toupper(IPCC.AR5.Table.9.A.1$Model.Name),toupper(gcmnm[i]))
+  if (sum(ii)>0) {
+    x <- c(as.character(IPCC.AR5.Table.9.A.1$Atmosphere.Component.Name)[ii][1],
+               as.character(IPCC.AR5.Table.9.A.1$Horizontal.Grid)[ii][1],
+               IPCC.AR5.Table.9.A.1$Number.of.Vert.Levels[ii][1],
+               IPCC.AR5.Table.9.A.1$Grid.Top.hPa[ii][1],
+               as.character(IPCC.AR5.Table.9.A.1$Component.Name.or.type)[ii][1],
+               as.character(IPCC.AR5.Table.9.A.1$Atmos.Chemistry.Component.Name)[ii][1],
+               as.character(IPCC.AR5.Table.9.A.1$Land.Surface.Component.Name)[ii][1],
+               as.character(IPCC.AR5.Table.9.A.1$Ocean.Component.Name)[ii][1],
+               IPCC.AR5.Table.9.A.1$Number.of.Vertical.Levels[ii][1],
+               as.character(IPCC.AR5.Table.9.A.1$z.Co.ord)[ii][1],
+               as.character(IPCC.AR5.Table.9.A.1$Ocean.Biogeochemistry.Component.Name)[ii][1],
+               as.character(IPCC.AR5.Table.9.A.1$Sea.Ice.Component.Name)[ii][1])
+    #print(x)
+    X[i,] <- x
+  }  else print(paste('no match for ',gcmnm[i]))
+}
+```
+
+Set the column names
+
+```{r}
+X <- as.data.frame(X)
+colnames(X) <- c('atm.model','atm.grid',
+                 'atm.lev','atm.top',
+                 'atm.type','Atm.chem',
+                 'Land','oce.model',
+                 'oce.lev','oce.z',
+                 'oce.bio','Seaice')
+X$atm.lev <- as.integer(X$atm.lev)
+X$atm.top <- as.numeric(X$atm.top)
+X$oce.lev <- as.integer(X$oce.lev)
+```
+
+Combine the simulated temperature change with corresponding information about the model configuration
+
+```{r}
+dT <- colMeans(window(zoo(global.t2m.gcm[[1]]),start=2070,end=2099))-
+      colMeans(window(zoo(global.t2m.gcm[[1]]),start=1970,end=1999))
+X <- as.data.frame(cbind(round(dT,2),X))
+```
+
+##**Results**
+
+Is the simulated temperature change sensitive to how the atmospheric model is configured?
+
+```{r}
+fit.atm <- lm(dT ~ atm.grid + atm.lev + atm.top + oce.lev + oce.z,data=X)
+print(summary(fit.atm))
+```
+
+
+
+
+
+
