@@ -64,25 +64,29 @@ pca.mu <- PCA(mu)
 pca.fw <- PCA(fw)
 ```
 
-Plot the leading PCA mode
+##**Synthesise errors**
+
+Take a copy of the original data and mess it up by introducing deliberate errors and artifacts to degrade the information embedded. The idea is to explore the ways such errors affect the end result. We can experiment with different degree of degration by changing the parameters that control the number of bad/random numbers we want to insert:
 
 ```{r}
-plot(pca.mu,new=FALSE)
+## number of bad data point in time
+n.t <- 4000
+#3 Number of bad data points in space
+n.s <- 50
 ```
 
-Take a copy of the original data and mess it up by introducing deliberate errors and artifacts to degrade the information embedded. The idea is to explore the ways such errors affect the end result. 
 
 ```{r}
 X <- Pr
 ## Degrade the original data by synthetically introducing of errors and problems
 d <- dim(X)
 ## Indices with values set to zero
-s20.1 <- sample(1:d[1],1000); s20.2 <- sample(1:d[2],10)
+s20.1 <- sample(1:d[1],n.t); s20.2 <- sample(1:d[2],n.s)
 ## Indices with values set to random
-s2r.1 <- sample(1:d[1],1000); s2r.2 <- sample(1:d[2],10)
+s2r.1 <- sample(1:d[1],n.t); s2r.2 <- sample(1:d[2],n.s)
 ## Set a random sub-selection of data points to zero or random values
 X[s20.1,s20.2] <- 0
-X[s2r.1,s2r.2] <- rexp(10000,rate=0.001)
+X[s2r.1,s2r.2] <- rexp(n.t*n.s,rate=0.001)
 ## Set some locations to bad values
 S2R <- sample(1:d[2],3)
 X[,S2R] <- rexp(d[1],rate=c(1,0.1,0.5))
@@ -96,23 +100,77 @@ fw.s <- annual(X,'wetfreq')
 map(mu,FUN='trend',new=FALSE)
 ```
 
+Plot the degraded data:
+
 ```{r}
 plot(X,new=FALSE)
 ```
+
+The aggregated degraded data: $\mu$
 
 ```{r}
 plot(mu.s,new=FALSE)
 ```
 
+and $f_w$ 
+
 ```{r}
 plot(fw.s,new=FALSE)
 ```
+
+##**analysis of the original and degraded data**
+
+Apply PCA to the degraded data:
 
 ```{r}
 pca.smu <- PCA(mu.s)
 pca.sfw <- PCA(fw.s)
 ```
 
+Plot the leading PCA mode of the original $\mu$
+
 ```{r}
+plot(pca.mu,new=FALSE)
+```
+
+Plot the leading PCA mode of the degraded $\mu$
+
+```{r}
+
 plot(pca.smu,new=FALSE)
 ```
+
+Plot the leading PCA mode of the original $\mu$
+
+```{r}
+plot(pca.fw,new=FALSE)
+```
+
+Plot the leading PCA mode of the degraded $\mu$
+
+```{r}
+
+plot(pca.sfw,new=FALSE)
+```
+
+##**Second information source**
+
+Retrieve mean sea-level pressure (SLP) and use a regression analysis to examine the data, knowing that the SLP is related to $f_w$.
+
+```{r}
+#slp <- annual(retrieve('slp.mon.mean.nc',lon=c(-60,30),lat=c(50,70)))
+#eof.slp<- EOF(slp)
+#save(file='eof.slp.rda',eof.slp)
+load('eof.slp.rda')
+ds <- DS(subset(pca.fw,pattern=1:3),eof.slp)
+ds.s <- DS(subset(pca.sfw,pattern=1:3),eof.slp)
+```
+
+Compare the results:
+```{r}
+plot(ds,new=FALSE)
+plot(ds.s,new=FALSE)
+```
+
+
+
