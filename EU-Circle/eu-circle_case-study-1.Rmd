@@ -1,0 +1,118 @@
+---
+title: "eu-circle_case-study-1"
+author: "Rasmus Benestad"
+date: "May 2, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Extreme Dryness and forest fires on electricity and transport networks
+
+Simultaneous forest fires ignite in the Bouche du Rhone department near Aix en Porvence, and in the Alpes Maritimes Department, at the French/Italian frontier, near a highway (A8) used by thousands of tourists. Due to the important smoke production, visibility is strongly reduced so that highway has to be closed, leading to an important traffic on the secondary road networks. The crossing of the frontier by car being completely impossible, traffic between France and Italy has to be diverted. Tourists are confined on highway rest areas. People, blocked on the roads, have difficulties to breathe because of the smoke and leave their cars, scattering into the nature. Additional accidents are caused because of the panic of people. Due to aerial firefighting, electricity lines have to be cut. Due to the fire smoke, aerial traffic in Nice airport has to be stopped. Numerous dwellings are without electricity and of course without telephones. Other emergency operations are disturbed because of the large delay of alert, major dispersion of means, decrease of available means.
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+**Precipitation**
+
+***Station data***
+
+Represent the station data with lower-case $x$
+
+```{r,echo=FALSE,message=FALSE}
+library(esd)
+ss <- select.station(param='precip',lon=c(5,10),lat=c(42,45),nmin=50)
+map(ss)
+```
+
+```{r}
+if (!file.exists('eu-circle_case-study-1_precio.rda')) {
+  x <- station(ss)
+  x <- subset(X,is=list(alt=-400))
+  save(file='eu-circle_case-study-1_precio.rda',x)
+} else load('eu-circle_case-study-1_precio.rda')
+diagnose(x)
+```
+
+The raw daily precipitation data. The colour of the curves correspond to the colour marker of the location. There have been some instances with very large precipitation amounts in the past.
+
+```{r}
+plot(x,new=FALSE)
+```
+
+Examine the trend in the wet-day mean precipitation $\mu$
+
+```{r}
+mu <- annual(x,'wetmean')
+wq95 <- function(x) {x <- x[is.finite(x)]; x <- x[x >= 1]; wq95 <- quantile(x,probs=0.95); wq95}
+q95 <- annual(x,'wq95')
+plot(mu,new=FALSE)
+```
+
+For many purposes, it may be useful to assume that the daily precipitation amount is approximately exponentially distributed for the days when it rains and that the probability of the precipitation exceedin a threshold value $x_0$ can be estimated according to $Pr(X>x_0) = f_w e^{-x_0/\mu}$ where $f_w$ is the wet-day frequency. Below is a test for whether the amount is close to exponential for a wet day. 
+
+```{r}
+## check the relationship between wet-day 95-percentile and wet-day mean
+plot(-log(0.05)*zoo(mu[,2]),zoo(q95[,2]),pch=19,xlim=c(0,120),ylim=c(0,120),
+     main='Wet-day mean v.s. 95th wet percentile',
+     xlab=expression(paste(-ln(1-0.95)*mu,' (mm/day)')), ylab=expression(paste(q[95],' (mm/day)')))
+points(-log(0.05)*zoo(mu[,1]),zoo(q95[,1]),pch=19,col=rgb(1,0,0,0.2))
+points(-log(0.05)*zoo(mu[,3]),zoo(q95[,3]),pch=19,col=rgb(0,0,1,0.2))
+points(-log(0.05)*zoo(mu[,4]),zoo(q95[,4]),pch=19,col=rgb(0,1,0,0.2))
+points(-log(0.05)*zoo(mu[,5]),zoo(q95[,5]),pch=19,col=rgb(0,0.7,0.7,0.2))
+points(-log(0.05)*zoo(mu[,6]),zoo(q95[,6]),pch=19,col=rgb(0.7,0,0.7,0.2))
+points(-log(0.05)*zoo(mu[,7]),zoo(q95[,7]),pch=19,col=rgb(0.5,0.5,0.5,0.2))
+grid()
+legend(0,120,loc(climatrans.pr),pch=19,col=c(rgb(1,0,0,0.2),'black',rgb(0,0,1,0.2)),bty='n')
+```
+
+The scatter plot suggests that the points are clustered around the diagonal and hence the 24-hr precipitation amoun is approximately exponentially distributed. 
+
+We also need to examine the trend in the wet-day frequency
+
+```{r}
+fw <- annual(x,'wetfreq')
+plot(mu,new=FALSE)
+```
+
+
+
+```{r}
+z <- subset(x,it=c(1900,2016),is=1)
+ncd <- spell(z,threshold=1)
+plot(ncd)
+```
+
+How close is the duration of wet/dry spells to the geometric distribution?
+
+```{r}
+hist(ncd)
+```
+
+The mean value if the parameter that describes the shape of the geometric distribution. The comparison suggests that it does not give a bad representation of the observed charactereistics. Are there any trends in the annual mean durations?
+
+```{r}
+amncd <- annual(ncd)
+plot(amncd,col=c(rgb(0,0,1),rgb(1,0.3,0)))
+grid()
+lines(trend(subset(amncd,is=1)),lty=2)
+lines(trend(subset(amncd,is=2)),lty=2)
+```
+
+There is a 
+
+Represent gridded precipitation with upper-case $X$
+
+***Gridded precipitation***
+
+Gridded data are not ideal when it comes to extremes, as the gridding process makes the data spatially inhomogeneous. But 
+
+```{r}
+X <- retrieve('data.ECAD/rr_0.25deg_reg_v12.0.nc',lon=c(4,8),lat=c(43,46))
+map(X)
+```
+
+
+

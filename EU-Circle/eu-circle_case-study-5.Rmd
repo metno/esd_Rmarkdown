@@ -1,0 +1,18 @@
+---
+title: "EU-Circle Case study 5"
+author: "Rasmus Benestad"
+date: "May 2, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Rapid Winter Flooding (melting ice, narrow mountain streams, flooding) around Dresden, Germany
+
+Dresden is the largest city in the Eastern part of Germany, Saxony, near the Czech border. It is crossed by the large river Elbe (its width is around 110m in Dresden) which comes from the Czech Republic and flows through Magdeburg and Hamburg into the North Sea. The region between Dresden and the Czech border, but also in the near surroundings in the Eastern and South-Western directions, is quite hilly with mountains up to ca. 1200 m. In the recent past (especially notable are the big floodings in 2002 and 2013) there has been quite some floodings caused by intense and long rain which led to floods of the Elbe.However, there is another threat which is happening more often and hence causing more damage because of the currently ongoing climate changes. In the mountains are lots of small mountain streams which are really small on a normal day (a typical one has a width of 1.5m and a depth of 0.5m). But in cases of heavy rains these small streams rapidly grow quite large (1-2h is not uncommon), especially compared to their normal size (sometimes they grow to their hundredfold size in respect of the amount of water they carry). This causes a lot of damage, especially as prediction and short-term prevention mechanisms are not really possible because of the small timescale. The damages caused by such events are quite local and often not related to the flooding of big rivers. In these  regions there are often roads going through valley which are vital in a sense that if they are  not available any more, quite long bypasses have to be taken. Additionally railways,  especially railway bridges, are often effected as well. These two aspects show the impacts on the transport network.
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+
