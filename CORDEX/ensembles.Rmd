@@ -159,7 +159,9 @@ X <- as.data.frame(cbind(round(dT,2),X))
 Is the simulated temperature change sensitive to how the atmospheric model is configured?
 
 ```{r}
-fit.atm <- lm(dT ~ atm.grid + atm.lev + atm.top + oce.lev + oce.z,data=X)
+fit.atm <- lm(dT ~ atm.grid + atm.lev + atm.top + oce.lev + oce.z +
+                   atm.grid*atm.lev + atm.grid*atm.top +       # interactions
+                   atm.grid*oce.lev + atm.grid*oce.z,data=X)
 print(summary(fit.atm))
 ```
 
