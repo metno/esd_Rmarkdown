@@ -49,7 +49,7 @@ attr(djf,'unit') <- 'degC'
 corfield(djf,DJF,colbar=list(breaks=seq(-1,1,by=0.1),rev=FALSE),new=FALSE)
 ```
 
-We can interpolate temperatures for the same coordinate as for Mwanza, but when we do the comparison, we need to use standardised values as the predictor represents the mean of daily mean temperatures $\overline{T}$ whereas the station is the mean daily minimum $T[min]$:
+We can interpolate temperatures for the same coordinate as for Mwanza, but when we do the comparison, we need to use standardised values as the predictor represents the mean of daily mean temperatures $\bar{T}$ whereas the station is the mean daily minimum $T_{min}$:
 
 ```{r}
 djf.i <- regrid(DJF,is=y)
