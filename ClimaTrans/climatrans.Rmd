@@ -195,10 +195,11 @@ plot(aggregate(climatrans.pr,month,'sum'),new=FALSE)
 Estimate annual aggregated statistics for the months May-October (the wet/Monsoon season): 
 
 ```{r}
+wq95 <- function(x) {x <- x[is.finite(x)]; x <- x[x >= 1]; wq95 <- quantile(x,probs=0.95); wq95}
 season<-5:10
 fw <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetfreq')
 mu <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetmean')
-q95 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'quantile',probs=0.95)
+q95 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wq95')
 ```
 
 Compare the data to the exponential distribution - if the data is exponentially distributed, then the wet-day mean precipitation $\mu$ and the 95-percentile $q_{95}$ are propportional by $q_p = -ln(1-p)\mu$.

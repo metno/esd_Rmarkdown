@@ -1,0 +1,289 @@
+PCA4station-data-inspection
+================
+Rasmus Benestad
+April 29, 2016
+
+Quality of station data
+-----------------------
+
+We want to look at a group of station data and test a strategy for assessing data quality. This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+**Station data**
+----------------
+
+Get some data to play with.
+
+``` r
+library(esd)
+library(utils)
+if (!file.exists('precip.norway.rda')) download.file('https://ndownloader.figshare.com/files/2155751','precip.norway.rda')
+load('precip.norway.rda')
+## The precipitation data is 'Pr'
+```
+
+Now inspect the data - check for missing values
+
+``` r
+diagnose(Pr)
+```
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-2-1.png)<!-- -->
+
+Estimate annual aggregates:
+
+``` r
+mu <- annual(Pr,'wetmean')
+fw <- annual(Pr,'wetfreq')
+map(mu,FUN='trend',new=FALSE,colbar=list(breaks=seq(-0.5,0.5,by=0.05),pal='t2m',rev=TRUE))
+```
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-3-1.png)<!-- -->
+
+The map suggests that the original data contains some randomness, as the trend in the wet-day mean precipitation \(\mu\) does not indicate clear large-scale features, but contains siginicant random small-scale variations. This is not surprising, as \(\mu\) seems to be more strongly influenced by local factors (e.g. convective rain) than e.g. the wet-day frequency \(f_w\).
+
+``` r
+map(mu,FUN='trend',new=FALSE,colbar=list(breaks=seq(-0.35,0.35,by=0.01),pal='t2m',rev=TRUE))
+```
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-4-1.png)<!-- -->
+
+There are some trend outliers even for \(f_w\), which look questionable. Due to capture/sampling limitations? Rain gauges only have diameters of the order of cm whereas the phenomenon they sample has scales of the order of km.
+
+We can plot the original daily data to get some idea of what it looks like
+
+``` r
+plot(Pr,new=FALSE)
+grid()
+```
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-5-1.png)<!-- -->
+
+The daily data contains a lot of information and it's hard to see relevant information. We can see large diffrences between the different stations and that there are some events with much higher amounts than others. similar plot of the annual wet-day mean precipitation \(\mu\) can give a clearer picture of the long-term changes
+
+``` r
+plot(mu,errorbar=FALSE,new=FALSE)
+grid()
+```
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-6-1.png)<!-- -->
+
+The annual wet-day frequency \(f_w\)
+
+``` r
+plot(fw,new=FALSE)
+grid()
+```
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-7-1.png)<!-- -->
+
+Apply a principal component analysis (PCA) to the annual aggregates:
+
+``` r
+pca.mu <- PCA(mu)
+pca.fw <- PCA(fw)
+```
+
+**Synthesise errors**
+---------------------
+
+Take a copy of the original data and mess it up by introducing deliberate errors and artifacts to degrade the information embedded. The idea is to explore the ways such errors affect the end result. We can experiment with different degree of degration by changing the parameters that control the number of bad/random numbers we want to insert:
+
+``` r
+## number of bad data point in time
+n.t <- 4000
+#3 Number of bad data points in space
+n.s <- 25
+```
+
+Apply the degrading:
+
+``` r
+X <- Pr
+## Degrade the original data by synthetically introducing of errors and problems
+d <- dim(X)
+## Indices with values set to zero
+s20.1 <- sample(1:d[1],n.t); s20.2 <- sample(1:d[2],n.s)
+## Indices with values set to random
+s2r.1 <- sample(1:d[1],n.t); s2r.2 <- sample(1:d[2],n.s)
+## Set a random sub-selection of data points to zero or random values
+X[s20.1,s20.2] <- 0
+X[s2r.1,s2r.2] <- rexp(n.t*n.s,rate=0.001)
+## Set some locations to bad values
+S2R <- sample(1:d[2],3)
+X[,S2R] <- rexp(d[1],rate=c(1,0.1,0.5))
+```
+
+Now, estimate synthetic annual aggregates for \(\mu\) and \(f_w\). Also make a new map of the trends in \(\mu\) where the data has been degraded. The results from the trend analysis may not be so sensitive to the degraded data when only a selection of random numbers have been altered.
+
+``` r
+mu.s <- annual(X,'wetmean')
+fw.s <- annual(X,'wetfreq')
+map(mu.s,FUN='trend',new=FALSE,colbar=list(breaks=seq(-0.5,0.5,by=0.05),pal='t2m',rev=TRUE))
+```
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-11-1.png)<!-- -->
+
+Plot the degraded data:
+
+``` r
+plot(X,new=FALSE)
+```
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-12-1.png)<!-- -->
+
+The aggregated degraded data: \(\mu\)
+
+``` r
+plot(mu.s,new=FALSE)
+```
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-13-1.png)<!-- -->
+
+and \(f_w\)
+
+``` r
+plot(fw.s,new=FALSE)
+```
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-14-1.png)<!-- -->
+
+**analysis of the original and degraded data**
+----------------------------------------------
+
+We apply PCA to the degraded data to get a better picture of the spatial and temporal structures - we expect the covariance to be reduced and there should be less coherence between the different stations.
+
+``` r
+pca.smu <- PCA(mu.s)
+pca.sfw <- PCA(fw.s)
+```
+
+Plot the leading PCA mode of the original \(\mu\). The eigen-value spectrum (upper right panel) can provide an indication about the data quality. There are some coherent and pronounced variations when the leading modes are associated with a high proportion of the variance, and this is what we expect from parameters aggregated over reasonably long time scales. Hence, high variance associated with the leading mode suggests that there is some real information embedded in the data.
+
+``` r
+plot(pca.mu,new=FALSE)
+```
+
+    ## Warning in plot.xy(xy.coords(x, y), type = type, ...): "plot" is not a
+    ## graphical parameter
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-16-1.png)<!-- -->
+
+We can compare the original results with leading PCA mode of the degraded \(\mu\). Now the eigen-value spectrum is flatter, and the leading mode accounts for less of the variance. The spatial pattern is also more complex, without features that are associated with known geography. Also the time series contains less autocorrelation.
+
+``` r
+plot(pca.smu,new=FALSE)
+```
+
+    ## Warning in plot.xy(xy.coords(x, y), type = type, ...): "plot" is not a
+    ## graphical parameter
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-17-1.png)<!-- -->
+
+Plot the leading PCA mode of the original \(f_w\)
+
+``` r
+plot(pca.fw,new=FALSE)
+```
+
+    ## Warning in plot.xy(xy.coords(x, y), type = type, ...): "plot" is not a
+    ## graphical parameter
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-18-1.png)<!-- -->
+
+Plot the leading PCA mode of the degraded \(f_w\)
+
+``` r
+plot(pca.sfw,new=FALSE)
+```
+
+    ## Warning in plot.xy(xy.coords(x, y), type = type, ...): "plot" is not a
+    ## graphical parameter
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-19-1.png)<!-- -->
+
+**Second information source**
+-----------------------------
+
+Retrieve mean sea-level pressure (SLP) and use a regression analysis to examine the data, knowing that the SLP is related to \(f_w\).
+
+``` r
+#slp <- annual(retrieve('slp.mon.mean.nc',lon=c(-60,30),lat=c(50,70)))
+#eof.slp<- EOF(slp)
+#save(file='eof.slp.rda',eof.slp)
+load('eof.slp.rda')
+ds <- DS(subset(pca.fw,pattern=1:3),eof.slp)
+```
+
+    ## 
+      |                                                                       
+      |                                                                 |   0%
+      |                                                                       
+      |======================                                           |  33%
+
+    ## Warning in DS.station(ys, X, biascorrect = biascorrect, m = m, eofs =
+    ## eofs, : DS.station: different indices: Date numeric
+
+    ## 
+      |                                                                       
+      |===========================================                      |  67%
+
+    ## Warning in DS.station(ys, X, biascorrect = biascorrect, m = m, eofs =
+    ## eofs, : DS.station: different indices: Date numeric
+
+    ## 
+      |                                                                       
+      |=================================================================| 100%
+
+    ## Warning in DS.station(ys, X, biascorrect = biascorrect, m = m, eofs =
+    ## eofs, : DS.station: different indices: Date numeric
+
+``` r
+ds.s <- DS(subset(pca.sfw,pattern=1:3),eof.slp)
+```
+
+    ## 
+      |                                                                       
+      |                                                                 |   0%
+      |                                                                       
+      |======================                                           |  33%
+
+    ## Warning in DS.station(ys, X, biascorrect = biascorrect, m = m, eofs =
+    ## eofs, : DS.station: different indices: Date numeric
+
+    ## 
+      |                                                                       
+      |===========================================                      |  67%
+
+    ## Warning in DS.station(ys, X, biascorrect = biascorrect, m = m, eofs =
+    ## eofs, : DS.station: different indices: Date numeric
+
+    ## 
+      |                                                                       
+      |=================================================================| 100%
+
+    ## Warning in DS.station(ys, X, biascorrect = biascorrect, m = m, eofs =
+    ## eofs, : DS.station: different indices: Date numeric
+
+Compare the results:
+
+``` r
+plot(ds,new=FALSE)
+```
+
+    ## Warning in plot.xy(xy.coords(x, y), type = type, ...): "plot" is not a
+    ## graphical parameter
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-21-1.png)<!-- -->
+
+    ## NULL
+
+``` r
+plot(ds.s,new=FALSE)
+```
+
+    ## Warning in plot.xy(xy.coords(x, y), type = type, ...): "plot" is not a
+    ## graphical parameter
+
+![](pca4stations_files/figure-markdown_github/unnamed-chunk-21-2.png)<!-- -->
+
+    ## NULL
