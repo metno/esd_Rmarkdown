@@ -77,8 +77,117 @@ PrexpPr <- function(mu,fw,x0=10) {
   invisible(Pr)
 }
 ```
+
+Below is a listing of the function used to extract the raw precipitation results averaged over the Indian sub-continent.
+
+```{r}
+RMSE <- function(x,y) sqrt(sum((x-y)^2))/length(x)
+
+precipcmip <- function(predictor='data/ERAINT/era-int-precip-mon.nc',
+                    path="CMIP5.monthly/",rcp='rcp45',pattern="pr_Amon_ens_",
+                    type='ncdf',it=c(1950,2015),plot=TRUE,verbose=FALSE,
+                    lon=c(70,90),lat=c(7,30),select=NULL,xlim=NULL,fname=NULL) {
+  
+  if (is.null(fname)) fname <- paste('precipcmip.',paste(lon,lat,sep='.',collapse='-'),'.rda',sep='')
+  
+  print(paste('precipcmip: results (will be) stored in',fname))
+  
+  if (file.exists(fname)) {
+    load(fname)
+    return(results)
+  }
+
+  ## Diagnose the common EOFs and effect of bias-adjustment
+
+  if (verbose) print(paste('getcmip, it=',it))
+
+  if (verbose) print('predictor')
+  if (is.character(predictor))
+    ## Unit: "mm"
+    rea <- retrieve(ncfile=predictor,lon=lon,lat=lat,
+                    type=type,verbose=verbose) else
+  if (inherits(predictor,'field'))
+    rea <- subset(predictor,is=list(lon=lon,lat=lat))
+  if (!is.null(it)) {
+    rea <- subset(rea,it=it)
+    it <- c(min(year(rea)),max(year(rea)))
+  }
+  
+  ## The reanalysis
+  if (verbose) print('aggregate the reanalysis')
+  Rea <- aggregate.area(rea,FUN='mean')
+  X <- aggregate(Rea,month,FUN='mean')
+  Xt <- annual(Rea,FUN='sum')
+
+  if (plot) plot(X,lwd=3,col='black',main='Climatology',ylim=c(0,2*round(max(X))),
+                 ylab=ylab(X),xlab='Calendar month',map.type='rectangle')
+  
+  # Ensemble GCMs
+  path <- file.path(path,rcp,fsep = .Platform$file.sep)
+  ncfiles <- list.files(path=path,pattern=pattern,full.name=TRUE)
+  N <- length(ncfiles)
+
+  if (is.null(select)) select <- 1:N else
+                       N <- length(select)
+  if (verbose) {print('GCMs:'); print(path); print(ncfiles[select])}
+
+  Z <- matrix(rep(NA,N*12),N,12)
+  Zt <- matrix(rep(NA,N*201),N,201)
+  gcmnm <- rep("",N); rmse <- rep(NA,N); r <- rep(NA,N)
+
+  ## Set up a list environment to keep all the results
+  if (verbose) print("loop...") 
+  for (i in 1:N) {
+    if (verbose) print(ncfiles[select[i]])
+
+    ## unit: "kg m-2 s-1"
+    gcm <- retrieve(ncfile = ncfiles[select[i]],type=type,
+                          lon=range(lon(rea)),
+                          lat=range(lat(rea)),verbose=verbose)
+    GCM <- aggregate.area(gcm,FUN='mean')
+    ## Annual total precipitation
+    zt <- annual(GCM,FUN='sum')
+    i1 <- is.element(year(zt),1900:2100)
+    i2 <- is.element(1900:2100,year(zt))
+    Zt[i,i2] <- coredata(zt)[i1]
+
+    if (!is.null(it)) {
+      if (verbose) print('Extract some months ot a time period')
+      if (verbose) print(it)
+      gcm <- subset(gcm,it=it)
+    }
+    ## The mean annual cycle
+    ## The units of the GCMs are mm/day - multiply by 30
+    z <- 30*aggregate(GCM,month,FUN='mean')
+    Z[i,] <- coredata(z)
+    #gcmnm[i] <- attr(gcm,'model_id')
+    gcmnm.i <- paste(attr(gcm,'model_id'),attr(gcm,'realization'),sep="-r")
+    gcmnm.i <- gsub(' ','',gcmnm.i)
+    gcmnm.i <- gsub('-','.',gcmnm.i)
+    rmse[i] <- round(RMSE(coredata(X),coredata(z)),2)
+    r[i] <- round(cor(coredata(X),coredata(z)),2)
+    gcmnm[i] <- gcmnm.i
+    print(paste(gcmnm.i,unit(GCM),unit(Rea),rmse[i],r[i]))
+    if (plot) lines(z,col=rgb(i/N,0,0.5+0.5*r[i],0.1),lwd=3)
+  }
+  attr(Z,'GCMs') <- gcmnm
+   if (plot) {
+     lines(X,col='black',lwd=3)
+     grid()
+     figlab(paste(start(Rea),end(Rea)))
+   }
+  results <- list(reanalysis=X,GCMs=z,
+                  obs=Xt,gcm=zoo(t(Zt),order.by=1900:2100),rmse=rmse,cor=r)
+  dev.copy2pdf(file=paste('precipcmip.',
+                 paste(lon,lat,sep='.',collapse='-'),'.pdf',sep=''))
+  save(file=fname,results)
+  return(results)
+}
+```
+
 ##*Precipitation*
 
+We look at various aspects of the precipitation in order to get an idea about what is happening over the sub-continent of India and at the three Indian megacities. First, we present features from the past, such as the mean annual cycle, historical long-term trends, and statistical distribution for different aspects connected to precipitation: wet-day frequency and the wet-day mean (precipitation intencity). 
 
 #### Pre-processing: adapting the netCDF data to esd: set up station objects: 
 ```{r,eval=FALSE}
@@ -159,7 +268,7 @@ climatrans.tx <- combine(tx.delhi,tx.bombay,tx.bangalore)
 save(file='climatrans.tx.rda',climatrans.tx)
 ```
 
-## Analysis
+### Analysis of rain gauge data
 
 The analysis and downscaling can be carried out once the data has been converted to esd-station object. First load the precipitation data:
 
@@ -179,20 +288,32 @@ Examine the mean seasonal cycle to see if it responds to systematic forcings - t
 ```{r, fig.width=6, fig.height=6}
 ## Wet-day frequency
 plot(aggregate(climatrans.pr,month,'wetfreq'),new=FALSE)
+grid()
 ```
+
+The monsoon season is clearly visible in the wet-day frequency $f_w$, being a period when it rains  almost every day in Mumbay (Bombay) to somewhat less than every other day in the two other cities New Delhi and Bangalore. The duration of the Monsoon season is longest in Bangalore (~Apr-Oct) and shortest in New Delhi (~Jun-Sep).  
 
 ```{r, fig.width=6, fig.height=6}
 ## Wet-day mean
 plot(aggregate(climatrans.pr,month,'wetmean'),new=FALSE)
+grid()
 ```
 
+There are less pronounced difference in the precipitation intencity $\mu$ between the Monsoon season and the other Calendar months, although the most intense rains tend to take place in Mumbay during June and later in the season in New Delhi (Sep) and Bangalore (Sep-Oct). 
+
+Both the frequency and intensity of the rains are typically higher in Mumbay than in New Delhi and Bangalore, and Mumbay has at outset a more challenging situation in terms of coping with extreme rains than the two other megacities. This difference is also clearly visible in the typical monthly precipitation totals, which are much higher for Mumbay and peaks in July when both $f_w$ and $\mu$ tend to be high.
 
 ```{r, fig.width=6, fig.height=6}
 ## Monthly precipitation totals
 plot(aggregate(climatrans.pr,month,'sum'),new=FALSE)
+grid()
 ```
 
-Estimate annual aggregated statistics for the months May-October (the wet/Monsoon season): 
+### Testing the precipitation statistics.
+
+The idea that the wet-day precipitation approcimately follows the exponential distribution enbles a simplified analysis and interpreation of the reainfall statistics and the prediction/projection of heavy precipitation events.
+
+We concentrate on the monsoon season and estimate annual aggregated statistics for the months May-October: 
 
 ```{r}
 wq95 <- function(x) {x <- x[is.finite(x)]; x <- x[x >= 1]; wq95 <- quantile(x,probs=0.95); wq95}
@@ -202,7 +323,7 @@ mu <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetmean')
 q95 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wq95')
 ```
 
-Compare the data to the exponential distribution - if the data is exponentially distributed, then the wet-day mean precipitation $\mu$ and the 95-percentile $q_{95}$ are propportional by $q_p = -ln(1-p)\mu$.
+A simple test to see if the data follows the exponential distribution is to compare the data to the exponential distribution - if the data is exponentially distributed, then the wet-day mean precipitation $\mu$ and the 95-percentile $q_{95}$ are propportional by $q_p = -ln(1-p)\mu$.
 
 
 ```{r}
@@ -216,14 +337,16 @@ grid()
 legend(0,120,loc(climatrans.pr),pch=19,col=c(rgb(1,0,0,0.2),'black',rgb(0,0,1,0.2)),bty='n')
 ```
 
-Compare the histogram of the preciptation data with an exponential distribution
+another way to visualise this is to compare the histogram of the preciptation data with an exponential distribution
+
 ```{r}
 z <- climatrans.pr[,3]; z <- z[z > 1]
 hist(z,breaks=seq(0,500,by=2),xlim=c(0,100),freq=FALSE)
 lines(seq(0,250,by=1),dexp(seq(0,250,by=1),rate=1/mean(z)),lwd=3,col='red')
+grid()
 ```
 
-##**Historical long-term trends**
+###**Historical long-term trends in precipitation**
 
 Estimate the long-term trends in the precipitation statistics at the three megacities: first the wet-day frequency $f_w$ - does the number of rainy days change over time? 
 
@@ -231,7 +354,11 @@ Estimate the long-term trends in the precipitation statistics at the three megac
 ## Wet-day frequency
 plot(fw,new=FALSE)
 for(i in 1:3) lines(trend(subset(fw,is=i)))
+grid()
+print(trend(fw,result='pval')) 
 ```
+
+The long-term trends only hint to potentially slight changes, and only the trend in New Delhi appears to be statistically significant at the 5% level.  
 
 Does the wet-day mean precipitation $\mu$ change over time? 
 
@@ -239,28 +366,36 @@ Does the wet-day mean precipitation $\mu$ change over time?
 ## Wet-day mean
 plot(mu,new=FALSE)
 for(i in 1:3) lines(trend(subset(mu,is=i)))
+grid()
+print(trend(mu,result='pval'))
 ```
 
-If the 24-hr preciptation amounts is exponential (when it rains), then the probability of exceeding a threshold is $Pr(X>x_0) = f_w e^{-x_0/\mu}$. Since we know both  
+For $\mu$, only the record for Mumbay suggest a significant long-term trend at the 5%-level. There were a couple of years during the 1950s which stand out as unique seasons with particularly intense rainfall in Mumbay.   
+
+If the 24-hr preciptation amounts is exponential (when it rains), then the probability of exceeding a threshold is $Pr(X>x_0) = f_w e^{-x_0/\mu}$. Since we know both, we can approximately quantify the probability for days receiving more than 50 mm of rain.   
 
 ```{r, fig.width=6, fig.height=6}
 ## Wet-day mean
 Pr <- PrexpPr(mu,fw,x0=50) 
 plot(Pr,new=FALSE,errorbar=FALSE)
 for(i in 1:3) lines(trend(subset(Pr,is=i)))
+grid()
 ```
 
 Also, it's interesting to see how the annual total precipitation amount changes over time:
 
 ```{r, fig.width=6, fig.height=6}
 ## Aggregate to mean seasonal cycle and annual mean values
-plot(annual(climatrans.pr,'sum'),new=FALSE)
+pt <- annual(climatrans.pr,'sum')
+attr(pt,'unit') <- 'mm/season'
+plot(pt,new=FALSE)
 for(i in 1:3) lines(trend(subset(annual(climatrans.pr,'wetfreq'),is=i)))
+grid()
 ```
 
-##**Predictors**
+##**Predictors for downscaling**
 
-Now prepare for the downscaling: Retrieve and process the predictors. For the wet-day mean we try temperature (or sea surface temperature, SST). There are different possibilities. We can estimate the vapour saturation pressure based on the Clausius-Clapeyron equation (`C.C.eq()`) or we can use the temperature directly (the former translates more directly into moisture mass). The aggregation of the temperature over the wet-season may involve the average, minimum or the maximum values. Trial anderror to see what works and what doesn't: 
+Now prepare for the downscaling: Retrieve and process the predictors. For the wet-day mean we try temperature (or sea surface temperature, SST). There are different possibilities. We can estimate the vapour saturation pressure based on the Clausius-Clapeyron equation (`C.C.eq()`) or we can use the temperature directly (the former translates more directly into moisture mass). The aggregation of the temperature over the wet-season may involve the average, minimum or the maximum values. Trial and error to see what works and what doesn't: the results suggest a reasonable choise was May-October season mean.
 
 ```{r}
 ## Aggregate sub-season values to annual mean values
@@ -270,7 +405,7 @@ if (!exists("es")) {
 }
 ```
 
-The mean seal-level pressure (SLP) is usually a promising predictor for the wet-day frequency.
+The mean seal-level pressure (SLP) is usually a promising predictor for the wet-day frequency for the May-October season.
 
 ```{r}
 if (!exists("slp")) {
@@ -285,13 +420,13 @@ if (!exists("slp")) {
 ```{r}
 ## Correlation between the wet-day mean and the temperature-based predictor
 y <- subset(mu,is=2)
-corfield(y,es,colbar=list(pal='t2m',breaks=seq(-1,1,by=0.1)))
+corfield(y,es,colbar=list(pal='t2m',breaks=seq(-1,1,by=0.1)),new=FALSE)
 ```
 
 ```{r}
 ## Correlation between the wet-day frequency and the SLP
 z <- subset(fw,is=2)
-corfield(z,slp,colbar=list(pal='t2m',breaks=seq(-1,1,by=0.1)))
+corfield(z,slp,colbar=list(pal='t2m',breaks=seq(-1,1,by=0.1)),new=FALSE)
 ```
 
 Principal component analysis (PCA) can improve the quality of empirical-statistical downscaling (ESD) by reorganising the data so that the large-scale variability is enhanced (<http://dx.doi.org/10.3402/tellusa.v67.28326>).
@@ -300,9 +435,19 @@ Principal component analysis (PCA) can improve the quality of empirical-statisti
 ```{r}
 pca.mu <- PCA(mu)
 pca.fw <-PCA(fw)
+plot(pca.mu,new=FALSE)
 ```
 
-### **Estimate EOFs for the predictands**
+The leading mode for the seasonal wet-day mean precipitation is dominated by Mumbay with almost zero covariance with Bangalore. 
+
+```{r}
+plot(pca.fw,new=FALSE)
+```
+
+The PCA pattern has more similar spatial weights for $f_w$ over the three megacities, even though there is a more equal share of variance between the modes.  
+
+### **Estimate EOFs for the predictors**
+
 ```{r}
 eof.es <- EOF(es)
 eof.slp <- EOF(slp)
@@ -310,10 +455,14 @@ index(eof.es) <- year(eof.es)
 index(eof.slp) <- year(eof.slp)
 ```
 
+The dominant mode of variability in the May-October mean $e_s$ featured largest magnitudes east of south Indian coast.  
+
 ### **Plot the EOFs for the temperature-based predictor**
 ```{r, fig.width=6, fig.height=6}
 plot(eof.es,new=FALSE)
 ```
+
+The main May-October SLP mode was associated with the strength of the Monsoon winds.
 
 ### **Plot the EOFs for the SLP**
 ```{r, fig.width=6, fig.height=6}
@@ -322,41 +471,56 @@ plot(eof.slp,new=FALSE)
 
 ## **Do the downscaling**
 
-### 
-```{r,echo=FALSE, fig.width=6, fig.height=6}
+### The wet-day mean precipitation
+
+The predictor for the wet-day mean precipitation was taken to be the saturation vapour pressure $e_s$ estimated from maritime surface air taken from the NCEP/NCAR reanalysis 1. This choice was motivated by physics, expecting the intensity to be influenced by the amount of moisture in the air - which again has ita main source from the evaopration over the oceans.
+
+```{r fig.width=6, fig.height=6}
 ## The function DS uses multiple regression by default
 ds.mu <- DS(pca.mu,eof.es,eofs=1:20)
+plot(ds.mu,colbar1=list(breaks=seq(0,1,by=0.1)),
+           colbar2=list(breaks=seq(-500,500,by=25)),new=FALSE)
+```
+
+The results for the wet-daty mean $\mu$ were problematic in the sense that the evaluation of the downscaling model (cross-validation) revealed low scores, in particular associated with a small number of extreme seasons with exceptionally high $\mu$. 
+
+## The wet-day frequency
+
+Mean sea level pressure was used as a predictor to downscale the wet-day frequency $f_w$, which too is motivated from physical reasoning: the wind speed/direction and transport of moisture influence the probability for precipitation. 
+
+```{r}
 ds.fw <- DS(pca.fw,eof.slp,eofs=1:20)
-plot(ds.mu,colbar1=list(breaks=seq(0,1,by=0.1),rev=2),
-     colbar2=list(breaks=seq(-500,500,by=25),rev=TRUE),new=FALSE)
 plot(ds.fw,new=FALSE)
 ```
+
+The downscaled results for $f_w$ were associated with high skill (cross-validation = 0.71), and the associated predictor pattern implies that the rain occurrence is associated with large-scale southwesterly wind field, typically associated with the monsoon.  
 
 ## **Examine the residuals from the downscaling**
 
 First check the residuals for the wet-day mean precipitation:
 
-```{r}
-## Examine the PCA of residuals for the cold monthsto see if there are any structures left
-  mu.2 <- as.residual(as.station(ds.mu))
-  mu.2 <- attrcp(mu,mu.2); class(mu.2) <- class(mu)
+```{r pca-of-residual-mu}
+## Examine the PCA of residuals for the cold months to see if there are any structures left
+  mu.2 <- as.station(as.residual(ds.mu))
   pca.mu.2 <- PCA(mu.2)
-  plot(pca.mu.2)
+  plot(pca.mu.2,new=FALSE)
+  grid()
+  str(mu.2)
 ```
 
 The residuals for the wet-day frequency:
 
-```{r}
+```{r pca-of-residual-fw}
 ## Examine the PCA of residuals for the cold monthsto see if there are any structures left
-  fw.2 <- as.residual(as.station(ds.fw))
-  fw.2 <- attrcp(fw,fw.2); class(fw.2) <- class(fw)
+  fw.2 <- as.station(as.residual(ds.fw))
   pca.fw.2 <- PCA(fw.2)
-  plot(pca.fw.2)
+  plot(pca.fw.2,new=FALSE)
+  grid()
 ```
 
 #### **Do the downscaling based on the CMIP5 RCP4.5 ensemble**
 
-Here include the argument xfuns='tas2es' to use the option annual(tas2es(gcm)) rather than the option annual(gcm,FUN='tas2es') which will fail. Also  
+Here include the argument xfuns='tas2es' to use the option annual(tas2es(gcm)) rather than the option annual(gcm,FUN='tas2es') which will fail. Also, we apply the downscaling to the mean sea level pressure (MSLP).  
 
 ```{r}
 if (!file.exists('dse.mu.climatrans.rda')) {
@@ -376,16 +540,66 @@ for (i in 1:3) {
 }
 ```
 
-#### *Maximum temperature*
+*Delhi* 
+Validation of the downscaled ensembles underestimated both the observed interannual variations and trend in the May-October mean $\mu$. The projections do not indicate much change in the future, however, the analysis does not capture well all factors that may influence the precipitation intencity. It may be more sensitive to small-scale conditions and processes (e.g. mesoscale convection).
+
+The donscaled ensemble provides an inadequate description of $f_w$ for Delhi, although both models and observations agree on near-zero trends. There are uncounted sources for interannual variability, which implies and underestimation of dry and wet seasons.
+
+*Mumbay*
+The downscaled results provide an inadequate description of both $\mu$ and $f_w$ in terms of interannual variability and trend ($\mu$). The results do not suggest future change in $\mu$, however, there are some indication of a slight increase in $f_w$.
+
+*Bangalore*
+The downscaled results provide an inadequate description of both $\mu$ and $f_w$ in terms of interannual variability and trend, and suggest future no change in $\mu$ or $f_w$.
+
+## GCM raw results for precipitation over the Indian sub-continent:
+
+As an extra check, a plot is made of the raw CMIP5 RCP4.5 GCM results for the precipitation averaged over the Indian continent (70-90E/7-30N). Here, the annual mean precipitation $\overline{x}$ is shown rather than May-October $f_w$ and $\mu$, however, $\overline{x}= f_w \mu$ and most of the rainfall typically falls within the May-October period. Hence, any change in the annual mean precipitation is mostly due to the rainy monsoon season.    
+
+The results suggest a modest increase simulated for precipitation. The corresponding estimate from the NCAR/NCEP reanalyses suggests an increasing trend, however, such results should be viewed with caution doe to potential inhomogeneities (<https://climatedataguide.ucar.edu/climate-data/atmospheric-reanalysis-overview-comparison-tables>)
+
+```{r}
+## India:
+Z2 <- precipcmip(lon=c(70,90),lat=c(7,30))
+par(bty='n')
+X <- zoo(x=apply(coredata(Z2$gcm),2,function(x) 100*(x/mean(x,na.rm=TRUE))),order.by=index(Z2$gcm))
+plot(X,lwd=3,col=rgb(0,0.5,1,0.2),plot.type='single',ylab='Annual precip (%)')
+lines(100*Z2$obs/mean(Z2$obs,na.rm=TRUE),lwd=3)
+grid()
+```
+
+## * Analysis of maximum temperature*
 
 Check the long-term change: historic trend in the mean - include all seasons, but to get a clearer ipression, plot the anomalies (i.e. exclude the mean seasonal cycle).
 
 ```{r}
   load('climatrans.tx.rda')
-  plot(as.4seasons(anomaly(climatrans.tx)))
+  plot(as.4seasons(anomaly(climatrans.tx)),new=FALSE)
   for(i in 1:3) lines(trend(subset(as.4seasons(anomaly(climatrans.tx)),is=i)))
   grid()
 ```
+
+## Are the hot events behaving like Poisson distribution?
+
+Take hot events to be any day warmer than 30C:
+
+```{r}
+nhot <- annual(climatrans.tx,FUN='count',threshold=35)
+plot(nhot,new=FALSE)
+for(i in 1:3) lines(trend(subset(nhot,is=i)))
+grid()
+print(trend(nhot,result='pval')) 
+```
+
+
+```{r}
+print(paste('Mean number=',mean(nhot[,1],na.rm=TRUE),'Variance=',var(nhot[,1],na.rm=TRUE),
+            'should equal',mean(nhot[,1],na.rm=TRUE),'for Poisson process'))
+hist(coredata(nhot[,1]),freq=FALSE,col='grey',
+     main=loc(nhot)[1])
+lines(dpois(x=seq(0,max(nhot[,1]),by=1),lambda=mean(nhot[,1],na.rm=TRUE)),lwd=2,col='red')
+grid()
+```
+
 
 Downscale the seasonal seasonal mean maximum temperature and then use the mean temperature to estimate the number of hot days assuming that the daily distribution is approximately Gaussian for a given season. 
 
@@ -395,18 +609,37 @@ Downscale the seasonal seasonal mean maximum temperature and then use the mean t
   predictor <- aggregate(subset(predictor,it='jja'),year,FUN='mean')
   index(predictor) <- year(predictor)
   eof.t2m <- EOF(predictor)
+```
+
+Organise the predictand
+
+```{r Tx-predictand}
 ## The predictand
   Tx <- subset(as.4seasons(climatrans.tx),it='jja')
   pca.tx <- PCA(Tx)
   class(pca.tx) <- c("pca","station", "annual", "zoo")
   index(pca.tx) <- year(pca.tx)
-  ds.tx <- DS(pca.tx,eof.t2m)
-## Check the residuals
-  tx.2 <- as.residual(as.station(ds.tx))
-  tx.2 <- attrcp(Tx,tx.2); class(tx.2) <- class(Tx)
-  pca.tx.2 <- PCA(tx.2)
-  plot(pca.tx.2)
 ```
+
+Apply the downscaling to maximum temperature and check the residuals.
+
+```{r}
+  ds.tx <- DS(pca.tx,eof.t2m)
+  plot(ds.tx,new=FALSE)
+```
+
+### Check the residuals of the regression analysis
+
+```{r}
+## Check the residuals
+  tx.2 <- as.station(as.residual(ds.tx))
+  pca.tx.2 <- PCA(tx.2)
+  plot(pca.tx.2,new=FALSE)
+```
+
+The eigenvalue spectrum is not flat, and the time series hints of some temporal structure, however, the spatial weights suggests little spatial covariance.
+
+## Hot day statistics
 
 Apply the analysis of number of hot days
 
@@ -422,10 +655,14 @@ Apply the analysis of number of hot days
 
     ## The function hotsummerdays estimates the number of hot days based on
     ## the assumption that the temperature is close to being normally distributed
-    hw <- hotsummerdays(x=y,dse=dse.tx,threshold=trh[i],plot=FALSE)
-    plot(hw,new=FALSE)
+    hw <- hotsummerdays(x=y,dse=dse.tx,threshold=trh[i],plot=TRUE,new=FALSE)
+    #plot(hw)
   }
 ```
+
+The general linear models provide a reasonable description of the number of hot events given the summer mean temperature. The tails of the distribution do not quite conform to the normal distribution, however. The downscaled model summer mean temperatures are comparable with observed  summer mean temperatures.  
+
+### Check link between the mean and 95-percentile
 
 Check the correlation between the seasonal percentiles and the seasonal mean temperature, assuming the temperature is normally distributed.
 
@@ -433,30 +670,25 @@ Check the correlation between the seasonal percentiles and the seasonal mean tem
   txq95 <- diagnose(subset(climatrans.tx,is=1))
 ```
 
-Check whether the maximum temperature is close to being normally distributed
-
-```{r}
-## New Delhi:	
-  new.delhi.tx <- subset(climatrans.tx,is=1)
-## Bangalore:
-  bangalore.tx <- subset(climatrans.tx,is=3)
-## Bombay:     
-  bombay.tx <- subset(climatrans.tx,is=2)
-  
-  y <- new.delhi.tx
-  par(mfcol=c(2,2))
-  qqnorm(coredata(subset(y,it='djf')),col='grey',main='DJF')
-  qqline(coredata(subset(y,it='djf')))
-  qqnorm(coredata(subset(y,it='mam')),col='grey',main='MAM')
-  qqline(coredata(subset(y,it='mam')))
-  qqnorm(coredata(subset(y,it='jja')),col='grey',main='JJA')
-  qqline(coredata(subset(y,it='jja')))
-  qqnorm(coredata(subset(y,it='son')),col='grey',main='SON')
-  qqline(coredata(subset(y,it='son')))
-```
-
 Check the long-term change: historic trend in the seasonal spread (standard deviation) - the above estimates assumed that the spread is constant. The number of hot days will be even higher if the spread increases over time.
 
 ```{r}
-  plot(as.4seasons(anomaly(climatrans.tx),FUN='sd'),new=FALSE)
+  tx.sd <- as.4seasons(anomaly(climatrans.tx),FUN='sd')
+  plot(subset(tx.sd,it='jja'),new=FALSE)
+  for(i in 1:3) lines(trend(subset(subset(tx.sd,it='jja'),is=i)))
+  grid()
+  print(trend(subset(tx.sd,it='jja'),result='pval'))
+  print(colMeans(climatrans.tx))
 ```
+
+The interannual variabilty in the seasonal daily max temperature variance of ~2 degrees is small compared to the temperature level (especially in degrees Kelvin).
+
+### Check if the variance in standard deviation conforms to randomness: normally distributed
+
+```{r}
+for (i in 1:3) {
+  qqnorm(coredata(subset(subset(tx.sd,it='jja'),is=i)),main=loc(tx.sd)[i])
+}
+```
+
+
