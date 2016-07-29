@@ -420,6 +420,7 @@ wq95 <- function(x) {x <- x[is.finite(x)]; x <- x[x >= 1]; wq95 <- quantile(x,pr
 season<-5:10
 fw <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetfreq')
 mu <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetmean')
+nd <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'nv')
 q95 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wq95')
 ```
 
@@ -493,9 +494,28 @@ for(i in 1:3) lines(trend(subset(annual(climatrans.pr,'wetfreq'),is=i)))
 grid()
 ```
 
+
+```{r}
+print(summary(coredata(pt)))
+print(summary(coredata(fw*nd)))
+print(summary(coredata(mu)))
+```
+
 ##**Predictors for downscaling**
 
 Now prepare for the downscaling: Retrieve and process the predictors. For the wet-day mean we try temperature (or sea surface temperature, SST). There are different possibilities. We can estimate the vapour saturation pressure based on the Clausius-Clapeyron equation (`C.C.eq()`) or we can use the temperature directly (the former translates more directly into moisture mass). The aggregation of the temperature over the wet-season may involve the average, minimum or the maximum values. Trial and error to see what works and what doesn't: the results suggest a reasonable choise was May-October season mean.
+
+
+```{r}
+## Retrieve the reanalysis from FTP
+if (!file.exists("air.mon.mean.nc"))
+  download.file('ftp://ftp.cdc.noaa.gov/Datasets/ncep.reanalysis.derived/surface/air.mon.mean.nc',
+              destfile = 'air.mon.mean.nc')
+if (!file.exists("slp.mon.mean.nc"))
+  download.file('ftp://ftp.cdc.noaa.gov/Datasets/ncep.reanalysis.derived/surface/slp.mon.mean.nc',
+              destfile = 'slp.mon.mean.nc')
+```
+
 
 ```{r}
 ## Aggregate sub-season values to annual mean values
@@ -651,6 +671,7 @@ The downscaled results provide an inadequate description of both $\mu$ and $f_w$
 *Bangalore*
 The downscaled results provide an inadequate description of both $\mu$ and $f_w$ in terms of interannual variability and trend, and suggest future no change in $\mu$ or $f_w$.
 
+
 ## GCM raw results for precipitation over the Indian sub-continent:
 
 As an extra check, a plot is made of the raw CMIP5 RCP4.5 GCM results for the precipitation averaged over the Indian continent (70-90E/7-30N). Here, the annual mean precipitation $\overline{x}$ is shown rather than May-October $f_w$ and $\mu$, however, $\overline{x}= f_w \mu$ and most of the rainfall typically falls within the May-October period. Hence, any change in the annual mean precipitation is mostly due to the rainy monsoon season.    
@@ -676,6 +697,7 @@ Check the long-term change: historic trend in the mean - include all seasons, bu
   plot(as.4seasons(anomaly(climatrans.tx)),new=FALSE)
   for(i in 1:3) lines(trend(subset(as.4seasons(anomaly(climatrans.tx)),is=i)))
   grid()
+  print(summary(coredata(climatrans.tx)))
 ```
 
 Downscale the seasonal seasonal mean maximum temperature and then use the mean temperature to estimate the number of hot days assuming that the daily distribution is approximately Gaussian for a given season. 
