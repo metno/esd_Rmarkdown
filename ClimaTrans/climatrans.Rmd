@@ -39,6 +39,7 @@ Load the esd and ncdf packages.
 ```{r,echo=TRUE}
 library(esd)
 library(ncdf)
+#rm(list=ls())
 ## Information about the system and session
 ```
 
@@ -378,7 +379,9 @@ The analysis and downscaling can be carried out once the data has been converted
 load('climatrans.pr.rda')
 ## Display the structure of the data as
 str(climatrans.pr)
+plot(climatrans.pr,new=FALSE)
 ```
+
 ##**Sensitivity tests**
 
 How do the precipitation respond to varying forcings/conditions? Such iformation may provide useful clues as to how the precipitation is expected to change in the future.
@@ -421,6 +424,7 @@ season<-5:10
 fw <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetfreq')
 mu <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetmean')
 nd <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'nv')
+ndhr <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'count',threshold=100)
 q95 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wq95')
 ```
 
@@ -476,21 +480,31 @@ For $\mu$, only the record for Mumbay suggest a significant long-term trend at t
 If the 24-hr preciptation amounts is exponential (when it rains), then the probability of exceeding a threshold is $Pr(X>x_0) = f_w e^{-x_0/\mu}$. Since we know both, we can approximately quantify the probability for days receiving more than 50 mm of rain.   
 
 ```{r, fig.width=6, fig.height=6}
-## Wet-day mean
+## Probability of exceedin 50 mm/day
 Pr <- PrexpPr(mu,fw,x0=50) 
 plot(Pr,new=FALSE,errorbar=FALSE)
 for(i in 1:3) lines(trend(subset(Pr,is=i)))
 grid()
+print(trend(Pr,result='pval'))
 ```
 
 Also, it's interesting to see how the annual total precipitation amount changes over time:
 
 ```{r, fig.width=6, fig.height=6}
-## Aggregate to mean seasonal cycle and annual mean values
+## Aggregate to annual totals
 pt <- annual(climatrans.pr,'sum')
 attr(pt,'unit') <- 'mm/season'
 plot(pt,new=FALSE)
-for(i in 1:3) lines(trend(subset(annual(climatrans.pr,'wetfreq'),is=i)))
+for(i in 1:3) lines(trend(subset(pt,is=i)))
+grid()
+print(trend(pt,result='pval'))
+```
+
+
+Also, it's interesting to see how the number of days with heave rainfall changes over time:
+
+```{r, fig.width=6, fig.height=6}
+plot(ndhr,new=FALSE)
 grid()
 ```
 
@@ -535,6 +549,7 @@ if (!exists("slp")) {
 
 ```
 
+
 ### **Examine potential large-scale tele-connections: correlation fields** 
 
 ```{r}
@@ -571,8 +586,10 @@ The PCA pattern has more similar spatial weights for $f_w$ over the three megaci
 ```{r}
 eof.es <- EOF(es)
 eof.slp <- EOF(slp)
+eof.t2m <- EOF(aggregate(subset(t2m,is=list(lon=c(65,80),lat=c(10,20))),year,'mean'))
 index(eof.es) <- year(eof.es)
 index(eof.slp) <- year(eof.slp)
+index(eof.t2m) <- year(eof.t2m)
 ```
 
 The dominant mode of variability in the May-October mean $e_s$ featured largest magnitudes east of south Indian coast.  
@@ -587,6 +604,13 @@ The main May-October SLP mode was associated with the strength of the Monsoon wi
 ### **Plot the EOFs for the SLP**
 ```{r, fig.width=6, fig.height=6}
 plot(eof.slp,new=FALSE)
+```
+
+The main May-October T(2m) mode was associated with the strength of the Monsoon winds.
+
+### **Plot the EOFs for the SLP**
+```{r, fig.width=6, fig.height=6}
+plot(eof.t2m,new=FALSE)
 ```
 
 ## **Do the downscaling**
@@ -604,18 +628,7 @@ plot(ds.mu,colbar1=list(breaks=seq(0,1,by=0.1)),
 
 The results for the wet-daty mean $\mu$ were problematic in the sense that the evaluation of the downscaling model (cross-validation) revealed low scores, in particular associated with a small number of extreme seasons with exceptionally high $\mu$. 
 
-## The wet-day frequency
-
-Mean sea level pressure was used as a predictor to downscale the wet-day frequency $f_w$, which too is motivated from physical reasoning: the wind speed/direction and transport of moisture influence the probability for precipitation. 
-
-```{r}
-ds.fw <- DS(pca.fw,eof.slp,eofs=1:20)
-plot(ds.fw,new=FALSE)
-```
-
-The downscaled results for $f_w$ were associated with high skill (cross-validation = 0.71), and the associated predictor pattern implies that the rain occurrence is associated with large-scale southwesterly wind field, typically associated with the monsoon.  
-
-## **Examine the residuals from the downscaling**
+### Examine the residuals from the downscaling for the wet-day mean
 
 First check the residuals for the wet-day mean precipitation:
 
@@ -628,7 +641,42 @@ First check the residuals for the wet-day mean precipitation:
   str(mu.2)
 ```
 
-The residuals for the wet-day frequency:
+### Alternative approach: downscale the number of days with heavy rainfall
+
+Model the number with heavy rainfall (more than 100 mm/day) in Mumbay.
+
+```{r fig.width=6, fig.height=6}
+ndhr.cal <- data.frame(y = coredata(subset(subset(ndhr,is=2),it=c(1949,2004))),
+                       X = coredata(subset(eof.es,it=c(1949,2004))))
+ds.ndhr <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr.cal,family="poisson")
+plot(1949:2004,ndhr.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr)[2])
+grid()
+lines(1949:2004,exp(predict(ds.ndhr)),col='red')
+```
+
+Check if the number of days with heavy precipitation is Poisson-distributed
+
+```{r}
+print(paste('Mean number=',mean(ndhr[,2],na.rm=TRUE),'Variance=',var(ndhr[,2],na.rm=TRUE),
+            'should equal',mean(ndhr[,2],na.rm=TRUE),'for Poisson process'))
+h <- hist(coredata(ndhr[,2]),freq=FALSE,col='grey',
+     main=loc(ndhr)[2])
+lines(h$mids-0.5,dpois(x=h$mids-0.5,lambda=mean(ndhr[,2],na.rm=TRUE)),lwd=2,col='red')
+grid()
+```
+
+## The wet-day frequency
+
+Mean sea level pressure was used as a predictor to downscale the wet-day frequency $f_w$, which too is motivated from physical reasoning: the wind speed/direction and transport of moisture influence the probability for precipitation. 
+
+```{r}
+ds.fw <- DS(pca.fw,eof.slp,eofs=1:20)
+plot(ds.fw,new=FALSE)
+```
+
+The downscaled results for $f_w$ were associated with high skill (cross-validation = 0.71), and the associated predictor pattern implies that the rain occurrence is associated with large-scale southwesterly wind field, typically associated with the monsoon.  
+
+### The residuals for the wet-day frequency:
 
 ```{r pca-of-residual-fw}
 ## Examine the PCA of residuals for the cold monthsto see if there are any structures left
@@ -638,7 +686,7 @@ The residuals for the wet-day frequency:
   grid()
 ```
 
-#### **Do the downscaling based on the CMIP5 RCP4.5 ensemble**
+## **Do the downscaling based on the CMIP5 RCP4.5 ensemble**
 
 Here include the argument xfuns='tas2es' to use the option annual(tas2es(gcm)) rather than the option annual(gcm,FUN='tas2es') which will fail. Also, we apply the downscaling to the mean sea level pressure (MSLP).  
 
@@ -790,6 +838,7 @@ The interannual variabilty in the seasonal daily max temperature variance of ~2 
 ```{r}
 for (i in 1:3) {
   qqnorm(coredata(subset(subset(tx.sd,it='jja'),is=i)),main=loc(tx.sd)[i])
+  qqline(coredata(subset(subset(tx.sd,it='jja'),is=i)),main=loc(tx.sd)[i])
 }
 ```
 
