@@ -1,3 +1,6 @@
+---
+output: pdf_document
+---
 *Climatrans results: Work package 3: Outline of the development trends and climate change impact up to 2050* 
 -----------------------------------
 title: "Extreme precip and heat waves: empirical-statistical downscaling and analysis"
