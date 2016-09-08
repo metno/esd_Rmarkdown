@@ -1,7 +1,8 @@
 ---
 output: pdf_document
 ---
-*Climatrans results: Work package 3: Outline of the development trends and climate change impact up to 2050* 
+* Supporting Material for 'Predicting events: Hot days and heavy precipitation'*
+
 -----------------------------------
 title: "Extreme precip and heat waves: empirical-statistical downscaling and analysis"
 author: "Rasmus Benestad"
@@ -12,6 +13,8 @@ output: pdf_document
 ---
 
 **Background**
+
+***Climatrans results: Work package 3: Outline of the development trends and climate change impact up to 2050***
 The main objectives of the project are: 1) Assess climate change and environmental impacts in urban areas in India related to the transport sector. 2) Develop mitigation and adaption strategies related to the transport sector in urban areas in India. The objectives are set responding to the following objectives in the KLIMAFORK call: Improve knowledge about the impacts of climate change on the natural environment and society; and Enhance knowledge about how society can and should adapt to the challenges of climate change.
 
 The CLIMATRANS project proposal responds to the research themes-Strategies for reduced human made climate change" and "Strategies for climate change adaption" of the KLMAFORSK call. Assessing risk, uncertainty and irreversibility as inherent to the climate problem, this project will provide knowledge that makes it possible to improve institutional capacity in climate decision-making strategies. The project is interdisciplinary within the realm of social sciences (economics, political science, sociology), and natural sciences (meteorology and civil engineering). It is also a collaboration between Norwegian (Institute of Transport Economics and Norway Meteorological Institute) and four Indian research environments, thereby responding to the INDNOR program.
@@ -860,7 +863,6 @@ grid()
 print(trend(nhot,result='pval')) 
 ```
 
-
 ```{r}
 print(paste('Mean number=',mean(nhot[,1],na.rm=TRUE),'Variance=',var(nhot[,1],na.rm=TRUE),
             'should equal',mean(nhot[,1],na.rm=TRUE),'for Poisson process'))
@@ -870,4 +872,122 @@ lines(dpois(x=seq(0,max(nhot[,1]),by=1),lambda=mean(nhot[,1],na.rm=TRUE)),lwd=2,
 grid()
 ```
 
+
+## The highest values expected is proportional to the sample size
+
+The actual sample size for precipitation amount is $N=n_{days} f_w$, and for a variable with an particular exponential distribution, we can demonstrate that the highest value is a function of the sample size $N$:
+
+```{r}
+N = round(10^seq(1,5,length=300))
+qx <- rep(NA,length(N))
+for (i in 1:length(N)) qx[i] <- max(rexp(N[i]))
+plot(N,qx,log='x',main='Maximum value vs sample size',ylab='Maximum value')
+```
+
+
+## Some analyses to examine the data and its quality
+
+A simple ideal demonstration that simulates the gridding process where a grid-point data is a weighted sum of four nearby measurements (similar to a bi-linear interpolation). 
+
+```{r}
+## Test weighted sum of daily rainfall.
+## Simulate gridding 
+
+N <- 100000
+iw <- runif(4*N)
+x <- rexp(4*N)
+x[iw < 0.6] <- 0
+W <- runif(4)
+W <- W/sum(W)
+dim(x) <- c(N,4)
+y <- x %*% W
+
+breaks <- seq(-1,20,by=0.1)
+hx1 <- hist(x[,1],plot=FALSE,breaks=breaks)
+hx2 <- hist(x[,2],plot=FALSE,breaks=breaks)
+hx3 <- hist(x[,3],plot=FALSE,breaks=breaks)
+hx4 <- hist(x[,4],plot=FALSE,breaks=breaks)
+maxx <- max(hx1$counts,hx2$counts,hx3$counts,hx4$counts)
+hy <- hist(y,breaks=breaks,xlim=c(0,5),ylim=c(0,maxx),col="grey",border="grey",
+           main='Test gridded precip',xlab='amount',
+           sub="'gridded' result = weighted sum of 4 stations")
+lines(hx1$mids,hx1$counts,col='red',lwd=3)
+lines(hx2$mids,hx2$counts,col='red',lwd=3)
+lines(hx3$mids,hx3$counts,col='red',lwd=3)
+lines(hx4$mids,hx4$counts,col='red',lwd=3)
+legend(3,maxx,c('Individual simulation','Weighted sum'),
+      col=c('red','grey'),lwd=c(3,10),bty='n')
+```
+
+
+
+## Example of station record
+
+The format of the station records bears a structure from the past where it was more important to take up little space rather than being human readable. 
+
+```{r eval=FALSE}
+102197208 491010005000000000000000000000000000000000000000001090000000002820249 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 49102000000000000000000000000000300000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 491110000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 4911200000000000000000000000000000000000000000000000000000000         1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 491210000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 49122000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500110000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50012000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500210000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50022000000000000000000000000000000000000000000000000                 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500310000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50032000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500410000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 5004200000000000000000000000000000000000000000000000000000000         1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500510000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50052000000000000000000000000000000080003000500000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500610000000000000000000300050000000000000000004304750051001301470053 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 5006201220089005800790076000000200000000000000010001800380000         1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500710005004100280000002000150513154901420030039108410729012200760051 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50072004600080457074403560066006101070269046007320330001300710058     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500810028000300410147006100710081027701420152010700130015000000050005 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50082000000250000000000030000000000000000000000000000005600030175     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500910470107207921283027400580208007900080000000003811201065800030000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 5009200030003002003350043000000380000000000000000000000000000         1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 501010028000000000000000000000000009900000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50102000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 501110000000000000000000000000000000000000000000000000000000000280000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 5011200000000000000000000000000000000000000000000000000000000         1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 501210000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50122000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 51011    000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 51012000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 51021    000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 51022000000000000000000000000000000000000000000000000                 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 51031    000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+```
+
+The way to decode such files has been provided, but the way the information is stored makes it prone to errors and mistakes when reading the data:
+
+```{r eval=FALSE}
+Format Specifications
+Column                                           Data
+A                                                Catchment No. - 3 Digits
+B                                                Latitude - 2 Digits
+C                                                Longitudes - 2 Digits
+D                                                Station No. - 2 Digits
+E                                                Blank
+F                                                Year - 2 Digits
+G                                                Month - 2 Digits
+H                                                Card No. - 1 Digit
+I to W                                           Rainfall in 4 Digits (Without Decimal)
+                                                 If Col H has a value 1 - Rainfall from
+Dates 1 to 15; value 2 - Rainfall from Dates 17 to 31
+X                                                If Col H has value 1 - Rainfall for
+the date 16; value 2 - Rainfall for the month - (5 Digits)
+Y                                                State No. - 2 Digits
+Z                                                District No. - 2 Digits
+AA                                               STN No. - 2 Digits
+AB                                               District Name - 16 Characters
+AC                                               Station Name - 16 Characters
+AD                                               Class - 5 Characters
+AE                                               Secret Classification - 2 Digits
+AF                                               Century Year - 19 or 20
+```
 
