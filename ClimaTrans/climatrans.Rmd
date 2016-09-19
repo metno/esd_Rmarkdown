@@ -291,6 +291,122 @@ hotsummerdays <- function (x, y = NULL, dse = NULL, it = "jja", threshold = 30,
 }
 ```
 
+### Function to evaluate spatio-temporal variance structure for SLP
+
+
+```{r}
+showceofvar <-  function(x,N,i,gcmnm.i,add=FALSE,xlim=NULL,ylim=NULL,verbose=FALSE,...) {
+  n <- length(x$mean.diff)
+  j <- 1:n
+  col <- rgb(j/n,abs(sin(pi*j/n)),(1-j/n),0.3)
+  if (is.null(xlim)) xlim <- c(-1,1)
+  if (is.null(ylim)) ylim <- c(1,N)
+  
+  if (!add) {
+    par(bty="n")
+    par0 <- par()
+    plot(xlim,ylim,type="n",
+         ylab="GCM",xlab=expression(1- sigma[p*r*e]/sigma[r*e*f]),
+         main=paste("Diagnostics: common EOFs",attr(x,'variable')),
+         xlim=xlim,ylim=ylim,col="grey")
+    grid()
+    #legend(xlim[1],ylim[2],c("same sign","different sign"),
+    #       pch=c(19,21),bty="n",col="grey")
+    par(xpd=TRUE)
+    text(xlim[2],ylim[2],'EOF #',col='grey40',cex=0.8,pos=3)
+
+    par(new=TRUE,fig=c(0.85,0.95,0.70,0.85),mar=c(0,3,0,0),
+        cex.axis=0.7,yaxt="s",xaxt="n",las=1)
+     colbar <- rbind(1:n,1:n)
+    image(1:2,1:n,colbar,col=col)
+    par(fig=par0$fig,mar=par0$mar,cex.axis=par0$cex.axis,
+        yaxt=par0$yaxt,xaxt=par0$xaxt,las=par0$las,new=TRUE)
+    plot(xlim,ylim,type="n",xlim=xlim,ylim=ylim,
+         xlab='',ylab='',main='',sub='')
+    par(par0$new)
+  }
+  cex <- abs(0.1 - x$mean.diff)/0.1
+  pch <- rep(19,n); pch[cex < 0] <- 21
+  cex <- abs(cex); cex[cex > 2] <- 2
+  if (verbose) {
+     print('Mean difference:');print(x$mean.diff)
+     print('Ration of standard deviation');print(x$sd.ratio)
+     print('Size');print(cex)
+     print('col');print(col)
+     #points(x$mean.diff,1-x$sd.ratio,pch=pch,col='grey75',cex=1)
+  }
+  
+  points(1-x$sd.ratio,rep(i,n),pch=pch,col=col,cex=cex)
+  text(xlim[1],i,gcmnm.i,pos=4,cex=0.7)
+}
+
+
+biasdiag <- function(predictor,param='slp',
+                    path="CMIP5.monthly/",pattern="slp_Amon_ens_",type='ncdf',
+                    period=c(1950,2015),rcp='rcp45',verbose=TRUE,
+                    lon=c(0,100),lat=c(65,90),select=NULL,xlim=NULL) {
+
+  ## Diagnose the common EOFs and effect of bias-adjustment
+
+  it <- month.abb[as.numeric(rownames(table(month(predictor))))]
+  if (verbose) print(paste('biasdiag, it=',it))
+
+  # Ensemble GCMs
+  path <- file.path(path,rcp,fsep = .Platform$file.sep)
+  ncfiles <- list.files(path=path,pattern=pattern,full.name=TRUE)
+  N <- length(ncfiles)
+
+  if (is.null(select)) select <- 1:N else
+                       N <- length(select)
+  if (verbose) {print('GCMs:'); print(path); print(ncfiles[select])}
+  
+  d.y <- 6 # Number of leading EOFs to evalue
+  years <- 1900:2100
+  m <- length(years)
+  months <- rep(month(y)[1],m)
+  X <- matrix(rep(NA,N*m*d.y),N,m*d.y)
+  dim(X) <- c(d.y[2],N,m)
+  gcmnm <- rep("",N)
+  scorestats <- matrix(rep(NA,N*9),N,9)
+  colnames(scorestats) <- c("1-r.xval","mean.diff","sd.ratio","autocorr.ratio",
+                            "res.trend","res.K-S","res.ar1",'amplitude.ration',
+                            "1-R2")
+
+  t <- as.Date(paste(years,months,'01',sep='-'))
+
+  cols <- rgb(seq(1,0,length=100),rep(0,100),seq(0,1,length=100),0.15)
+
+  flog <- file("DSensemble.ceof-log.txt","at")
+  
+  ## Set up a list environment to keep all the results
+  results <- list() 
+  if (verbose) print("loop...") 
+  for (i in 1:N) {
+    if (verbose) print(ncfiles[select[i]])
+    gcm <- retrieve(ncfile = ncfiles[select[i]],type=type,
+                          lon=range(lon(predictor)),
+                          lat=range(lat(predictor)),verbose=verbose)
+    if (!is.null(it)) {
+      if (verbose) print('Extract some months ot a time period')
+      if (verbose) print(it)
+      gcm <- subset(gcm,it=it)
+    }
+    #gcmnm[i] <- attr(gcm,'model_id')
+    gcmnm.i <- paste(attr(gcm,'model_id'),attr(gcm,'realization'),sep="-r")
+    gcmnm.i <- gsub(' ','',gcmnm.i)
+    gcmnm.i <- gsub('-','.',gcmnm.i)
+    print(gcmnm.i)
+    GCM <- aggregate(subset(gcm,it=month.abb[month(y)[1]]),year,FUN='mean') 
+    SLPGCM <- combine(predictor,GCM)
+    Z <- try(EOF(SLPGCM))
+    diag <- diagnose(Z)
+    showceofvar(diag,N,i,gcmnm.i,add=(i!=1),xlim=xlim,verbose=verbose)
+    eval(parse(text=paste('results$',it,'.',gcmnm.i,' <- diag',sep='')))
+  }
+  return(results)
+}
+
+```
 
 ##*Precipitation*
 
@@ -430,7 +546,8 @@ season<-5:10
 fw <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetfreq')
 mu <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetmean')
 nd <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'nv')
-ndhr <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'count',threshold=100)
+ndhr100 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'count',threshold=100)
+ndhr50 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'count',threshold=50)
 q95 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wq95')
 ```
 
@@ -510,7 +627,15 @@ print(trend(pt,result='pval'))
 Also, it's interesting to see how the number of days with heave rainfall changes over time:
 
 ```{r, fig.width=6, fig.height=6}
-plot(ndhr,new=FALSE)
+plot(ndhr100,new=FALSE)
+grid()
+```
+
+
+And more moderate events
+
+```{r, fig.width=6, fig.height=6}
+plot(ndhr50,new=FALSE)
 grid()
 ```
 
@@ -652,12 +777,32 @@ First check the residuals for the wet-day mean precipitation:
 Model the number with heavy rainfall (more than 100 mm/day) in Mumbay.
 
 ```{r fig.width=6, fig.height=6}
-ndhr.cal <- data.frame(y = coredata(subset(subset(ndhr,is=2),it=c(1949,2004))),
+ndhr.cal <- data.frame(y = coredata(subset(subset(ndhr100,is=2),it=c(1949,2004))),
                        X = coredata(subset(eof.es,it=c(1949,2004))))
 ds.ndhr <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr.cal,family="poisson")
 plot(1949:2004,ndhr.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr)[2])
 grid()
 lines(1949:2004,exp(predict(ds.ndhr)),col='red')
+```
+
+Model the number with heavy rainfall (more than 50 mm/day) in Delhi and Bangalore.
+
+```{r fig.width=6, fig.height=6}
+## Delhi
+ndhr50.1.cal <- data.frame(y = coredata(subset(subset(ndhr50,is=1),it=c(1949,2004))),
+                       X = coredata(subset(eof.es,it=c(1949,2004))))
+ds.ndhr50.1 <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr50.1.cal,family="poisson")
+plot(1949:2004,ndhr50.1.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr)[1])
+grid()
+lines(1949:2004,exp(predict(ds.ndhr50.1)),col='red')
+
+# Bangalore
+ndhr50.3.cal <- data.frame(y = coredata(subset(subset(ndhr50,is=3),it=c(1949,2004))),
+                       X = coredata(subset(eof.es,it=c(1949,2004))))
+ds.ndhr50.3 <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr50.3.cal,family="poisson")
+plot(1949:2004,ndhr50.3.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr)[3])
+grid()
+lines(1949:2004,exp(predict(ds.ndhr50.3)),col='red')
 ```
 
 Check if the number of days with heavy precipitation is Poisson-distributed
@@ -919,6 +1064,13 @@ legend(3,maxx,c('Individual simulation','Weighted sum'),
       col=c('red','grey'),lwd=c(3,10),bty='n')
 ```
 
+## Examine the common EOFs for SLP over the Indian sub-continent
+
+
+```{r}
+print('Compare common EOFs')
+diag.slp <- biasdiag(slp)
+```
 
 
 ## Example of station record
