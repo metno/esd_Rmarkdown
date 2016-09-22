@@ -45,6 +45,7 @@ Load the esd and ncdf packages.
 ```{r,echo=TRUE}
 library(esd)
 library(ncdf)
+setwd('~/R')
 #rm(list=ls())
 ## Information about the system and session
 ```
@@ -210,8 +211,6 @@ hotsummerdays <- function (x, y = NULL, dse = NULL, it = "jja", threshold = 30,
     cal <- data.frame(x = c(coredata(mwd1)), y = c(coredata(nwd1)))
     dfit <- glm(y ~ x, family = "poisson", data = cal)
     if (plot) {
-        if (new) 
-            dev.new()
         par(bty = "n")
         plot(cal, pch = 19, ylim = c(0, 90), xlab = expression(paste("mean temperature ", 
             (degree * C))), ylab = "number of hot days", main = loc(x))
@@ -219,8 +218,6 @@ hotsummerdays <- function (x, y = NULL, dse = NULL, it = "jja", threshold = 30,
             1, max(cal$x, na.rm = TRUE) + 5, by = 0.1))
         lines(pre$x, exp(predict(dfit, newdata = pre)), col = rgb(1, 
             0, 0, 0.3), lwd = 3)
-        if (new) 
-            dev.new()
         djf.sd <- sd(coredata(djf), na.rm = TRUE)
         qqnorm(coredata(djf))
         qqline(coredata(coredata(djf)), col = "red")
@@ -258,16 +255,12 @@ hotsummerdays <- function (x, y = NULL, dse = NULL, it = "jja", threshold = 30,
     Nwd <- zoo(cbind(preq1, preq2, prem, tr1, tr2, tr3), order.by = t)
     nwd.pre <- zoo(exp(predict(dfit, newdata = obs)), order.by = year(mwd1))
     if (plot) {
-        if (new) 
-            dev.new()
         par(bty = "n")
         plot(zoo(djf.dse, order.by = year(djf.dse)), plot.type = "single", 
             col = rgb(0.5, 0.5, 0.5, 0.2), ylab = expression(paste("mean temperature", 
                 (degree * C))), xlab = "", main = loc(x))
         points(mwd1, pch = 19)
         grid()
-        if (new) 
-            dev.new()
         par(bty = "n")
         plot(Nwd, plot.type = "single", lwd = 5, main = loc(x), 
             ylim = c(0, 90), xlab = "", ylab = paste("number of hot days: T(2m) > ", 
@@ -337,18 +330,18 @@ showceofvar <-  function(x,N,i,gcmnm.i,add=FALSE,xlim=NULL,ylim=NULL,verbose=FAL
   }
   
   points(1-x$sd.ratio,rep(i,n),pch=pch,col=col,cex=cex)
-  text(xlim[1],i,gcmnm.i,pos=4,cex=0.7)
+  #print(paste(' > ',i,i,gcmnm.i[i]))
+  text(xlim[1],i,gcmnm.i[i],pos=4,cex=0.6)
 }
 
 
-biasdiag <- function(predictor,param='slp',
-                    path="CMIP5.monthly/",pattern="slp_Amon_ens_",type='ncdf',
+biasdiag <- function(predictor,param='slp',it=NULL,
+                    path="CMIP5.monthly/",pattern="psl_Amon_ens_",type='ncdf4',
                     period=c(1950,2015),rcp='rcp45',verbose=TRUE,
                     lon=c(0,100),lat=c(65,90),select=NULL,xlim=NULL) {
 
   ## Diagnose the common EOFs and effect of bias-adjustment
 
-  it <- month.abb[as.numeric(rownames(table(month(predictor))))]
   if (verbose) print(paste('biasdiag, it=',it))
 
   # Ensemble GCMs
@@ -360,13 +353,13 @@ biasdiag <- function(predictor,param='slp',
                        N <- length(select)
   if (verbose) {print('GCMs:'); print(path); print(ncfiles[select])}
   
-  d.y <- 6 # Number of leading EOFs to evalue
+  nceofs <- 6 # Number of leading EOFs to evalue
   years <- 1900:2100
   m <- length(years)
-  months <- rep(month(y)[1],m)
-  X <- matrix(rep(NA,N*m*d.y),N,m*d.y)
-  dim(X) <- c(d.y[2],N,m)
-  gcmnm <- rep("",N)
+  months <- rep(month(nceofs),m)
+  X <- matrix(rep(NA,N*m*nceofs),N,m*nceofs)
+  dim(X) <- c(nceofs,N,m)
+  gcmnm.i <- rep("",N)
   scorestats <- matrix(rep(NA,N*9),N,9)
   colnames(scorestats) <- c("1-r.xval","mean.diff","sd.ratio","autocorr.ratio",
                             "res.trend","res.K-S","res.ar1",'amplitude.ration',
@@ -380,29 +373,42 @@ biasdiag <- function(predictor,param='slp',
   
   ## Set up a list environment to keep all the results
   results <- list() 
-  if (verbose) print("loop...") 
-  for (i in 1:N) {
-    if (verbose) print(ncfiles[select[i]])
-    gcm <- retrieve(ncfile = ncfiles[select[i]],type=type,
-                          lon=range(lon(predictor)),
-                          lat=range(lat(predictor)),verbose=verbose)
-    if (!is.null(it)) {
-      if (verbose) print('Extract some months ot a time period')
-      if (verbose) print(it)
-      gcm <- subset(gcm,it=it)
+  if (!file.exists('diag.ceof.slp.rda')) {
+    if (verbose) print("loop...") 
+    for (i in 1:N) {
+    
+      if (verbose) print(ncfiles[select[i]])
+      gcm <- retrieve(ncfile = ncfiles[select[i]],type=type,
+                            lon=range(lon(predictor)),
+                           lat=range(lat(predictor)),verbose=verbose)
+      if (!is.null(it)) {
+        if (verbose) print('Extract some months ot a time period')
+        if (verbose) print(it)
+        gcm <- subset(gcm,it=it)
+        gcm <- subset(gcm,it=range(year(predictor)))
+      }
+      gcmnm <- paste(attr(gcm,'model_id'),attr(gcm,'realization'),sep="-r")
+      gcmnm <- gsub(' ','',gcmnm)
+      gcmnm <- gsub('-','.',gcmnm)
+      gcmnm.i[i] <- gcmnm
+      print(gcmnm.i[i])
+      GCM <- aggregate(gcm,year,FUN='mean') 
+      SLPGCM <- combine(predictor,GCM)
+      Z <- try(EOF(SLPGCM))
+      diag <- diagnose(Z)
+      showceofvar(diag,N,i,gcmnm.i,add=(i!=1),xlim=xlim,verbose=verbose)
+      eval(parse(text=paste('results$member.',i,'.',gcmnm.i[i],' <- diag',sep='')))
+    } 
+    save(file='diag.ceof.slp.rda',results,gcmnm.i)
+  } else {
+    load('diag.ceof.slp.rda')
+    N <- length(gcmnm.i)
+    for (i in 1:N) {
+      #print(paste(' < ', i,gcmnm.i[i]))
+      showceofvar(results[[i]],N,i,gcmnm.i,add=(i!=1),xlim=xlim,verbose=verbose)
     }
-    #gcmnm[i] <- attr(gcm,'model_id')
-    gcmnm.i <- paste(attr(gcm,'model_id'),attr(gcm,'realization'),sep="-r")
-    gcmnm.i <- gsub(' ','',gcmnm.i)
-    gcmnm.i <- gsub('-','.',gcmnm.i)
-    print(gcmnm.i)
-    GCM <- aggregate(subset(gcm,it=month.abb[month(y)[1]]),year,FUN='mean') 
-    SLPGCM <- combine(predictor,GCM)
-    Z <- try(EOF(SLPGCM))
-    diag <- diagnose(Z)
-    showceofvar(diag,N,i,gcmnm.i,add=(i!=1),xlim=xlim,verbose=verbose)
-    eval(parse(text=paste('results$',it,'.',gcmnm.i,' <- diag',sep='')))
   }
+  dev.copy2pdf(file=paste('diag.ceof.slp.india.pdf',sep=''))
   return(results)
 }
 
@@ -780,7 +786,7 @@ Model the number with heavy rainfall (more than 100 mm/day) in Mumbay.
 ndhr.cal <- data.frame(y = coredata(subset(subset(ndhr100,is=2),it=c(1949,2004))),
                        X = coredata(subset(eof.es,it=c(1949,2004))))
 ds.ndhr <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr.cal,family="poisson")
-plot(1949:2004,ndhr.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr)[2])
+plot(1949:2004,ndhr.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr100)[2])
 grid()
 lines(1949:2004,exp(predict(ds.ndhr)),col='red')
 ```
@@ -792,7 +798,7 @@ Model the number with heavy rainfall (more than 50 mm/day) in Delhi and Bangalor
 ndhr50.1.cal <- data.frame(y = coredata(subset(subset(ndhr50,is=1),it=c(1949,2004))),
                        X = coredata(subset(eof.es,it=c(1949,2004))))
 ds.ndhr50.1 <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr50.1.cal,family="poisson")
-plot(1949:2004,ndhr50.1.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr)[1])
+plot(1949:2004,ndhr50.1.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr50)[1])
 grid()
 lines(1949:2004,exp(predict(ds.ndhr50.1)),col='red')
 
@@ -800,7 +806,7 @@ lines(1949:2004,exp(predict(ds.ndhr50.1)),col='red')
 ndhr50.3.cal <- data.frame(y = coredata(subset(subset(ndhr50,is=3),it=c(1949,2004))),
                        X = coredata(subset(eof.es,it=c(1949,2004))))
 ds.ndhr50.3 <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr50.3.cal,family="poisson")
-plot(1949:2004,ndhr50.3.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr)[3])
+plot(1949:2004,ndhr50.3.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr50)[3])
 grid()
 lines(1949:2004,exp(predict(ds.ndhr50.3)),col='red')
 ```
@@ -808,11 +814,11 @@ lines(1949:2004,exp(predict(ds.ndhr50.3)),col='red')
 Check if the number of days with heavy precipitation is Poisson-distributed
 
 ```{r}
-print(paste('Mean number=',mean(ndhr[,2],na.rm=TRUE),'Variance=',var(ndhr[,2],na.rm=TRUE),
-            'should equal',mean(ndhr[,2],na.rm=TRUE),'for Poisson process'))
-h <- hist(coredata(ndhr[,2]),freq=FALSE,col='grey',
-     main=loc(ndhr)[2])
-lines(h$mids-0.5,dpois(x=h$mids-0.5,lambda=mean(ndhr[,2],na.rm=TRUE)),lwd=2,col='red')
+print(paste('Mean number=',mean(ndhr100[,2],na.rm=TRUE),'Variance=',var(ndhr100[,2],na.rm=TRUE),
+            'should equal',mean(ndhr100[,2],na.rm=TRUE),'for Poisson process'))
+h <- hist(coredata(ndhr100[,2]),freq=FALSE,col='grey',
+     main=loc(ndhr100)[2])
+lines(h$mids-0.5,dpois(x=h$mids-0.5,lambda=mean(ndhr100[,2],na.rm=TRUE)),lwd=2,col='red')
 grid()
 ```
 
@@ -1066,10 +1072,11 @@ legend(3,maxx,c('Individual simulation','Weighted sum'),
 
 ## Examine the common EOFs for SLP over the Indian sub-continent
 
+Common EOFs can be used to assess the GCMs' ability to reproduce the spatio-temporal structure in covariance in cinnection to mean sea-level pressure (SLP) variations over the Indian sub-continent. In orther words, whether the GCMs reproduce the observed circulation features such as wind patterns associated with the monsoon. The code below compares the statistical character of the odel results.  
 
 ```{r}
 print('Compare common EOFs')
-diag.slp <- biasdiag(slp)
+diag.slp <- biasdiag(slp,it=month.abb[season],verbose=FALSE)
 ```
 
 
