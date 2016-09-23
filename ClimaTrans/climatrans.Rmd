@@ -791,14 +791,14 @@ grid()
 lines(1949:2004,exp(predict(ds.ndhr)),col='red')
 ```
 
-Model the number with heavy rainfall (more than 50 mm/day) in Delhi and Bangalore.
+Model the number with heavy rainfall (more than 50 mm/day) in Delhi and Bangalore. The results for Delhi and Bangalore also indicate a failure to capture the number of events. 
 
 ```{r fig.width=6, fig.height=6}
 ## Delhi
 ndhr50.1.cal <- data.frame(y = coredata(subset(subset(ndhr50,is=1),it=c(1949,2004))),
                        X = coredata(subset(eof.es,it=c(1949,2004))))
 ds.ndhr50.1 <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr50.1.cal,family="poisson")
-plot(1949:2004,ndhr50.1.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr50)[1])
+plot(1949:2004,ndhr50.1.cal$y,pch=19,ylab=expression(N(X > 50*mm)),xlab='',main=loc(ndhr50)[1])
 grid()
 lines(1949:2004,exp(predict(ds.ndhr50.1)),col='red')
 
@@ -806,7 +806,7 @@ lines(1949:2004,exp(predict(ds.ndhr50.1)),col='red')
 ndhr50.3.cal <- data.frame(y = coredata(subset(subset(ndhr50,is=3),it=c(1949,2004))),
                        X = coredata(subset(eof.es,it=c(1949,2004))))
 ds.ndhr50.3 <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr50.3.cal,family="poisson")
-plot(1949:2004,ndhr50.3.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr50)[3])
+plot(1949:2004,ndhr50.3.cal$y,pch=19,ylab=expression(N(X > 50*mm)),xlab='',main=loc(ndhr50)[3])
 grid()
 lines(1949:2004,exp(predict(ds.ndhr50.3)),col='red')
 ```
@@ -814,13 +814,51 @@ lines(1949:2004,exp(predict(ds.ndhr50.3)),col='red')
 Check if the number of days with heavy precipitation is Poisson-distributed
 
 ```{r}
-print(paste('Mean number=',mean(ndhr100[,2],na.rm=TRUE),'Variance=',var(ndhr100[,2],na.rm=TRUE),
-            'should equal',mean(ndhr100[,2],na.rm=TRUE),'for Poisson process'))
+print(paste('Mean number=',round(mean(ndhr100[,2],na.rm=TRUE),1),
+            'Variance=',round(var(ndhr100[,2],na.rm=TRUE),1),
+            'should equal',round(mean(ndhr100[,2],na.rm=TRUE),1),'for Poisson process'))
 h <- hist(coredata(ndhr100[,2]),freq=FALSE,col='grey',
      main=loc(ndhr100)[2])
 lines(h$mids-0.5,dpois(x=h$mids-0.5,lambda=mean(ndhr100[,2],na.rm=TRUE)),lwd=2,col='red')
 grid()
 ```
+
+Also check whether the number of events in Delhi and Bangalore approximately follow a Poisson distribution.
+
+```{r}
+# Delhi
+print(paste('Mean number=',round(mean(ndhr50[,1],na.rm=TRUE),1),
+            'Variance=',round(var(ndhr50[,1],na.rm=TRUE),1),
+            'should equal',round(mean(ndhr50[,1],na.rm=TRUE),1),'for Poisson process'))
+h <- hist(coredata(ndhr50[,1]),freq=FALSE,col='grey',
+     main=loc(ndhr50)[1])
+lines(h$mids-0.5,dpois(x=h$mids-0.5,lambda=mean(ndhr50[,1],na.rm=TRUE)),lwd=2,col='red')
+grid()
+
+# Bangalore
+print(paste('Mean number=',round(mean(ndhr50[,3],na.rm=TRUE),1),
+            'Variance=',round(var(ndhr50[,3],na.rm=TRUE),1),
+            'should equal',round(mean(ndhr50[,3],na.rm=TRUE),1),'for Poisson process'))
+h <- hist(coredata(ndhr50[,3]),freq=FALSE,col='grey',
+     main=loc(ndhr50)[3])
+lines(h$mids-0.5,dpois(x=h$mids-0.5,lambda=mean(ndhr50[,3],na.rm=TRUE)),lwd=2,col='red')
+grid()
+```
+
+The number of days with heavy rain is deviating somewhat from the Poisson distribution for the Indian data. We can compare the assumption of Poisson distribution with Norwegian data (all year) with known high quality (we have the metadata), and the results suggest a closer fit, although this data too is over-dispersed. 
+
+```{r}
+data(bjornholt)
+ndhr30 <- aggregate(bjornholt,year,'count',threshold=30)
+print(paste('Mean number=',round(mean(ndhr30,na.rm=TRUE),1),'Variance=',round(var(ndhr30,na.rm=TRUE),1),
+            'should equal',round(mean(ndhr30,na.rm=TRUE),1),'for Poisson process'))
+h <- hist(coredata(ndhr30),freq=FALSE,col='grey',
+     main=loc(ndhr30))
+lines(h$mids-0.5,dpois(x=h$mids,lambda=mean(ndhr30,na.rm=TRUE)),lwd=2,col='red')
+grid()
+```
+
+
 
 ## The wet-day frequency
 
@@ -1072,17 +1110,20 @@ legend(3,maxx,c('Individual simulation','Weighted sum'),
 
 ## Examine the common EOFs for SLP over the Indian sub-continent
 
+
 Common EOFs can be used to assess the GCMs' ability to reproduce the spatio-temporal structure in covariance in cinnection to mean sea-level pressure (SLP) variations over the Indian sub-continent. In orther words, whether the GCMs reproduce the observed circulation features such as wind patterns associated with the monsoon. The code below compares the statistical character of the odel results.  
 
-```{r}
+```{r fig.width=12, fig.height=20}
 print('Compare common EOFs')
 diag.slp <- biasdiag(slp,it=month.abb[season],verbose=FALSE)
 ```
 
+This test shows a comparison of the standard deviation of the principal components (PCs) associated with the reanalysis SLP and the GCM SLP over the sub-indian continent (region shown in the maps above) and the year-to-year variability in the monsoon season mean SLP. A good reproduction of the spatio-temporal variance structure for the SLP is expected to yield leading EOFs with similar variance and hence the blue symbols should be close to zero for $1 - \rho_{gcm}/\rho_{ref}$ along the x-axis. The results suggest otherwise, with large differences in the standard deviation connected to the PCs, and indicate that all GCMs have difficulties reproducing the monsoon features in the monsoon SLP.  
+
 
 ## Example of station record
 
-The format of the station records bears a structure from the past where it was more important to take up little space rather than being human readable. 
+The format of the station records bears a structure from the past where it was more important to take up little space rather than being human readable. This cryptic and non-human readable way of recording data is associated several risks of error introduction, as it is easy to mistype some of the '0' entries and it is hard to spot obvious mistakes (e.g. unreasonable and unphysical values). Furthermore, reading data of this type of format also is prone to errors, as the data is stored in a way that may vary from time to time. There is also a high risk of the introduction of errors when reading such data. 
 
 ```{r eval=FALSE}
 102197208 491010005000000000000000000000000000000000000000001090000000002820249 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
