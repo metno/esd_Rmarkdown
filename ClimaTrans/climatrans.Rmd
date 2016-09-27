@@ -1,4 +1,8 @@
-*Climatrans results: Work package 3: Outline of the development trends and climate change impact up to 2050* 
+---
+output: pdf_document
+---
+* Supporting Material for 'Predicting events: Hot days and heavy precipitation'*
+
 -----------------------------------
 title: "Extreme precip and heat waves: empirical-statistical downscaling and analysis"
 author: "Rasmus Benestad"
@@ -9,6 +13,8 @@ output: pdf_document
 ---
 
 **Background**
+
+***Climatrans results: Work package 3: Outline of the development trends and climate change impact up to 2050***
 The main objectives of the project are: 1) Assess climate change and environmental impacts in urban areas in India related to the transport sector. 2) Develop mitigation and adaption strategies related to the transport sector in urban areas in India. The objectives are set responding to the following objectives in the KLIMAFORK call: Improve knowledge about the impacts of climate change on the natural environment and society; and Enhance knowledge about how society can and should adapt to the challenges of climate change.
 
 The CLIMATRANS project proposal responds to the research themes-Strategies for reduced human made climate change" and "Strategies for climate change adaption" of the KLMAFORSK call. Assessing risk, uncertainty and irreversibility as inherent to the climate problem, this project will provide knowledge that makes it possible to improve institutional capacity in climate decision-making strategies. The project is interdisciplinary within the realm of social sciences (economics, political science, sociology), and natural sciences (meteorology and civil engineering). It is also a collaboration between Norwegian (Institute of Transport Economics and Norway Meteorological Institute) and four Indian research environments, thereby responding to the INDNOR program.
@@ -39,6 +45,7 @@ Load the esd and ncdf packages.
 ```{r,echo=TRUE}
 library(esd)
 library(ncdf)
+setwd('~/R')
 #rm(list=ls())
 ## Information about the system and session
 ```
@@ -204,8 +211,6 @@ hotsummerdays <- function (x, y = NULL, dse = NULL, it = "jja", threshold = 30,
     cal <- data.frame(x = c(coredata(mwd1)), y = c(coredata(nwd1)))
     dfit <- glm(y ~ x, family = "poisson", data = cal)
     if (plot) {
-        if (new) 
-            dev.new()
         par(bty = "n")
         plot(cal, pch = 19, ylim = c(0, 90), xlab = expression(paste("mean temperature ", 
             (degree * C))), ylab = "number of hot days", main = loc(x))
@@ -213,8 +218,6 @@ hotsummerdays <- function (x, y = NULL, dse = NULL, it = "jja", threshold = 30,
             1, max(cal$x, na.rm = TRUE) + 5, by = 0.1))
         lines(pre$x, exp(predict(dfit, newdata = pre)), col = rgb(1, 
             0, 0, 0.3), lwd = 3)
-        if (new) 
-            dev.new()
         djf.sd <- sd(coredata(djf), na.rm = TRUE)
         qqnorm(coredata(djf))
         qqline(coredata(coredata(djf)), col = "red")
@@ -252,16 +255,12 @@ hotsummerdays <- function (x, y = NULL, dse = NULL, it = "jja", threshold = 30,
     Nwd <- zoo(cbind(preq1, preq2, prem, tr1, tr2, tr3), order.by = t)
     nwd.pre <- zoo(exp(predict(dfit, newdata = obs)), order.by = year(mwd1))
     if (plot) {
-        if (new) 
-            dev.new()
         par(bty = "n")
         plot(zoo(djf.dse, order.by = year(djf.dse)), plot.type = "single", 
             col = rgb(0.5, 0.5, 0.5, 0.2), ylab = expression(paste("mean temperature", 
                 (degree * C))), xlab = "", main = loc(x))
         points(mwd1, pch = 19)
         grid()
-        if (new) 
-            dev.new()
         par(bty = "n")
         plot(Nwd, plot.type = "single", lwd = 5, main = loc(x), 
             ylim = c(0, 90), xlab = "", ylab = paste("number of hot days: T(2m) > ", 
@@ -285,6 +284,135 @@ hotsummerdays <- function (x, y = NULL, dse = NULL, it = "jja", threshold = 30,
 }
 ```
 
+### Function to evaluate spatio-temporal variance structure for SLP
+
+
+```{r}
+showceofvar <-  function(x,N,i,gcmnm.i,add=FALSE,xlim=NULL,ylim=NULL,verbose=FALSE,...) {
+  n <- length(x$mean.diff)
+  j <- 1:n
+  col <- rgb(j/n,abs(sin(pi*j/n)),(1-j/n),0.3)
+  if (is.null(xlim)) xlim <- c(-1,1)
+  if (is.null(ylim)) ylim <- c(1,N)
+  
+  if (!add) {
+    par(bty="n")
+    par0 <- par()
+    plot(xlim,ylim,type="n",
+         ylab="GCM",xlab=expression(1- sigma[p*r*e]/sigma[r*e*f]),
+         main=paste("Diagnostics: common EOFs",attr(x,'variable')),
+         xlim=xlim,ylim=ylim,col="grey")
+    grid()
+    #legend(xlim[1],ylim[2],c("same sign","different sign"),
+    #       pch=c(19,21),bty="n",col="grey")
+    par(xpd=TRUE)
+    text(xlim[2],ylim[2],'EOF #',col='grey40',cex=0.8,pos=3)
+
+    par(new=TRUE,fig=c(0.85,0.95,0.70,0.85),mar=c(0,3,0,0),
+        cex.axis=0.7,yaxt="s",xaxt="n",las=1)
+     colbar <- rbind(1:n,1:n)
+    image(1:2,1:n,colbar,col=col)
+    par(fig=par0$fig,mar=par0$mar,cex.axis=par0$cex.axis,
+        yaxt=par0$yaxt,xaxt=par0$xaxt,las=par0$las,new=TRUE)
+    plot(xlim,ylim,type="n",xlim=xlim,ylim=ylim,
+         xlab='',ylab='',main='',sub='')
+    par(par0$new)
+  }
+  cex <- abs(0.1 - x$mean.diff)/0.1
+  pch <- rep(19,n); pch[cex < 0] <- 21
+  cex <- abs(cex); cex[cex > 2] <- 2
+  if (verbose) {
+     print('Mean difference:');print(x$mean.diff)
+     print('Ration of standard deviation');print(x$sd.ratio)
+     print('Size');print(cex)
+     print('col');print(col)
+     #points(x$mean.diff,1-x$sd.ratio,pch=pch,col='grey75',cex=1)
+  }
+  
+  points(1-x$sd.ratio,rep(i,n),pch=pch,col=col,cex=cex)
+  #print(paste(' > ',i,i,gcmnm.i[i]))
+  text(xlim[1],i,gcmnm.i[i],pos=4,cex=0.6)
+}
+
+
+biasdiag <- function(predictor,param='slp',it=NULL,
+                    path="CMIP5.monthly/",pattern="psl_Amon_ens_",type='ncdf4',
+                    period=c(1950,2015),rcp='rcp45',verbose=TRUE,
+                    lon=c(0,100),lat=c(65,90),select=NULL,xlim=NULL) {
+
+  ## Diagnose the common EOFs and effect of bias-adjustment
+
+  if (verbose) print(paste('biasdiag, it=',it))
+
+  # Ensemble GCMs
+  path <- file.path(path,rcp,fsep = .Platform$file.sep)
+  ncfiles <- list.files(path=path,pattern=pattern,full.name=TRUE)
+  N <- length(ncfiles)
+
+  if (is.null(select)) select <- 1:N else
+                       N <- length(select)
+  if (verbose) {print('GCMs:'); print(path); print(ncfiles[select])}
+  
+  nceofs <- 6 # Number of leading EOFs to evalue
+  years <- 1900:2100
+  m <- length(years)
+  months <- rep(month(nceofs),m)
+  X <- matrix(rep(NA,N*m*nceofs),N,m*nceofs)
+  dim(X) <- c(nceofs,N,m)
+  gcmnm.i <- rep("",N)
+  scorestats <- matrix(rep(NA,N*9),N,9)
+  colnames(scorestats) <- c("1-r.xval","mean.diff","sd.ratio","autocorr.ratio",
+                            "res.trend","res.K-S","res.ar1",'amplitude.ration',
+                            "1-R2")
+
+  t <- as.Date(paste(years,months,'01',sep='-'))
+
+  cols <- rgb(seq(1,0,length=100),rep(0,100),seq(0,1,length=100),0.15)
+
+  flog <- file("DSensemble.ceof-log.txt","at")
+  
+  ## Set up a list environment to keep all the results
+  results <- list() 
+  if (!file.exists('diag.ceof.slp.rda')) {
+    if (verbose) print("loop...") 
+    for (i in 1:N) {
+    
+      if (verbose) print(ncfiles[select[i]])
+      gcm <- retrieve(ncfile = ncfiles[select[i]],type=type,
+                            lon=range(lon(predictor)),
+                           lat=range(lat(predictor)),verbose=verbose)
+      if (!is.null(it)) {
+        if (verbose) print('Extract some months ot a time period')
+        if (verbose) print(it)
+        gcm <- subset(gcm,it=it)
+        gcm <- subset(gcm,it=range(year(predictor)))
+      }
+      gcmnm <- paste(attr(gcm,'model_id'),attr(gcm,'realization'),sep="-r")
+      gcmnm <- gsub(' ','',gcmnm)
+      gcmnm <- gsub('-','.',gcmnm)
+      gcmnm.i[i] <- gcmnm
+      print(gcmnm.i[i])
+      GCM <- aggregate(gcm,year,FUN='mean') 
+      SLPGCM <- combine(predictor,GCM)
+      Z <- try(EOF(SLPGCM))
+      diag <- diagnose(Z)
+      showceofvar(diag,N,i,gcmnm.i,add=(i!=1),xlim=xlim,verbose=verbose)
+      eval(parse(text=paste('results$member.',i,'.',gcmnm.i[i],' <- diag',sep='')))
+    } 
+    save(file='diag.ceof.slp.rda',results,gcmnm.i)
+  } else {
+    load('diag.ceof.slp.rda')
+    N <- length(gcmnm.i)
+    for (i in 1:N) {
+      #print(paste(' < ', i,gcmnm.i[i]))
+      showceofvar(results[[i]],N,i,gcmnm.i,add=(i!=1),xlim=xlim,verbose=verbose)
+    }
+  }
+  dev.copy2pdf(file=paste('diag.ceof.slp.india.pdf',sep=''))
+  return(results)
+}
+
+```
 
 ##*Precipitation*
 
@@ -424,7 +552,8 @@ season<-5:10
 fw <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetfreq')
 mu <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wetmean')
 nd <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'nv')
-ndhr <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'count',threshold=100)
+ndhr100 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'count',threshold=100)
+ndhr50 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'count',threshold=50)
 q95 <- aggregate(subset(climatrans.pr,it=month.abb[season]),year,'wq95')
 ```
 
@@ -504,7 +633,15 @@ print(trend(pt,result='pval'))
 Also, it's interesting to see how the number of days with heave rainfall changes over time:
 
 ```{r, fig.width=6, fig.height=6}
-plot(ndhr,new=FALSE)
+plot(ndhr100,new=FALSE)
+grid()
+```
+
+
+And more moderate events
+
+```{r, fig.width=6, fig.height=6}
+plot(ndhr50,new=FALSE)
 grid()
 ```
 
@@ -646,24 +783,82 @@ First check the residuals for the wet-day mean precipitation:
 Model the number with heavy rainfall (more than 100 mm/day) in Mumbay.
 
 ```{r fig.width=6, fig.height=6}
-ndhr.cal <- data.frame(y = coredata(subset(subset(ndhr,is=2),it=c(1949,2004))),
+ndhr.cal <- data.frame(y = coredata(subset(subset(ndhr100,is=2),it=c(1949,2004))),
                        X = coredata(subset(eof.es,it=c(1949,2004))))
 ds.ndhr <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr.cal,family="poisson")
-plot(1949:2004,ndhr.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr)[2])
+plot(1949:2004,ndhr.cal$y,pch=19,ylab=expression(N(X > 100*mm)),xlab='',main=loc(ndhr100)[2])
 grid()
 lines(1949:2004,exp(predict(ds.ndhr)),col='red')
+```
+
+Model the number with heavy rainfall (more than 50 mm/day) in Delhi and Bangalore. The results for Delhi and Bangalore also indicate a failure to capture the number of events. 
+
+```{r fig.width=6, fig.height=6}
+## Delhi
+ndhr50.1.cal <- data.frame(y = coredata(subset(subset(ndhr50,is=1),it=c(1949,2004))),
+                       X = coredata(subset(eof.es,it=c(1949,2004))))
+ds.ndhr50.1 <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr50.1.cal,family="poisson")
+plot(1949:2004,ndhr50.1.cal$y,pch=19,ylab=expression(N(X > 50*mm)),xlab='',main=loc(ndhr50)[1])
+grid()
+lines(1949:2004,exp(predict(ds.ndhr50.1)),col='red')
+
+# Bangalore
+ndhr50.3.cal <- data.frame(y = coredata(subset(subset(ndhr50,is=3),it=c(1949,2004))),
+                       X = coredata(subset(eof.es,it=c(1949,2004))))
+ds.ndhr50.3 <- glm(y ~ X.1 + X.2 + X.3 + X.4 + X.5 + X.6 + X.7, data=ndhr50.3.cal,family="poisson")
+plot(1949:2004,ndhr50.3.cal$y,pch=19,ylab=expression(N(X > 50*mm)),xlab='',main=loc(ndhr50)[3])
+grid()
+lines(1949:2004,exp(predict(ds.ndhr50.3)),col='red')
 ```
 
 Check if the number of days with heavy precipitation is Poisson-distributed
 
 ```{r}
-print(paste('Mean number=',mean(ndhr[,2],na.rm=TRUE),'Variance=',var(ndhr[,2],na.rm=TRUE),
-            'should equal',mean(ndhr[,2],na.rm=TRUE),'for Poisson process'))
-h <- hist(coredata(ndhr[,2]),freq=FALSE,col='grey',
-     main=loc(ndhr)[2])
-lines(h$mids-0.5,dpois(x=h$mids-0.5,lambda=mean(ndhr[,2],na.rm=TRUE)),lwd=2,col='red')
+print(paste('Mean number=',round(mean(ndhr100[,2],na.rm=TRUE),1),
+            'Variance=',round(var(ndhr100[,2],na.rm=TRUE),1),
+            'should equal',round(mean(ndhr100[,2],na.rm=TRUE),1),'for Poisson process'))
+h <- hist(coredata(ndhr100[,2]),freq=FALSE,col='grey',
+     main=loc(ndhr100)[2])
+lines(h$mids-0.5,dpois(x=h$mids-0.5,lambda=mean(ndhr100[,2],na.rm=TRUE)),lwd=2,col='red')
 grid()
 ```
+
+Also check whether the number of events in Delhi and Bangalore approximately follow a Poisson distribution.
+
+```{r}
+# Delhi
+print(paste('Mean number=',round(mean(ndhr50[,1],na.rm=TRUE),1),
+            'Variance=',round(var(ndhr50[,1],na.rm=TRUE),1),
+            'should equal',round(mean(ndhr50[,1],na.rm=TRUE),1),'for Poisson process'))
+h <- hist(coredata(ndhr50[,1]),freq=FALSE,col='grey',
+     main=loc(ndhr50)[1])
+lines(h$mids-0.5,dpois(x=h$mids-0.5,lambda=mean(ndhr50[,1],na.rm=TRUE)),lwd=2,col='red')
+grid()
+
+# Bangalore
+print(paste('Mean number=',round(mean(ndhr50[,3],na.rm=TRUE),1),
+            'Variance=',round(var(ndhr50[,3],na.rm=TRUE),1),
+            'should equal',round(mean(ndhr50[,3],na.rm=TRUE),1),'for Poisson process'))
+h <- hist(coredata(ndhr50[,3]),freq=FALSE,col='grey',
+     main=loc(ndhr50)[3])
+lines(h$mids-0.5,dpois(x=h$mids-0.5,lambda=mean(ndhr50[,3],na.rm=TRUE)),lwd=2,col='red')
+grid()
+```
+
+The number of days with heavy rain is deviating somewhat from the Poisson distribution for the Indian data. We can compare the assumption of Poisson distribution with Norwegian data (all year) with known high quality (we have the metadata), and the results suggest a closer fit, although this data too is over-dispersed. 
+
+```{r}
+data(bjornholt)
+ndhr30 <- aggregate(bjornholt,year,'count',threshold=30)
+print(paste('Mean number=',round(mean(ndhr30,na.rm=TRUE),1),'Variance=',round(var(ndhr30,na.rm=TRUE),1),
+            'should equal',round(mean(ndhr30,na.rm=TRUE),1),'for Poisson process'))
+h <- hist(coredata(ndhr30),freq=FALSE,col='grey',
+     main=loc(ndhr30))
+lines(h$mids-0.5,dpois(x=h$mids,lambda=mean(ndhr30,na.rm=TRUE)),lwd=2,col='red')
+grid()
+```
+
+
 
 ## The wet-day frequency
 
@@ -857,7 +1052,6 @@ grid()
 print(trend(nhot,result='pval')) 
 ```
 
-
 ```{r}
 print(paste('Mean number=',mean(nhot[,1],na.rm=TRUE),'Variance=',var(nhot[,1],na.rm=TRUE),
             'should equal',mean(nhot[,1],na.rm=TRUE),'for Poisson process'))
@@ -867,4 +1061,133 @@ lines(dpois(x=seq(0,max(nhot[,1]),by=1),lambda=mean(nhot[,1],na.rm=TRUE)),lwd=2,
 grid()
 ```
 
+
+## The highest values expected is proportional to the sample size
+
+The actual sample size for precipitation amount is $N=n_{days} f_w$, and for a variable with an particular exponential distribution, we can demonstrate that the highest value is a function of the sample size $N$:
+
+```{r}
+N = round(10^seq(1,5,length=300))
+qx <- rep(NA,length(N))
+for (i in 1:length(N)) qx[i] <- max(rexp(N[i]))
+plot(N,qx,log='x',main='Maximum value vs sample size',ylab='Maximum value')
+```
+
+
+## Some analyses to examine the data and its quality
+
+A simple ideal demonstration that simulates the gridding process where a grid-point data is a weighted sum of four nearby measurements (similar to a bi-linear interpolation). 
+
+```{r}
+## Test weighted sum of daily rainfall.
+## Simulate gridding 
+
+N <- 100000
+iw <- runif(4*N)
+x <- rexp(4*N)
+x[iw < 0.6] <- 0
+W <- runif(4)
+W <- W/sum(W)
+dim(x) <- c(N,4)
+y <- x %*% W
+
+breaks <- seq(-1,20,by=0.1)
+hx1 <- hist(x[,1],plot=FALSE,breaks=breaks)
+hx2 <- hist(x[,2],plot=FALSE,breaks=breaks)
+hx3 <- hist(x[,3],plot=FALSE,breaks=breaks)
+hx4 <- hist(x[,4],plot=FALSE,breaks=breaks)
+maxx <- max(hx1$counts,hx2$counts,hx3$counts,hx4$counts)
+hy <- hist(y,breaks=breaks,xlim=c(0,5),ylim=c(0,maxx),col="grey",border="grey",
+           main='Test gridded precip',xlab='amount',
+           sub="'gridded' result = weighted sum of 4 stations")
+lines(hx1$mids,hx1$counts,col='red',lwd=3)
+lines(hx2$mids,hx2$counts,col='red',lwd=3)
+lines(hx3$mids,hx3$counts,col='red',lwd=3)
+lines(hx4$mids,hx4$counts,col='red',lwd=3)
+legend(3,maxx,c('Individual simulation','Weighted sum'),
+      col=c('red','grey'),lwd=c(3,10),bty='n')
+```
+
+## Examine the common EOFs for SLP over the Indian sub-continent
+
+
+Common EOFs can be used to assess the GCMs' ability to reproduce the spatio-temporal structure in covariance in cinnection to mean sea-level pressure (SLP) variations over the Indian sub-continent. In orther words, whether the GCMs reproduce the observed circulation features such as wind patterns associated with the monsoon. The code below compares the statistical character of the odel results.  
+
+```{r fig.width=12, fig.height=20}
+print('Compare common EOFs')
+diag.slp <- biasdiag(slp,it=month.abb[season],verbose=FALSE)
+```
+
+This test shows a comparison of the standard deviation of the principal components (PCs) associated with the reanalysis SLP and the GCM SLP over the sub-indian continent (region shown in the maps above) and the year-to-year variability in the monsoon season mean SLP. A good reproduction of the spatio-temporal variance structure for the SLP is expected to yield leading EOFs with similar variance and hence the blue symbols should be close to zero for $1 - \rho_{gcm}/\rho_{ref}$ along the x-axis. The results suggest otherwise, with large differences in the standard deviation connected to the PCs, and indicate that all GCMs have difficulties reproducing the monsoon features in the monsoon SLP.  
+
+
+## Example of station record
+
+The format of the station records bears a structure from the past where it was more important to take up little space rather than being human readable. This cryptic and non-human readable way of recording data is associated several risks of error introduction, as it is easy to mistype some of the '0' entries and it is hard to spot obvious mistakes (e.g. unreasonable and unphysical values). Furthermore, reading data of this type of format also is prone to errors, as the data is stored in a way that may vary from time to time. There is also a high risk of the introduction of errors when reading such data. 
+
+```{r eval=FALSE}
+102197208 491010005000000000000000000000000000000000000000001090000000002820249 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 49102000000000000000000000000000300000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 491110000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 4911200000000000000000000000000000000000000000000000000000000         1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 491210000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 49122000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500110000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50012000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500210000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50022000000000000000000000000000000000000000000000000                 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500310000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50032000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500410000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 5004200000000000000000000000000000000000000000000000000000000         1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500510000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50052000000000000000000000000000000080003000500000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500610000000000000000000300050000000000000000004304750051001301470053 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 5006201220089005800790076000000200000000000000010001800380000         1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500710005004100280000002000150513154901420030039108410729012200760051 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50072004600080457074403560066006101070269046007320330001300710058     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500810028000300410147006100710081027701420152010700130015000000050005 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50082000000250000000000030000000000000000000000000000005600030175     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 500910470107207921283027400580208007900080000000003811201065800030000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 5009200030003002003350043000000380000000000000000000000000000         1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 501010028000000000000000000000000009900000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50102000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 501110000000000000000000000000000000000000000000000000000000000280000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 5011200000000000000000000000000000000000000000000000000000000         1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 501210000000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 50122000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 51011    000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 51012000000000000000000000000000000000000000000000000000000000000     1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 51021    000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 51022000000000000000000000000000000000000000000000000                 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+102197208 51031    000000000000000000000000000000000000000000000000000000000000 1207  BOMBAY CITY     BOMBAY SANTACRUZOBSY   19
+```
+
+The way to decode such files has been provided, but the way the information is stored makes it prone to errors and mistakes when reading the data:
+
+```{r eval=FALSE}
+Format Specifications
+Column                                           Data
+A                                                Catchment No. - 3 Digits
+B                                                Latitude - 2 Digits
+C                                                Longitudes - 2 Digits
+D                                                Station No. - 2 Digits
+E                                                Blank
+F                                                Year - 2 Digits
+G                                                Month - 2 Digits
+H                                                Card No. - 1 Digit
+I to W                                           Rainfall in 4 Digits (Without Decimal)
+                                                 If Col H has a value 1 - Rainfall from
+Dates 1 to 15; value 2 - Rainfall from Dates 17 to 31
+X                                                If Col H has value 1 - Rainfall for
+the date 16; value 2 - Rainfall for the month - (5 Digits)
+Y                                                State No. - 2 Digits
+Z                                                District No. - 2 Digits
+AA                                               STN No. - 2 Digits
+AB                                               District Name - 16 Characters
+AC                                               Station Name - 16 Characters
+AD                                               Class - 5 Characters
+AE                                               Secret Classification - 2 Digits
+AF                                               Century Year - 19 or 20
+```
 
