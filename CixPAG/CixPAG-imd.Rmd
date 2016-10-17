@@ -23,7 +23,14 @@ library(esd)
 ```{r pressure, echo=FALSE}
 pt <- retrieve('data/IMD/tp_IMD.1951-2007.nc')
 tx <- retrieve('data/IMD/maxT_IMD.1951-2013.nc')
-map(pt)
+map(tx)
+```
+
+```{r}
+Tx.maxjja <- subset(as.4seasons(tx,FUN='max'),it='jja')
+eof.tx <- EOF(Tx.maxjja)
+
+Tx.nhd <- annual(tx,FUN='count',threshold=40)
 ```
 
 
