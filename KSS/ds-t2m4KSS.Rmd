@@ -69,34 +69,29 @@ Get the predictand data: daily temperature from ECAD:
 
 ```{r predictand-data}
 if (!file.exists('t2m.nordic.rda')) {
-  ss <- select.station(param='t2m',lon=c(5,30),lat=c(55,72),src='ecad',nmin=50)
-  X <- station(ss)
-  save(X,file='t2m.nordic.rda')
+  ss <- select.station(param='tg',lon=c(5,30),lat=c(55,72),src='ecad',nmin=50)
+  Y <- station(ss)
+  save(Y,file='t2m.nordic.rda')
 } else load('t2m.nordic.rda')
 ```
 
 ```{r}
 ## Only use the most recent 66 years 
-X <- subset(X,it=c(1950,2015))
+Y <- subset(Y,it=c(1960,2015))
 ## Remove records with many missing datapoints
-nv <- apply(coredata(X),2,'nv')
+nv <- apply(coredata(Y),2,'nv')
+Y <- subset(Y,is=nv > 14000)
 ```
 
 ```{r}
 #-----------------------------------------------------------------------
 # Define season and parameter
 
-param <- 't2m'
 FUN <- 'mean'
 reanalysis <- 'air.mon.mean.nc'
-lon=c(0,100); lat=c(65,90)
-
-if (param=='precip') FUNX <- 'C.C.eq' else FUNX <- 'mean'
-
-## Get the predictand -> Y
-if (!exists('Y')) {
-  load(paste(param,'.nordic.rda',sep=''))
-}
+lon=c(-30,30); lat=c(50,75)
+FUNX <- 'mean'
+verbose=TRUE
 
 for (it in c('djf','mam','jja','son')) {
 
@@ -111,7 +106,7 @@ for (it in c('djf','mam','jja','son')) {
   
   ## Carry out the downscaling:
   if (!file.exists(paste('dse.kss.t2m.rcp45.',it,'.rda',sep=''))) {
-    Z <- downscale(Y,predictor,it,param,FUN=FUN,FUNX=FUNX,lon=lon,lat=lat)
+    Z <- downscale(Y,predictor,it,param,FUN=FUN,FUNX=FUNX,lon=lon,lat=lat,verbose=verbose)
     save(file=paste('dse.kss.t2m.rcp45.',it,'.rda',sep=''),Z)
   }
 
@@ -119,7 +114,7 @@ for (it in c('djf','mam','jja','son')) {
   
   if (!file.exists(paste('dse.kss.t2m.rcp26.',it,'.rda',sep=''))) {
     Z <- downscale(Y,predictor,it,param,rcp='rcp26',
-                                    FUN=FUN,FUNX=FUNX,lon=lon,lat=lat)
+                                    FUN=FUN,FUNX=FUNX,lon=lon,lat=lat,verbose=verbose)
     save(file=paste('dse.kss.t2m.rcp26.',it,'.rda',sep=''),Z)
   }
 
@@ -127,7 +122,7 @@ for (it in c('djf','mam','jja','son')) {
   
   if (!file.exists(paste('dse.kss.t2m.rcp85.',it,'.rda',sep=''))) {
     Z <- downscale(Y,predictor,it,param,rcp='rcp85',
-                                    FUN=FUN,FUNX=FUNX,lon=lon,lat=lat)
+                                    FUN=FUN,FUNX=FUNX,lon=lon,lat=lat,verbose=verbose)
     save(file=paste('dse.kss.t2m.rcp85.',it,'.rda',sep=''),Z)
   }
 }

@@ -30,7 +30,8 @@ map(tx)
 Tx.maxjja <- subset(as.4seasons(tx,FUN='max'),it='jja')
 eof.tx <- EOF(Tx.maxjja)
 
-Tx.nhd <- annual(tx,FUN='count',threshold=40)
+Tx.nhd40 <- annual(tx,FUN='count',threshold=40)
+map(Tx.nhd40)
 ```
 
 
