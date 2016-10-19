@@ -462,9 +462,9 @@ The downscaling emplies a multiple regression applied to each of the principal c
 
 ```{r DS}
 ## The wet-day frequency and SLP
-ds.fw <- DS(subset(eof.fw,pattern=1:4),eof.slp,eofs=1:5)
+ds.fw <- DS(subset(eof.fw,ip=1:4),eof.slp,eofs=1:5)
 plot(ds.fw)
-ds.mu <- DS(subset(eof.mu,pattern=1:4),eof.es,eofs=1:7)
+ds.mu <- DS(subset(eof.mu,ip=1:4),eof.es,eofs=1:7)
 plot(ds.mu)
 ```
 

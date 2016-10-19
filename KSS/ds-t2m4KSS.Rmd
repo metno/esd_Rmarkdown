@@ -15,6 +15,7 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 ```{r esd}
 library(esd)
+sessionInfo()
 ```
 
 ## Function definitions:

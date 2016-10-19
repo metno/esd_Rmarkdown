@@ -25,7 +25,6 @@ Load the esd and ncdf packages.
 ## Load the necessary R-package
 library(esd)
 ## Information about the system and session
-Sys.info()
 sessionInfo()
 ```
 
@@ -43,7 +42,7 @@ if (!file.exists(fname.predictand)) {
   ## Read daily precipitation from the ECA&D data set
   ## Long stations within the Nordic countries++
   ss <- select.station(param='precip',src='ecad',
-                       lon=c(5,35),lat=c(55,72),nmin=60)
+                       lon=c(5,30),lat=c(55,72),nmin=60)
   precip <- station(ss)
   ## Remove stations with large holes of missing data and limit the data
   ## to a common interval with good data coverage
