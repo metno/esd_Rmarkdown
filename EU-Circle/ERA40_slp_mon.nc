@@ -1,0 +1,1 @@
+/home/rasmusb/storeA/ERA40_slp_mon.nc

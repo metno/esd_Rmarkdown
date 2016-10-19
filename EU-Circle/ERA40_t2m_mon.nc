@@ -1,1 +1,1 @@
-/home/rasmusb/R/ERA40_t2m_mon.nc
+/home/rasmusb/storeA/ERA40_t2m_mon.nc
