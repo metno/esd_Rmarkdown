@@ -1,3 +1,6 @@
+---
+output: pdf_document
+---
 **EU-Circle case study 3
 -----------------------------------
 title: Coastal Flooding (surface water, highway, sewer and watercourse flooding) across Torbay, UK
@@ -246,7 +249,7 @@ map(Z,FUN='trend',cex=-2)
 Estimate wind windspeed from SLP measurements. Make use of the gridded EOBS data as the documentation for MIDAS data is poor and it's difficult to read the data and organise it, due to very large ASCII files and the way the data is stored. 
 
 ```{r slp-trend-map}
-slp.eobs <- retrieve('data.ECAD/pp_0.25deg_reg_v13.1.nc',lon=c(-6,0),lat=c(48,52))
+slp.eobs <- retrieve('data.ECAD/pp_0.25deg_reg.nc',lon=c(-6,0),lat=c(48,52))
 slp.eobs <- 10000*slp.eobs ## The data have some funny scaling factor
 attr(slp.eobs,'unit') <- 'Pa'
 map(slp.eobs,FUN='trend')
@@ -372,7 +375,7 @@ The EOBS data was chosen here because the rain gauge data from stations (MIDAS) 
 Rain gauges provide a very tiny sample of the rainfall, and previous work suggests that downscaling can provide a better picture if it's applied to a group of stations rather than single stations (Benestad et al., 2015; doi:10.342/tellusa.v67.28326). Downscaling applied to products from principal component analysis (PCA) benefits from an emphasis on cohernt structure of variability in time and space, which can improve the signal-to-noise ratio. PCA requires no missing values, but the EOBS gridded data provides complete records. 
 
 ```{r predictand}
-pr.eobs <- retrieve('data.ECAD/rr_0.25deg_reg_v13.0.nc',lon=c(-6,-1),lat=c(50,52))
+pr.eobs <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=c(-6,-1),lat=c(50,52))
 mu <- annual(pr.eobs,FUN='wetmean')
 fw <- annual(pr.eobs,FUN='wetfreq')
 ```

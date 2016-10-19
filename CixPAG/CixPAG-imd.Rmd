@@ -18,20 +18,62 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 library(esd)
 ```
 
-## Reading data predictand
+## Reading data predictand: maximum temperature
 
-```{r pressure, echo=FALSE}
-pt <- retrieve('data/IMD/tp_IMD.1951-2007.nc')
+```{r IMD maxmum temperature}
 tx <- retrieve('data/IMD/maxT_IMD.1951-2013.nc')
 map(tx)
 ```
 
+Some initial exploration of the data - the mean summer maximum daily maximum temperature
+
 ```{r}
 Tx.maxjja <- subset(as.4seasons(tx,FUN='max'),it='jja')
 eof.tx <- EOF(Tx.maxjja)
-
-Tx.nhd40 <- annual(tx,FUN='count',threshold=40)
-map(Tx.nhd40)
+plot(eof.tx,new=FALSE)
 ```
 
+Trend in the men summer maximum daily maximum temperature
+
+```{r}
+map(Tx.maxjja,FUN='trend',new=FALSE)
+```
+
+The mean number of days with daily maximum temperature exceeding 40C. 
+
+```{r}
+Tx.nhd40 <- annual(tx,FUN='count',threshold=40)
+map(Tx.nhd40,new=FALSE)
+```
+
+## Precipitation
+
+```{r IMD maxmum temperature}
+rr <- retrieve('data/IMD/tp_IMD.1951-2007.nc')
+```
+
+Monsoon rain statistics for the past - any interesting trends?
+
+```{r}
+mu <- aggregate(subset(rr,it=month.abb[6:9]),year,FUN='wetmean')
+MU <- annual(rr,FUN='wetmean')  ## Use capital letters for theentire year
+fw <- aggregate(subset(rr,it=month.abb[6:9]),year,FUN='wetfreq')
+FW <- annual(rr,FUN='wetfreq')
+pt <- annual(rr,FUN='sum')
+map(pt,new=FALSE)
+```
+
+The precipitation intencity during the monsoon months
+
+```{r}
+map(mu,new=FALSE)
+map(mu,FUN='trend',new=FALSE)
+```
+
+The precipitation frequency during the monsoon months
+
+```{r}
+map(fw,new=FALSE)
+map(fw,FUN='trend',new=FALSE)
+```
 
