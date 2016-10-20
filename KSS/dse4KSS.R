@@ -1,10 +1,11 @@
 #!/usr/bin/env Rscript
-args=commandArgs(trainingOnly=TRUE)
+args=commandArgs(trailingOnly=TRUE)
 
 ## R-job for downscaling Nordic temperatures for KSS 
+print('--- R-job for downscaling Nordic temperatures for KSS ---')
+print(args)
 
 library(esd)
-
 
 ## Function definitions:
 
@@ -54,6 +55,7 @@ downscale <- function(Y,predictor,it='djf',param='t2m',FUN='mean',FUNX='mean',
 ##-----------------------------------------------------------------------
 ## Define season and parameter: passed from the parameters
 
+print('Settings')
 param <- args[1]  # parameter
 rcp <- args[2]
 it <- args[3]
@@ -89,7 +91,9 @@ verbose=TRUE
 
 ## Retrieving the data
 ## Get the predictand data: daily temperature from ECAD:
-  
+
+print('Retrieve data')
+
 if (!file.exists(predictand)) {
   ss <- select.station(param=varid,lon=c(5,30),lat=c(55,72),src='ecad',nmin=50)
   Y <- station(ss)
@@ -102,7 +106,8 @@ Y <- subset(Y,it=c(1960,2015))
 nv <- apply(coredata(Y),2,'nv')
 Y <- subset(Y,is=nv > 14000)
 
-  
+print('predictand')
+
   ## Get the large-scale predictor:
   if (!exists('predictor')) {
     T2M <- retrieve(reanalysis,lon=lon,lat=lat)
