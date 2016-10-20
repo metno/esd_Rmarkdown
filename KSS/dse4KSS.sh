@@ -1,14 +1,14 @@
 #!/bin/bash
 
 echo "Submit downscaling jobs for KSS as parallel tasks"
-#for PARAM in t2m mu fw
-for PARAM in t2m #TEST
+for PARAM in t2m mu fw
+#for PARAM in t2m #TEST
 do  
-  #for SEASON in djf mam jja son 
-  for SEASON in djf # TEST
+  for SEASON in djf mam jja son 
+  #for SEASON in djf # TEST
   do
-    #for RCP in rcp45 rcp85 rcp26
-    for RCP in rcp45
+    for RCP in rcp45 rcp85 rcp26
+    #for RCP in rcp45
     do
       echo dse4KSS.$PARAM.$SEASON.$RCP.job
       sed 's|param|'$PARAM'|;

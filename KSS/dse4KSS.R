@@ -55,6 +55,8 @@ downscale <- function(Y,predictor,it='djf',param='t2m',FUN='mean',FUNX='mean',
 ##-----------------------------------------------------------------------
 ## Define season and parameter: passed from the parameters
 
+path <- 
+
 print('Settings')
 param <- args[1]  # parameter
 rcp <- args[2]
@@ -64,7 +66,7 @@ if (param=='t2m') {
   FUN='mean'
   FUNX='mean'
   pattern='tas_Amon_ens'
-  predictand <- '/lustre/t2m.nordic.rda/t2m.nordic.rda'
+  predictand <- '/lustre/storeB/users/rasmusb/data/t2m.nordic.rda'
   varid <- 'tg'
 }
 if (param=='mu') {
@@ -72,7 +74,7 @@ if (param=='mu') {
   FUN='wetmean'
   FUNX='meanx'
   pattern='tas_Amon_ens'
-  predictand <- '/lustre/t2m.nordic.rda/rr.nordic.rda'
+  predictand <- '/lustre/storeB/users/rasmusb/data/rr.nordic.rda'
   varid <- 'precip'
 }
 if (param=='fw') {
@@ -80,14 +82,16 @@ if (param=='fw') {
   FUN='wetfreq'
   FUNX='mean'
   pattern='psl_Amon_ens'
-  predictand <- '/lustre/t2m.nordic.rda/rr.nordic.rda'
+  predictand <- '/lustre/storeB/users/rasmusb/data/rr.nordic.rda'
   varid <- 'precip'
 }
 
 outdir <- '/lustre/storeB/users/rasmusb/dse4KSS/'
+if (!file.exists(outdir)) dir.create(outdir)
+
 lon=c(-30,30); lat=c(50,75)
 
-verbose=TRUE
+verbose=FALSE
 
 ## Retrieving the data
 ## Get the predictand data: daily temperature from ECAD:
