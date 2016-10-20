@@ -35,9 +35,9 @@ eof.Y <- EOF(Tx.maxjja,n=5)
 plot(eof.Y,new=FALSE)
 ```
 
-Trend in the men summer maximum daily maximum temperature
+Trend in the max summer maximum daily maximum temperature
 
-```{r}
+```{r map_trend_tx}
 map(Tx.maxjja,FUN='trend',new=FALSE)
 ```
 
@@ -50,7 +50,7 @@ map(Tx.nhd40,new=FALSE)
 
 ## Downscaling
 
-```{r}
+```{r predictor}
 predictor <- retrieve('air.mon.mean.nc',lon=c(60,100),lat=c(0,25))
 predictor <- annual(subset(predictor,it='jja'),nmin=3)
 eof.X <- EOF(predictor,n=10)
@@ -59,7 +59,7 @@ plot(eof.X,new=FALSE)
 
 Check the link between large and small scales
 
-```{r}
+```{r test_downscaling}
 class(eof.Y) <- c("eof", "field", "season", "zoo") # Fix some incorrect settings
 class(eof.X) <- c("eof", "field", "season", "zoo") # Fix some incorrect settings
 index(eof.Y) <- as.Date(paste(year(eof.Y),'-07-01',sep=''))
@@ -72,7 +72,7 @@ plot(ds.test,new=FALSE)
 
 Carry out the downscaling once and save the results. 
 
-```{r}
+```{r downscale_ensemble}
 if (!file.exists('dse.Tx.jja.cixpag.rda')) {
     dse.Tx <- DSensemble.eof(eof.Y,eof.X,ip=1:6,it='jja',
                              predictor='air.mon.mean.nc',verbose=FALSE)
@@ -82,11 +82,11 @@ if (!file.exists('dse.Tx.jja.cixpag.rda')) {
 
 
 
-```{r}
+```{r show_maps}
 ## Present annual maximum daily maximum temperature from RCP4.5 ensemble mean
-z0 <- map(dse.Tx,it=2010,new=FALSE)
+z0 <- map(dse.Tx,it=2010,new=FALSE,plot=FALSE)
 ## annual maximum daily maximum temperature for 2050 based on RCP4.5 ensemble mean
-z1 <- map(dse.Tx,it=2050,new=FALSE)
+z1 <- map(dse.Tx,it=2050,new=FALSE,plot=FALSE)
 ## Projected change in annual maximum daily maximum temperature
 dz <- z1-z0
 dz <- attrcp(z1,dz)

@@ -55,8 +55,6 @@ downscale <- function(Y,predictor,it='djf',param='t2m',FUN='mean',FUNX='mean',
 ##-----------------------------------------------------------------------
 ## Define season and parameter: passed from the parameters
 
-path <- 
-
 print('Settings')
 param <- args[1]  # parameter
 rcp <- args[2]
