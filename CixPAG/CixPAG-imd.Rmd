@@ -1,5 +1,5 @@
 ---
-title: "CixPAG"
+title: "CixPAG-IMD-Tx"
 author: "Rasmus Benestad"
 date: "August 3, 2016"
 output: pdf_document
@@ -82,34 +82,18 @@ if (!file.exists('dse.Tx.jja.cixpag.rda')) {
 
 
 
-## Precipitation
-
-```{r IMD_precip}
-rr <- retrieve('data/IMD/tp_IMD.1951-2007.nc')
-```
-
-Monsoon rain statistics for the past - any interesting trends?
-
-```{r aggregated_precip}
-mu <- aggregate(subset(rr,it=month.abb[6:9]),year,FUN='wetmean')
-MU <- annual(rr,FUN='wetmean')  ## Use capital letters for theentire year
-fw <- aggregate(subset(rr,it=month.abb[6:9]),year,FUN='wetfreq')
-FW <- annual(rr,FUN='wetfreq')
-pt <- annual(rr,FUN='sum')
-map(pt,new=FALSE)
-```
-
-The precipitation intencity during the monsoon months
-
 ```{r}
-map(mu,new=FALSE)
-map(mu,FUN='trend',new=FALSE)
+## Present annual maximum daily maximum temperature from RCP4.5 ensemble mean
+z0 <- map(dse.Tx,it=2010,new=FALSE)
+## annual maximum daily maximum temperature for 2050 based on RCP4.5 ensemble mean
+z1 <- map(dse.Tx,it=2050,new=FALSE)
+## Projected change in annual maximum daily maximum temperature
+dz <- z1-z0
+dz <- attrcp(z1,dz)
+attr(dz,'dimensions') <- attr(z1,'dimensions')
+class(dz) <- class(z1)
+map(dz,new=FALSE)
 ```
 
-The precipitation frequency during the monsoon months
 
-```{r}
-map(fw,new=FALSE)
-map(fw,FUN='trend',new=FALSE)
-```
 

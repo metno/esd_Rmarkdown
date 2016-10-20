@@ -1,0 +1,75 @@
+---
+title: "CixPAG-IMD precip"
+author: "Rasmus Benestad"
+date: "October 20, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+## Precipitation
+
+```{r IMD_precip}
+rr <- retrieve('data/IMD/tp_IMD.1951-2007.nc')
+```
+
+Monsoon rain statistics for the past - any interesting trends?
+
+```{r aggregated_precip}
+mu <- aggregate(subset(rr,it=month.abb[6:9]),year,FUN='wetmean')
+MU <- annual(rr,FUN='wetmean')  ## Use capital letters for theentire year
+fw <- aggregate(subset(rr,it=month.abb[6:9]),year,FUN='wetfreq')
+FW <- annual(rr,FUN='wetfreq')
+pt <- annual(rr,FUN='sum')
+map(pt,new=FALSE)
+```
+
+The precipitation intencity during the monsoon months
+
+```{r}
+map(mu,new=FALSE)
+map(mu,FUN='trend',new=FALSE)
+```
+
+The precipitation frequency during the monsoon months
+
+```{r}
+map(fw,new=FALSE)
+map(fw,FUN='trend',new=FALSE)
+```
+
+## Downscaling
+
+```{r max_summer_temps}
+mu.jjas <- annual(subset(rr,it=month.abb[6:9]),nmin=4)
+index(mu.jjas) <- year(mu.jjas)
+eof.Y <- EOF(mu.jjas,n=5)
+plot(eof.Y,new=FALSE)
+```
+
+
+```{r}
+predictor <- retrieve('air.mon.mean.nc',lon=c(60,100),lat=c(0,25))
+predictor <- maskland(predictor,land=TRUE)
+predictor <- C.C.eq(predictor)
+predictor <- annual(subset(predictor,it='jja'),nmin=3)
+eof.X <- EOF(predictor,n=10)
+plot(eof.X,new=FALSE)
+```
+
+Check the link between large and small scales
+
+```{r}
+class(eof.Y) <- c("eof", "field", "season", "zoo") # Fix some incorrect settings
+class(eof.X) <- c("eof", "field", "season", "zoo") # Fix some incorrect settings
+index(eof.Y) <- as.Date(paste(year(eof.Y),'-07-01',sep=''))
+index(eof.X) <- as.Date(paste(year(eof.X),'-07-01',sep=''))
+ds.test <- DS(eof.Y,eof.X,ip=1:6)
+plot(ds.test,new=FALSE)
+```
