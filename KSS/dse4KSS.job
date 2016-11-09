@@ -5,8 +5,8 @@
 #$ -q ded-parallel.q
 #$ -M rasmusb@met.no
 #$ -m ae
-#$ -o /lustre/storeB/users/rasmusb/dse-t2m4KSS_JOB.$JOB_ID.out
-#$ -e /lustre/storeB/users/rasmusb/dse-t2m4KSS_JOB.$JOB_ID.err
+#$ -o /lustre/storeB/users/rasmusb/dse-paramrcpseason4KSS_JOB.$JOB_ID.out
+#$ -e /lustre/storeB/users/rasmusb/dse-paramrcpseason4KSS_JOB.$JOB_ID.err
 # ---------------------------
   
 #module add netcdf R 

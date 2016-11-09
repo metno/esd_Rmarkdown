@@ -2,9 +2,10 @@
 
 echo "Submit downscaling jobs for KSS as parallel tasks"
 for PARAM in t2m mu fw
+#for PARAM in mu fw
 #for PARAM in t2m #TEST
 do  
-  for SEASON in djf mam jja son 
+  for SEASON in djf mam jja son ondjfm amjjas
   #for SEASON in djf # TEST
   do
     for RCP in rcp45 rcp85 rcp26

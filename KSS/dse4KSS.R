@@ -11,7 +11,7 @@ library(esd)
 
 downscale <- function(Y,predictor,it='djf',param='t2m',FUN='mean',FUNX='mean',
                       period=c(1950,2015),plot=FALSE,rcp='rcp45',verbose=FALSE,
-                      lon=c(-20,40),lat=c(50,80),ip=1:6,n=6,
+                      lon=c(-20,40),lat=c(50,80),ip=1:2,n=3,
                       pattern='tas_Amon_ens',
                       rel.cord=FALSE,select=NULL) {
   
@@ -19,7 +19,6 @@ downscale <- function(Y,predictor,it='djf',param='t2m',FUN='mean',FUNX='mean',
   
   ## Use a time and space window:  
   Y <- subset(Y,it=period)
-  Y <- subset(Y,is=list(lat=lat,lon=lon))
   
   ## Estimate seasonal means & weed out stations with little data
   Y4 <- subset(as.4seasons(Y,FUN=FUN),it=it)
@@ -45,8 +44,7 @@ downscale <- function(Y,predictor,it='djf',param='t2m',FUN='mean',FUNX='mean',
   print('DSensemble')
   dse.pca <- DSensemble(pca,predictor=predictor,FUNX=FUNX,verbose=verbose,
                         biascorrect=TRUE,rcp=rcp,ip=ip,select=select,
-                        pattern=pattern,
-                        lon=lon,lat=lat,rel.cord=rel.cord,it=it,plot=plot)
+                        nmin=1,pattern=pattern,lon=lon,lat=lat,rel.cord=rel.cord,it=it,plot=plot)
   
   attr(dse.pca,'N.missing') <- nmiss
   invisible(dse.pca)
@@ -55,43 +53,48 @@ downscale <- function(Y,predictor,it='djf',param='t2m',FUN='mean',FUNX='mean',
 ##-----------------------------------------------------------------------
 ## Define season and parameter: passed from the parameters
 
-path <- 
-
 print('Settings')
 param <- args[1]  # parameter
 rcp <- args[2]
 it <- args[3]
+landmask <- FALSE
+
 if (param=='t2m') {
   reanalysis <- 'air.mon.mean.nc'
+  #reanalysis <- 'ERA40_t2m_mon.nc'
   FUN='mean'
   FUNX='mean'
   pattern='tas_Amon_ens'
   predictand <- '/lustre/storeB/users/rasmusb/data/t2m.nordic.rda'
   varid <- 'tg'
+  lon=c(-20,40); lat=c(55,80)
 }
 if (param=='mu') {
   reanalysis <- 'air.mon.mean.nc'
+  #reanalysis <- 'ERA40_t2m_mon.nc'
   FUN='wetmean'
-  FUNX='meanx'
+  FUNX='C.C.eq'
   pattern='tas_Amon_ens'
   predictand <- '/lustre/storeB/users/rasmusb/data/rr.nordic.rda'
   varid <- 'precip'
+  lon=c(-90,10); lat=c(25,75)
+  landmask <- TRUE
 }
 if (param=='fw') {
-  reanalysis <- 'slp.mon.mean.nc'
+  #reanalysis <- 'slp.mon.mean.nc'
+  reanalysis <- 'ERA40_slp_mon.nc'
   FUN='wetfreq'
   FUNX='mean'
   pattern='psl_Amon_ens'
   predictand <- '/lustre/storeB/users/rasmusb/data/rr.nordic.rda'
   varid <- 'precip'
+  lon=c(-30,30); lat=c(50,75)
 }
 
 outdir <- '/lustre/storeB/users/rasmusb/dse4KSS/'
 if (!file.exists(outdir)) dir.create(outdir)
 
-lon=c(-30,30); lat=c(50,75)
-
-verbose=FALSE
+verbose=TRUE
 
 ## Retrieving the data
 ## Get the predictand data: daily temperature from ECAD:
@@ -110,23 +113,25 @@ Y <- subset(Y,it=c(1960,2015))
 nv <- apply(coredata(Y),2,'nv')
 Y <- subset(Y,is=nv > 14000)
 
-print('predictand')
+print('predictor')
 
   ## Get the large-scale predictor:
-  if (!exists('predictor')) {
+if (!exists('predictor')) {
     T2M <- retrieve(reanalysis,lon=lon,lat=lat)
     predictor <- subset(as.4seasons(T2M,FUNX=FUNX),it=it)
-  } else if (length(month(subset(predictor,it=it)))==0)
+} else if (length(month(subset(predictor,it=it)))==0)
     predictor <- subset(as.4seasons(T2M,FUNX=FUNX),it=it) 
-  
-  print(paste('Generating dse.kss.t2m.rcp45.',it,'.rda',sep=''))
+
+if (landmask) predictor <- mask(predictor,land=TRUE)
+
+print(paste('Generating dse.kss.',param,'.',rcp,'.',it,'.rda',sep=''))
   
   ## Carry out the downscaling:
-  if (!file.exists(paste('dse.kss.t2m.',rcp,',.',it,'.rda',sep=''))) {
-    Z <- downscale(Y,predictor,it,param,rcp='rcp26',FUN=FUN,FUNX=FUNX,
+if (!file.exists(paste('dse.kss.t2m.',rcp,',.',it,'.rda',sep=''))) {
+    Z <- downscale(Y,predictor,it,param,rcp=rcp,FUN=FUN,FUNX=FUNX,
                    lon=lon,lat=lat,verbose=verbose)
-    save(file=paste(outdir,'dse.kss.t2m.',rcp,'.',it,'.rda',sep=''),Z)
-  }
+    save(file=paste(outdir,'dse.kss.',param,'.',rcp,'.',it,'.rda',sep=''),Z)
+}
   
  
 print('--- Completed downscaling ---')
