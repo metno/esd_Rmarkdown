@@ -38,7 +38,7 @@ library(esd)
 
 Function to estimate probabilty for daily amount of exceeding a threshold x0 given that the distribution follows an exponential distribution and the records of the wet-day mean precipitation and frequency.
 
-```{r function-probability}
+```{r function-probability, warning=FALSE, message=FALSE}
 PrexpPr <- function(mu,fw,x0=10) {
   Pr <- zoo(coredata(fw)*exp(-x0/coredata(mu)),order.by=year(fw))
 
@@ -57,7 +57,7 @@ PrexpPr <- function(mu,fw,x0=10) {
 
 Load the data and weed out stations with lots of missing values
 
-```{r read-precip-data}
+```{r read-precip-data, warning=FALSE, message=FALSE}
 ## Get MIDAS preciptation data that has laready been retrieved 
 ## from the MIDAS data base (UK Met Office)
 load('pr.eu-circle-torbay.rda') 
@@ -84,7 +84,7 @@ fw<- subset(fw,is=(nok>= 44))
 
 Fill in missing values, but since there are too many missing values, we need to get some more data from the region. This is ok since we are working with annual aggregated values, which may imply larer spatial scales. In any case, these are used to assist the interpolation for the MIDAS sations.
 
-```{r ecad-data}
+```{r ecad-data, warning=FALSE, message=FALSE}
  ss <- select.station(param='precip',src='ecad',cntr=c('United Kingdom','France'),lat=c(45,55),lon=c(-10,0),nmin=50)
 pr.ecad <- station(ss)
 mu.ecad <- subset(annual(pr.ecad,'wetmean',nmin=100),it=c(1961,2011))
@@ -99,13 +99,13 @@ diagnose(mu.ecad)
 
 supplement these to the MIDAS data:
 
-```{r combine-stations}
+```{r combine-stations, warning=FALSE, message=FALSE}
 mu <- combine.stations(mu,mu.ecad)
 fw <- combine.stations(fw,fw.ecad)
 ```
 
 
-```{r fill in missing data}
+```{r fill in missing data, warning=FALSE, message=FALSE}
 ##Fill in the remaining gaps using a PCA-based interpolation scheme 
 ## Check the records
 diagnose(mu)
@@ -115,7 +115,7 @@ pcafill(fw) -> fw
 
 Examine the long-term trends in the wet-day mean precipitation
 
-```{r}
+```{r long-term-mu, warning=FALSE, message=FALSE}
 plot(mu,new=FALSE); grid()
 for (i in 1:dim(mu)[2]) lines(trend(mu[,i]))
 ```
@@ -125,7 +125,7 @@ plot(fw); grid()
 for (i in 1:dim(mu)[2]) lines(trend(mu[,i]))
 ```
 
-```{r probabilities}
+```{r probabilities, warning=FALSE, message=FALSE}
 Pr.gt.30 <- PrexpPr(mu,fw,x0=30)
 plot(Pr.gt.30); grid()
 for (i in 1:dim(mu)[2]) lines(trend(Pr.gt.30[,i]))
@@ -135,7 +135,7 @@ for (i in 1:dim(mu)[2]) lines(trend(Pr.gt.30[,i]))
 
 another attempt to search for systematic influences on the precipitation statistics ($\mu$) is to examine the mean seasonal cycle. This type of approach may 
 
-```{r aggregate}
+```{r aggregate, warning=FALSE, message=FALSE}
 ## Estimate the mean seasonal cycle in the wet-day mean precipitaiton
 MU <- aggregate(x,month,FUN='wetmean')
 ## Estimate the mean seasonal cycle in wet-day mean frequency
@@ -144,21 +144,21 @@ FW <- aggregate(x,month,FUN='wetfreq')
 MP <- aggregate(x,month,FUN='mean')
 ```
 
-```{r precipitation-intensity}
+```{r precipitation-intensity, warning=FALSE, message=FALSE}
 ## Show the mean seasonal cycle in the wet-day mean precipitation
 plot(MU)
 ```
 
 There is some indication of a mean seasonal cycle in $\mu$, with minimum values in late winter spring and higher values in late summer and autumn.
 
-```{r wet-day frequency}
+```{r wet-day frequency, warning=FALSE, message=FALSE}
 ## Show the mean seasonal cycle in the wet-day frequency
 plot(FW)
 ```
 
 There is a clear seasonal cycle in the wet-day occurrence - more rainy days in the uatumn.
 
-```{r sesonal-precipitation}
+```{r sesonal-precipitation, warning=FALSE, message=FALSE}
 ## Show the mean seasonal cycle in the total precipitation
 MP <- 30*MP
 attr(MP,'unit') <- 'mm/month'
@@ -167,7 +167,7 @@ plot(MP)
 
 Most of the rain falls during winter.
 
-```{r winter-rain}
+```{r winter-rain, warning=FALSE, message=FALSE}
 ## Estimate the PCA for the annual cycle to identify the general features:
 pca.MU <- PCA(MU,n=10)
 plot(pca.MU)
@@ -179,7 +179,7 @@ Most stations have the same features when it comes to a mean seasonal cycle in $
 
 Estimating upper-limits can be an additional approach to exploring the effect of temperature on the precipitation intensity. This is a cruder means for quantifying and may provide further information when more traditional methods give limited information. 
 
-```{r downscale-ensemble}
+```{r downscale-ensemble, warning=FALSE, message=FALSE}
 if (!file.exists('dse.mu.eu-circle-worstcase.rda')) {
   dse.mu <- DSensemble.mu.worstcase(x,biascorrect=TRUE,mask=TRUE,
                                 lon=c(-80,20),lat=c(10,60),
@@ -195,30 +195,42 @@ grid()
 
 Analyse the sea-level trends and connection to global temperatures to assess future outcome. First the stations from the GLOSS dataset (global monthly data):
 
-```{r}
+```{r sea-level, results="hide", warning=FALSE, message=FALSE}
 gloss <- aggregate(station.gloss(),year,FUN='max',na.rm=TRUE)
 gloss <- subset(gloss,is=list(lon=c(-20,20),lat=c(45,55)))
+```
+
+Plot the GLOSS tidal data:
+
+```{r}
 plot(gloss)
 ```
 
+
 Single station with hourly data from Newlyn:
 
-```{r}
+```{r newlyn, results="hide", warning=FALSE, message=FALSE}
 newlyn <- station.newlyn()
 newlyn <- aggregate(newlyn,year,FUN='max',na.rm=TRUE)
+```
+
+Plot the Newlyn tidal data:
+
+```{r}
 plot(newlyn)
 ```
 
+
 French tidal stations along the northern/eastern coast (SONEL):
 
-```{r}
+```{r sonel, warning=FALSE, message=FALSE}
 sonel <- aggregate(station.sonel(),year,FUN='max',na.rm=TRUE)
 plot(sonel)
 ```
 
 Combine the records from different sources
 
-```{r}
+```{r combine-sea-level, warning=FALSE, message=FALSE}
 index(newlyn) <- year(newlyn)
 index(sonel) <- year(sonel)
 index(gloss) <- year(gloss)
@@ -237,7 +249,7 @@ diagnose(Z)
 
 Make a map of the trend in the local sea-level - mm/decade
 
-```{r sl-trend-map}
+```{r sl-trend-map, warning=FALSE, message=FALSE}
 zc <- coredata(Z)
 zc[is.infinite(zc)] <- NA
 zc -> coredata(Z)
@@ -248,7 +260,7 @@ map(Z,FUN='trend',cex=-2)
 
 Estimate wind windspeed from SLP measurements. Make use of the gridded EOBS data as the documentation for MIDAS data is poor and it's difficult to read the data and organise it, due to very large ASCII files and the way the data is stored. 
 
-```{r slp-trend-map}
+```{r slp-trend-map, warning=FALSE, message=FALSE}
 slp.eobs <- retrieve('data.ECAD/pp_0.25deg_reg.nc',lon=c(-6,0),lat=c(48,52))
 slp.eobs <- 10000*slp.eobs ## The data have some funny scaling factor
 attr(slp.eobs,'unit') <- 'Pa'
@@ -257,7 +269,7 @@ map(slp.eobs,FUN='trend')
 
 Pick three grid points from which we can estiamte the geostropic wind 
 
-```{r trend-map}
+```{r trend-map, warning=FALSE, message=FALSE}
 ## Fudge it - pick some windstations, but do not use their data. Reset the
 ## coordinates to select a triangle of SLP from the EOBS data.
 ss <- select.station(param='slp',src='ecad',cntr=c('France','UNITED KINGDOM'))
@@ -277,14 +289,14 @@ plot(annual(uv,nmin=300),main='zonal and meridional wind components',
 
 The estimated annual mean geostrophic wind reveals that something changed between 2006 and 2010. The change seems to have taken place over 4 years.
 
-```{r trend-event-2006}
+```{r trend-event-2006, warning=FALSE, message=FALSE}
 plot(annual(uv,nmin=300),main='zonal and meridional wind components',
      xlim=c(2000,2010))
 ```
 
 This event also is seen in the upper tail of the wind speed distribution. There are four features concerning these wind speed estimates: a downward trend from moderate high wind speeds in the 1950s, two years with a large drop in values in the 1970s, a number of years with high values around year 2010, and a slight increasing trend in the upper wind speeds over the record.  
 
-```{r wind-speed-trend}
+```{r wind-speed-trend, warning=FALSE, message=FALSE}
 ## Trend in upper wind speed
 ff <- sqrt(uv[,1]^2 + uv[,2]^2)
 plot(annual(ff,"quantile",probs=0.98),lwd=2,
@@ -298,7 +310,7 @@ trend.err(annual(ff,"quantile",probs=0.98))
 
 The trend is not siginificant at the 5-percentage level.
 
-```{r wind-direction-trend}
+```{r wind-direction-trend, warning=FALSE, message=FALSE}
 ## Trend in upper wind direction
 dd <- zoo(180/pi*atan2(coredata(uv)[,1],coredata(uv)[,2]),order.by=index(uv))
 plot(annual(dd,FUN='mean'),lwd=2,ylim=c(-180,180),
@@ -309,7 +321,7 @@ for (j in c(-180,-90,0,90,180)) lines(range(index(dd)),rep(j,2),lty=3)
 
 The change in 2006-2010 is also visible in the wind direction. This could be an event caused by a change in circulation, but it cluld also be due to changes in instrumentation, data used in the gridding or observational practices. It is possible to examine whether there were changes in the criculation by using ESD to compare the windspeeds with SLP from reanalyses.
 
-```{r zonal-wind-check-get-slp}
+```{r zonal-wind-check-get-slp, warning=FALSE, message=FALSE}
 ## Trend in upper wind direction
 SLP <- retrieve('slp.mon.mean.nc',lon=c(-50,30),lat=c(40,60))
 eof.slp<- EOF(annual(SLP))
@@ -317,7 +329,7 @@ eof.slp<- EOF(annual(SLP))
 
 Apply the downscaling to the meridional wind component:
 
-```{r zonal-wind-check1}
+```{r zonal-wind-check1, warning=FALSE, message=FALSE}
 ## Trend in upper wind direction
 uam <- annual(subset(uv,is=2),nmin=300)
 ds.u1 <- DS(uam,eof.slp,eofs=1:20)
@@ -326,7 +338,7 @@ plot(ds.u1)
 
 The results suggest a mismatch between the reanalysis and the EOBS data, and the change after 2005 is not corroberated by other sources. We can therefore say that this feature is suspect.
 
-```{r zonal-wind-check2}
+```{r zonal-wind-check2, warning=FALSE, message=FALSE}
 ## Trend in upper wind direction
 ds.u2 <- DS(subset(uam,it=c(1950,2005)),eof.slp,eofs=1:20)
 plot(ds.u2)
@@ -334,7 +346,7 @@ plot(ds.u2)
 
 When the test is repeated for the shorter period excluding data after 2005, there is a reasonably good match between the EOBS data and the reanalysis. The trend analysis can be repeated with this event excluded
 
-```{r wind-speed-trend-2}
+```{r wind-speed-trend-2, warning=FALSE, message=FALSE}
 ## Trend in upper wind speed
 plot(subset(annual(ff,"quantile",probs=0.98),it=c(1950,2005)),lwd=2,
      main='Wind speed: annual 98-percentile (m/s)')
@@ -344,7 +356,7 @@ grid()
 
 The exclusion of the suspicious event also affects the long-term trend estiamte - now it's zero with a slight reduction.
 
-```{r wind-speed-distribution}
+```{r wind-speed-distribution, warning=FALSE, message=FALSE}
 ## 
 require(MASS)
 hist(coredata(subset(ff,it=c(1950,2005))),lwd=2,breaks=seq(0,70,by=1),
@@ -355,7 +367,7 @@ f<-fitdistr(ff[is.finite(ff)], 'weibull')
 lines(dweibull(seq(0,70,by=1),shape=f$estimate[1],scale=f$estimate[2]),lwd=3,col=rgb(1,0,0,0.3))
 ```
 
-```{r reanalysis-wind-speed}
+```{r reanalysis-wind-speed, warning=FALSE, message=FALSE}
 ## 
 UV <- geostrophicwind(SLP)
 ```
@@ -374,7 +386,7 @@ The EOBS data was chosen here because the rain gauge data from stations (MIDAS) 
 
 Rain gauges provide a very tiny sample of the rainfall, and previous work suggests that downscaling can provide a better picture if it's applied to a group of stations rather than single stations (Benestad et al., 2015; doi:10.342/tellusa.v67.28326). Downscaling applied to products from principal component analysis (PCA) benefits from an emphasis on cohernt structure of variability in time and space, which can improve the signal-to-noise ratio. PCA requires no missing values, but the EOBS gridded data provides complete records. 
 
-```{r predictand}
+```{r predictand, warning=FALSE, message=FALSE}
 pr.eobs <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=c(-6,-1),lat=c(50,52))
 mu <- annual(pr.eobs,FUN='wetmean')
 fw <- annual(pr.eobs,FUN='wetfreq')
@@ -384,7 +396,7 @@ fw <- annual(pr.eobs,FUN='wetfreq')
 
 Climate change has taken place for some time, and past trends may provide some indication about whether a chosen climate parameter such as the wet-day mean precipitation $\mu$ or wet-day frequency $f_w$ are sensitive to a global warming:
 
-```{r trend}
+```{r trend, warning=FALSE, message=FALSE}
 ## The area mean wet-day mean precipitation
 plot(mu,new=FALSE)
 ## The area mean wet-day frequency
@@ -405,7 +417,7 @@ The trend analysis for the wet-day frequency suggest a general increase in the n
 The predictors can be organised as EOFs to simplify the analysis and make use of properties as the products being orthogonal. Here are the EOFS for the annual wet-day mean precipitation $\mu$
 
 
-```{r EOFs-in-precip-mu}
+```{r EOFs-in-precip-mu, warning=FALSE, message=FALSE}
 ## The area mean wet-day mean precipitation
 eof.mu <- EOF(mu)
 ## The area mean wet-day frequency
@@ -415,7 +427,7 @@ plot(eof.mu)
 
 and the annual wet-day frequency $f_w$
 
-```{r EOFs-in-precip-fw}
+```{r EOFs-in-precip-fw, warning=FALSE, message=FALSE}
 ## Show maps of trends for the wet-day mean precipitation
 eof.fw <- EOF(fw)
 ## Map of trends in wet-day frequency:
@@ -430,7 +442,7 @@ The predictor for the wet-day mean precipitation was taken to be the saturation 
 
 ## Predictor
 
-```{r predictor}
+```{r predictor, warning=FALSE, message=FALSE}
 ## The mean sea-level pressure
 slp <- retrieve('slp.mon.mean.nc',lon=c(-80,0),lat=c(20,70))
 ## The surface temperature
@@ -446,7 +458,7 @@ eof.es <- EOF(annual(es,FUN='mean'))
 
 Carry out canonical correlation analysis (CCA) to explore relationships between the large-scale conditions such as SLP/temperature and the precipitation over soutwestern England:
 
-```{r cca}
+```{r cca, warning=FALSE, message=FALSE}
 ## The wet-day frequency and SLP
 cca.fw <- CCA(eof.fw,eof.slp)
 plot(cca.fw)
@@ -460,7 +472,7 @@ The CCA identifies the two patterns in the data that have the highest correlatio
 
 The downscaling emplies a multiple regression applied to each of the principal components for the EOFs of $\mu$ and $f_w$.
 
-```{r DS}
+```{r DS, warning=FALSE, message=FALSE}
 ## The wet-day frequency and SLP
 ds.fw <- DS(subset(eof.fw,ip=1:4),eof.slp,eofs=1:5)
 plot(ds.fw)
@@ -472,7 +484,7 @@ The downscaling includes cross-validation analysis, and the results shown are fo
 
 Extract the residual and examine to see if there is any temporal-stpatial structure left: a tell-tale sign for noise is a flat eigenspectrum 
 
-```{r residual for mu}
+```{r residual-for-mu, warning=FALSE, message=FALSE}
 ## The residual of the wet-day precipitation
 z.mu <- as.field(ds.mu)
 #res.mu <- as.residual(z.mu)
@@ -484,13 +496,13 @@ plot(eof.res.mu)
 ```
 
 For comparison the original data look like this:
-```{r EOF for mu}
+```{r EOF-for-mu, warning=FALSE, message=FALSE}
 ## The residual of the wet-day precipitation
 plot(EOF(mu))
 ```
 
 
-```{r residual for fw}
+```{r residual-for-fw, warning=FALSE, message=FALSE}
 ## Repeat with the wet-day frequency for the benefit of comparison
 z.fw <- as.field(ds.fw)
 #res.fw <- as.residual(ds.fw)
@@ -503,7 +515,7 @@ plot(eof.res.fw)
 ```
 
 For comparison the original data look like this:
-```{r EOF for fw}
+```{r EOF-for-fw, warning=FALSE, message=FALSE}
 ## The residual of the wet-day precipitation
 plot(EOF(fw))
 ```

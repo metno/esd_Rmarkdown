@@ -5,7 +5,7 @@ library(ncdf4)
 
 examine <- FALSE
 
-dipper <- read.table('~/Desktop/dipper.csv',header=TRUE)
+dipper <- read.table('~/Dropbox/data/dipper.csv',header=TRUE)
 
 dipper <- zoo(x=dipper[[2]],order.by=dipper[[1]])
 y <- as.station(dipper,loc='Lyngdalselva',
