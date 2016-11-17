@@ -147,6 +147,7 @@ MP <- aggregate(x,month,FUN='mean')
 ```{r precipitation-intensity, warning=FALSE, message=FALSE}
 ## Show the mean seasonal cycle in the wet-day mean precipitation
 plot(MU)
+grid()
 ```
 
 There is some indication of a mean seasonal cycle in $\mu$, with minimum values in late winter spring and higher values in late summer and autumn.
@@ -154,6 +155,7 @@ There is some indication of a mean seasonal cycle in $\mu$, with minimum values 
 ```{r wet-day frequency, warning=FALSE, message=FALSE}
 ## Show the mean seasonal cycle in the wet-day frequency
 plot(FW)
+grid()
 ```
 
 There is a clear seasonal cycle in the wet-day occurrence - more rainy days in the uatumn.
@@ -163,11 +165,12 @@ There is a clear seasonal cycle in the wet-day occurrence - more rainy days in t
 MP <- 30*MP
 attr(MP,'unit') <- 'mm/month'
 plot(MP)
+grid()
 ```
 
 Most of the rain falls during winter.
 
-```{r winter-rain, warning=FALSE, message=FALSE}
+```{r winter-rain, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
 ## Estimate the PCA for the annual cycle to identify the general features:
 pca.MU <- PCA(MU,n=10)
 plot(pca.MU)
@@ -191,6 +194,157 @@ plot.zoo(dse.mu[[1]],plot.type='single',col=rgb(1,0,0,0.05))
 grid()
 ```
 
+
+## EOBS gridded data
+
+This script retreives precipitation for Southwestern England from the EOBS data set and estimates the wet-day mean precipitation and frequency.
+
+The EOBS data was chosen here because the rain gauge data from stations (MIDAS) was intermittent and not readily available for an analysis that makes use of PCA in order to make the most use of the information embedded in many parallel data records. 
+
+Rain gauges provide a very tiny sample of the rainfall, and previous work suggests that downscaling can provide a better picture if it's applied to a group of stations rather than single stations (Benestad et al., 2015; doi:10.342/tellusa.v67.28326). Downscaling applied to products from principal component analysis (PCA) benefits from an emphasis on cohernt structure of variability in time and space, which can improve the signal-to-noise ratio. PCA requires no missing values, but the EOBS gridded data provides complete records. 
+
+```{r predictand, warning=FALSE, message=FALSE}
+pr.eobs <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=c(-6,-1),lat=c(50,52))
+mu <- annual(pr.eobs,FUN='wetmean')
+fw <- annual(pr.eobs,FUN='wetfreq')
+```
+
+## Past trends
+
+Climate change has taken place for some time, and past trends may provide some indication about whether a chosen climate parameter such as the wet-day mean precipitation $\mu$ or wet-day frequency $f_w$ are sensitive to a global warming:
+
+```{r trend, warning=FALSE, message=FALSE}
+## The area mean wet-day mean precipitation
+plot(mu,new=FALSE)
+## The area mean wet-day frequency
+plot(fw,new=FALSE)
+## The early part of the record looks suspect:
+mu <- subset(mu,it=c(1958,2015))
+fw <- subset(fw,it=c(1958,2015))
+## Show maps of trends for the wet-day mean precipitation
+map(mu,FUN='trend',
+    colbar=list(breaks=seq(-0.12,0.12,by=0.02),pal='t2m',rev=TRUE))
+## Map of trends in wet-day frequency:
+map(fw,FUN='trend',
+    colbar=list(breaks=seq(-0.01,0.01,by=0.001),pal='t2m',rev=TRUE))
+```
+
+The trend analysis for the wet-day frequency suggest a general increase in the number of wet-days over the  perdiod 1960--2015 while the intencity .
+
+The predictors can be organised as EOFs to simplify the analysis and make use of properties as the products being orthogonal. Here are the EOFS for the annual wet-day mean precipitation $\mu$
+
+
+```{r EOFs-in-precip-mu, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
+## The area mean wet-day mean precipitation
+eof.mu <- EOF(mu)
+## The area mean wet-day frequency
+plot(eof.mu)
+
+```
+
+and the annual wet-day frequency $f_w$
+
+```{r EOFs-in-precip-fw, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
+## Show maps of trends for the wet-day mean precipitation
+eof.fw <- EOF(fw)
+## Map of trends in wet-day frequency:
+plot(eof.fw)
+```
+
+The diagnostics of the EOFs suggest that the leading mode explains a high proportion of the variability on an annual time scale.
+
+The mean sea-level pressure (SLP) is used as predictor for the annual wet-day frequency, as this gives a good description of the circulation. A number of different spatial domains were tested, and for SLP and $f_w$, the results were fairly robust with respect to the choice of domain. 
+
+The predictor for the wet-day mean precipitation was taken to be the saturation vapour pressure over the North Atlantic, which is regarded as the main source for the atmospheric moisture over northern Europe.
+
+## Predictor
+
+```{r predictor, warning=FALSE, message=FALSE}
+## The mean sea-level pressure
+slp <- retrieve('slp.mon.mean.nc',lon=c(-80,0),lat=c(20,70))
+## The surface temperature
+t2m <- retrieve('air.mon.mean.nc',lon=c(-80,0),lat=c(10,70))
+## Saturation water pressure estimated from maritime temperatures
+es <- C.C.eq(mask(t2m,land=TRUE))
+eof.slp<- EOF(annual(slp))
+eof.t2m <- EOF(annual(t2m))
+eof.es <- EOF(annual(es,FUN='mean'))
+```
+
+## Cannical Correlation analysis
+
+Carry out canonical correlation analysis (CCA) to explore relationships between the large-scale conditions such as SLP/temperature and the precipitation over soutwestern England:
+
+```{r cca, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
+## The wet-day frequency and SLP
+cca.fw <- CCA(eof.fw,eof.slp)
+plot(cca.fw,new=FALSE)
+cca.mu <- CCA(eof.mu,eof.es)
+plot(cca.mu,new=FALSE)
+```
+
+The CCA identifies the two patterns in the data that have the highest correlation - this pattern may not necessarily be the ones with the highest variance.
+
+## Downscaling analysis
+
+The downscaling emplies a multiple regression applied to each of the principal components for the EOFs of $\mu$ and $f_w$.
+
+```{r DS, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
+## The wet-day frequency and SLP
+ds.fw <- DS(subset(eof.fw,ip=1:4),eof.slp,eofs=1:5)
+plot(ds.fw,new=FALSE)
+ds.mu <- DS(subset(eof.mu,ip=1:4),eof.es,eofs=1:7)
+plot(ds.mu,new=FALSE)
+```
+
+The downscaling includes cross-validation analysis, and the results shown are for the leading EOF of the predictands. We do not expect that the downscaling will capture a large fraction of the wet-day mean precipitation; local processes are also likely influencing.
+
+Extract the residual and examine to see if there is any temporal-stpatial structure left: a tell-tale sign for noise is a flat eigenspectrum. 
+
+```{r residual-for-mu, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
+## The residual of the wet-day precipitation
+z.mu <- as.field(ds.mu)
+#res.mu <- as.residual(z.mu)
+res.mu <- mu - z.mu
+res.mu <- attrcp(mu,res.mu)
+class(res.mu) <- class(mu)
+eof.res.mu <- EOF(res.mu)
+plot(eof.res.mu)
+```
+
+The residuals from the downscaling of $\mu$ still give eigenvalues which indicate that there are differnt coherent modes present associated with different variance. The spatial pattern is similar to the spatial patterns in the original data. This exercise suggests that the anaysis failed to capture any strong link between the predictor (vapour pressure estimated over the North Atlantic) and the predictand. One reason may be a shifting source region for moisture at different times of the year and from year to year. 
+
+For comparison the original data look like this:
+```{r EOF-for-mu, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
+## The original of the wet-day precipitation
+plot(EOF(mu))
+```
+
+
+```{r residual-for-fw, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
+## Repeat with the wet-day frequency for the benefit of comparison
+z.fw <- as.field(ds.fw)
+#res.fw <- as.residual(ds.fw)
+## Another way to estimate the residuals:
+res.fw <- fw - z.fw
+res.fw <- attrcp(fw,res.fw)
+class(res.fw) <- class(fw)
+eof.res.fw <- EOF(res.fw)
+plot(eof.res.fw)
+```
+
+The residual for the wet-day frequency ...
+
+For comparison the original data look like this:
+```{r EOF-for-fw, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
+## The original of the wet-day precipitation
+plot(EOF(fw))
+```
+
+Hence, there is remaining spatio-temporal structure left in the residuals from the downscaling. The challenge is to identify further factors on which both the wet-day mean precipitation and the wet-day frequency depend. It's surprising to see such strong modes in the residual of the wet-day frequency still. 
+
+
+
 ## Sea-level
 
 Analyse the sea-level trends and connection to global temperatures to assess future outcome. First the stations from the GLOSS dataset (global monthly data):
@@ -204,6 +358,7 @@ Plot the GLOSS tidal data:
 
 ```{r}
 plot(gloss)
+grid()
 ```
 
 
@@ -218,6 +373,7 @@ Plot the Newlyn tidal data:
 
 ```{r}
 plot(newlyn)
+grid()
 ```
 
 
@@ -226,6 +382,7 @@ French tidal stations along the northern/eastern coast (SONEL):
 ```{r sonel, warning=FALSE, message=FALSE}
 sonel <- aggregate(station.sonel(),year,FUN='max',na.rm=TRUE)
 plot(sonel)
+grid()
 ```
 
 Combine the records from different sources
@@ -285,13 +442,15 @@ pp.eobs <- regrid(slp.eobs,is=triangle)
 uv <- geostrophicwind(pp.eobs)
 plot(annual(uv,nmin=300),main='zonal and meridional wind components',
      sub='Estimated from triangulation of mean sea-level pressure from EOBS',zoom=7)
+grid()
 ```
 
 The estimated annual mean geostrophic wind reveals that something changed between 2006 and 2010. The change seems to have taken place over 4 years.
 
 ```{r trend-event-2006, warning=FALSE, message=FALSE}
 plot(annual(uv,nmin=300),main='zonal and meridional wind components',
-     xlim=c(2000,2010))
+     xlim=c(2000,2010),map.show=FALSE)
+grid()
 ```
 
 This event also is seen in the upper tail of the wind speed distribution. There are four features concerning these wind speed estimates: a downward trend from moderate high wind speeds in the 1950s, two years with a large drop in values in the 1970s, a number of years with high values around year 2010, and a slight increasing trend in the upper wind speeds over the record.  
@@ -329,7 +488,7 @@ eof.slp<- EOF(annual(SLP))
 
 Apply the downscaling to the meridional wind component:
 
-```{r zonal-wind-check1, warning=FALSE, message=FALSE}
+```{r zonal-wind-check1, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
 ## Trend in upper wind direction
 uam <- annual(subset(uv,is=2),nmin=300)
 ds.u1 <- DS(uam,eof.slp,eofs=1:20)
@@ -338,7 +497,7 @@ plot(ds.u1)
 
 The results suggest a mismatch between the reanalysis and the EOBS data, and the change after 2005 is not corroberated by other sources. We can therefore say that this feature is suspect.
 
-```{r zonal-wind-check2, warning=FALSE, message=FALSE}
+```{r zonal-wind-check2, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
 ## Trend in upper wind direction
 ds.u2 <- DS(subset(uam,it=c(1950,2005)),eof.slp,eofs=1:20)
 plot(ds.u2)
@@ -368,8 +527,8 @@ lines(dweibull(seq(0,70,by=1),shape=f$estimate[1],scale=f$estimate[2]),lwd=3,col
 ```
 
 ```{r reanalysis-wind-speed, warning=FALSE, message=FALSE}
-## 
-UV <- geostrophicwind(SLP)
+## Estimate grostrophich wind
+UV <- geostrophicwind(SLP,progressbar=FALSE)
 ```
 
 
@@ -377,149 +536,4 @@ UV <- geostrophicwind(SLP)
 ## wind rose
 windrose(uv)
 ```
-
-## EOBS gridded data
-
-This script retreives precipitation for Southwestern England from the EOBS data set and estimates the wet-day mean precipitation and frequency.
-
-The EOBS data was chosen here because the rain gauge data from stations (MIDAS) was intermittent and not readily available for an analysis that makes use of PCA in order to make the most use of the information embedded in many parallel data records. 
-
-Rain gauges provide a very tiny sample of the rainfall, and previous work suggests that downscaling can provide a better picture if it's applied to a group of stations rather than single stations (Benestad et al., 2015; doi:10.342/tellusa.v67.28326). Downscaling applied to products from principal component analysis (PCA) benefits from an emphasis on cohernt structure of variability in time and space, which can improve the signal-to-noise ratio. PCA requires no missing values, but the EOBS gridded data provides complete records. 
-
-```{r predictand, warning=FALSE, message=FALSE}
-pr.eobs <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=c(-6,-1),lat=c(50,52))
-mu <- annual(pr.eobs,FUN='wetmean')
-fw <- annual(pr.eobs,FUN='wetfreq')
-```
-
-## Past trends
-
-Climate change has taken place for some time, and past trends may provide some indication about whether a chosen climate parameter such as the wet-day mean precipitation $\mu$ or wet-day frequency $f_w$ are sensitive to a global warming:
-
-```{r trend, warning=FALSE, message=FALSE}
-## The area mean wet-day mean precipitation
-plot(mu,new=FALSE)
-## The area mean wet-day frequency
-plot(fw,new=FALSE)
-## The early part of the record looks suspect:
-mu <- subset(mu,it=c(1958,2015))
-fw <- subset(fw,it=c(1958,2015))
-## Show maps of trends for the wet-day mean precipitation
-map(mu,FUN='trend',
-    colbar=list(breaks=seq(-0.12,0.12,by=0.02),pal='t2m',rev=TRUE))
-## Map of trends in wet-day frequency:
-map(fw,FUN='trend',
-    colbar=list(breaks=seq(-0.01,0.01,by=0.001),pal='t2m',rev=TRUE))
-```
-
-The trend analysis for the wet-day frequency suggest a general increase in the number of wet-days over the  perdiod 1960--2015 while the intencity .
-
-The predictors can be organised as EOFs to simplify the analysis and make use of properties as the products being orthogonal. Here are the EOFS for the annual wet-day mean precipitation $\mu$
-
-
-```{r EOFs-in-precip-mu, warning=FALSE, message=FALSE}
-## The area mean wet-day mean precipitation
-eof.mu <- EOF(mu)
-## The area mean wet-day frequency
-plot(eof.mu)
-
-```
-
-and the annual wet-day frequency $f_w$
-
-```{r EOFs-in-precip-fw, warning=FALSE, message=FALSE}
-## Show maps of trends for the wet-day mean precipitation
-eof.fw <- EOF(fw)
-## Map of trends in wet-day frequency:
-plot(eof.fw)
-```
-
-The diagnostics of the EOFs suggest that the leading mode explains a high proportion of the variability on an annual time scale.
-
-The mean sea-level pressure (SLP) is used as predictor for the annual wet-day frequency, as this gives a good description of the circulation. A number of different spatial domains were tested, and for SLP and $f_w$, the results were fairly robust with respect to the choice of domain. 
-
-The predictor for the wet-day mean precipitation was taken to be the saturation vapour pressure over the North Atlantic, which is regarded as the main source for the atmospheric moisture over northern Europe.
-
-## Predictor
-
-```{r predictor, warning=FALSE, message=FALSE}
-## The mean sea-level pressure
-slp <- retrieve('slp.mon.mean.nc',lon=c(-80,0),lat=c(20,70))
-## The surface temperature
-t2m <- retrieve('air.mon.mean.nc',lon=c(-80,0),lat=c(10,70))
-## Saturation water pressure estimated from maritime temperatures
-es <- C.C.eq(mask(t2m,land=TRUE))
-eof.slp<- EOF(annual(slp))
-eof.t2m <- EOF(annual(t2m))
-eof.es <- EOF(annual(es,FUN='mean'))
-```
-
-## Cannical Correlation analysis
-
-Carry out canonical correlation analysis (CCA) to explore relationships between the large-scale conditions such as SLP/temperature and the precipitation over soutwestern England:
-
-```{r cca, warning=FALSE, message=FALSE}
-## The wet-day frequency and SLP
-cca.fw <- CCA(eof.fw,eof.slp)
-plot(cca.fw)
-cca.mu <- CCA(eof.mu,eof.es)
-plot(cca.mu)
-```
-
-The CCA identifies the two patterns in the data that have the highest correlation - this pattern may not necessarily be the ones with the highest variance.
-
-## Downscaling analysis
-
-The downscaling emplies a multiple regression applied to each of the principal components for the EOFs of $\mu$ and $f_w$.
-
-```{r DS, warning=FALSE, message=FALSE}
-## The wet-day frequency and SLP
-ds.fw <- DS(subset(eof.fw,ip=1:4),eof.slp,eofs=1:5)
-plot(ds.fw)
-ds.mu <- DS(subset(eof.mu,ip=1:4),eof.es,eofs=1:7)
-plot(ds.mu)
-```
-
-The downscaling includes cross-validation analysis, and the results shown are for the leading EOF of the predictands. We do not expect that the downscaling will capture a large fraction of the wet-day mean precipitation; local processes are also likely influencing.
-
-Extract the residual and examine to see if there is any temporal-stpatial structure left: a tell-tale sign for noise is a flat eigenspectrum 
-
-```{r residual-for-mu, warning=FALSE, message=FALSE}
-## The residual of the wet-day precipitation
-z.mu <- as.field(ds.mu)
-#res.mu <- as.residual(z.mu)
-res.mu <- mu - z.mu
-res.mu <- attrcp(mu,res.mu)
-class(res.mu) <- class(mu)
-eof.res.mu <- EOF(res.mu)
-plot(eof.res.mu)
-```
-
-For comparison the original data look like this:
-```{r EOF-for-mu, warning=FALSE, message=FALSE}
-## The residual of the wet-day precipitation
-plot(EOF(mu))
-```
-
-
-```{r residual-for-fw, warning=FALSE, message=FALSE}
-## Repeat with the wet-day frequency for the benefit of comparison
-z.fw <- as.field(ds.fw)
-#res.fw <- as.residual(ds.fw)
-## Another way to estimate the residuals:
-res.fw <- fw - z.fw
-res.fw <- attrcp(fw,res.fw)
-class(res.fw) <- class(fw)
-eof.res.fw <- EOF(res.fw)
-plot(eof.res.fw)
-```
-
-For comparison the original data look like this:
-```{r EOF-for-fw, warning=FALSE, message=FALSE}
-## The residual of the wet-day precipitation
-plot(EOF(fw))
-```
-
-Hence, there is remaining spatio-temporal structure left in the residuals from the downscaling. The challenge is to identify further factors on which both the wet-day mean precipitation and the wet-day frequency depend. It's surprising to see such strong modes in the residual of the wet-day frequency still. 
-
 
