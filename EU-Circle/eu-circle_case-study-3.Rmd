@@ -131,7 +131,7 @@ for (i in 1:dim(mu)[2]) lines(trend(Pr.gt.10[,i]))
 
 ## Useful information in the mean seasonal cycle?
 
-another attempt to search for systematic influences on the precipitation statistics ($\mu$) is to examine the mean seasonal cycle. This type of approach may 
+Another attempt to search for systematic influences on the precipitation statistics ($\mu$) is to examine the mean seasonal cycle. This type of approach may 
 
 ```{r}
 ## Estimate the mean seasonal cycle in the wet-day mean precipitaiton
@@ -250,7 +250,7 @@ attr(slp.eobs,'unit') <- 'Pa'
 map(slp.eobs,FUN='trend')
 ```
 
-Pick three grid points from which we can estiamte the geostropic wind 
+Pick three grid points from which we can estimate the geostropic wind.
 
 ```{r trend-map}
 triangle <- subset(Z,is=c(2,3,7))
