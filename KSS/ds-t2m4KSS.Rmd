@@ -1,0 +1,148 @@
+---
+title: "Downscale t2m for KSS"
+author: "Rasmus Benestad"
+date: "October 14, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+```{r esd}
+library(esd)
+sessionInfo()
+```
+
+## Function definitions:
+
+```{r}
+downscale <- function(Y,predictor,it='djf',param='t2m',FUN='mean',FUNX='mean',
+                      period=c(1950,2015),plot=FALSE,rcp='rcp45',verbose=FALSE,
+                      lon=c(-20,40),lat=c(50,80),ip=1:6,n=6,
+                      rel.cord=FALSE,select=NULL) {
+
+  print('downscale')
+  
+## Use a time and space window:  
+  Y <- subset(Y,it=period)
+  Y <- subset(Y,is=list(lat=lat,lon=lon))
+
+## Estimate seasonal means & weed out stations with little data
+  Y4 <- subset(as.4seasons(Y,FUN=FUN),it=it)
+  ok <- apply(coredata(Y4),1,nv)
+  Y4 <- subset(Y4,it=ok>0)
+  nok <- apply(coredata(Y4),2,nv)
+  Y4 <- subset(Y4,is=nok>15)
+
+  print(paste(round(100*sum(!is.finite(Y4))/length(!is.finite(Y4))),'% missing',
+  sep=''))
+  if (plot) map(Y,FUN=FUN,cex=-2)
+
+  nmiss <- round(100*sum(!is.finite(Y4))/length(!is.finite(Y4)))
+  #print(paste(nmiss,'% missing',sep=''))
+  
+## Fill missing data using PCA-based regression
+  Z <- pcafill(Y4)
+
+  pca <- PCA(Z,n=n)
+  if (plot) plot(pca)
+
+## Downscale results
+  print('DSensemble')
+  dse.pca <- DSensemble(pca,predictor=predictor,FUNX=FUNX,verbose=verbose,
+                        biascorrect=TRUE,rcp=rcp,ip=ip,select=select,
+                        lon=lon,lat=lat,rel.cord=rel.cord,it=it)
+
+  attr(dse.pca,'N.missing') <- nmiss
+  invisible(dse.pca)
+}
+```
+
+
+## Retrieving the data
+
+Get the predictand data: daily temperature from ECAD:
+
+```{r predictand-data}
+if (!file.exists('t2m.nordic.rda')) {
+  ss <- select.station(param='tg',lon=c(5,30),lat=c(55,72),src='ecad',nmin=50)
+  Y <- station(ss)
+  save(Y,file='t2m.nordic.rda')
+} else load('t2m.nordic.rda')
+```
+
+```{r}
+## Only use the most recent 66 years 
+Y <- subset(Y,it=c(1960,2015))
+## Remove records with many missing datapoints
+nv <- apply(coredata(Y),2,'nv')
+Y <- subset(Y,is=nv > 14000)
+```
+
+```{r}
+#-----------------------------------------------------------------------
+# Define season and parameter
+
+FUN <- 'mean'
+reanalysis <- 'air.mon.mean.nc'
+lon=c(-30,30); lat=c(50,75)
+FUNX <- 'mean'
+verbose=TRUE
+
+for (it in c('djf','mam','jja','son')) {
+
+  ## Get the large-scale predictor:
+  if (!exists('predictor')) {
+    T2M <- retrieve(reanalysis,lon=lon,lat=lat)
+    predictor <- subset(as.4seasons(T2M,FUNX=FUNX),it=it)
+  } else if (length(month(subset(predictor,it=it)))==0)
+    predictor <- subset(as.4seasons(T2M,FUNX=FUNX),it=it) 
+
+  print(paste('Generating dse.kss.t2m.rcp45.',it,'.rda',sep=''))
+  
+  ## Carry out the downscaling:
+  if (!file.exists(paste('dse.kss.t2m.rcp45.',it,'.rda',sep=''))) {
+    Z <- downscale(Y,predictor,it,param,FUN=FUN,FUNX=FUNX,lon=lon,lat=lat,verbose=verbose)
+    save(file=paste('dse.kss.t2m.rcp45.',it,'.rda',sep=''),Z)
+  }
+
+  print(paste('Generating dse.kss.t2m.rcp26.',it,'.rda',sep=''))
+  
+  if (!file.exists(paste('dse.kss.t2m.rcp26.',it,'.rda',sep=''))) {
+    Z <- downscale(Y,predictor,it,param,rcp='rcp26',
+                                    FUN=FUN,FUNX=FUNX,lon=lon,lat=lat,verbose=verbose)
+    save(file=paste('dse.kss.t2m.rcp26.',it,'.rda',sep=''),Z)
+  }
+
+   print(paste('Generating dse.kss.t2m.rcp85.',it,'.rda',sep=''))
+  
+  if (!file.exists(paste('dse.kss.t2m.rcp85.',it,'.rda',sep=''))) {
+    Z <- downscale(Y,predictor,it,param,rcp='rcp85',
+                                    FUN=FUN,FUNX=FUNX,lon=lon,lat=lat,verbose=verbose)
+    save(file=paste('dse.kss.t2m.rcp85.',it,'.rda',sep=''),Z)
+  }
+}
+print('--- Completed downscaling ---')
+```
+
+## Post-processing
+
+
+```{r}
+## source the functions for gridding
+demo(pca2eof,ask=FALSE)
+load('dse.kss.t2m.rcp45.djf.rda')
+## Filter and reduce data size by reteining only the 4 leading PCA
+Z <- subset(Z,ip=1:4)
+## Convert the PCA object to EOF 
+Z <- as.eof.dsensemble.pca(Z)
+save(Z,file='dse.KSS.t2m.rcp45.djf.rda')
+map(Z,it=c(2040,2060))
+```
+
+

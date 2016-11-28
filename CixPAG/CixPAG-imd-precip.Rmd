@@ -1,0 +1,146 @@
+---
+title: "CixPAG-IMD precip"
+author: "Rasmus Benestad"
+date: "October 20, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+```{r esd}
+library(esd)
+```
+
+## Reading data predictand: Precipitation
+
+```{r IMD_precip, warning=FALSE}
+rr <- retrieve('data/IMD/tp_IMD.1951-2007.nc')
+```
+
+Monsoon rain statistics for the past - any interesting trends? Derive aggregated statistics for wet-day mean $\mu$ (`mu`), wet-day frequency $f_w$ (`fw`), and the annual total amount (`pt`). The threshold value for a wet day was set to 1mm/day.
+
+```{r aggregated_precip, warning=FALSE}
+mu <- aggregate(subset(rr,it=month.abb[6:9]),year,FUN='wetmean')
+MU <- annual(rr,FUN='wetmean')  ## Use capital letters for theentire year
+fw <- aggregate(subset(rr,it=month.abb[6:9]),year,FUN='wetfreq')
+FW <- annual(rr,FUN='wetfreq')
+pt <- annual(rr,FUN='sum')
+map(pt,new=FALSE)
+```
+
+The highest total precipitation amounts are found along the western coast of India and in the far north-eastern corner. The mean annual can be as high as 4500 mm/year.
+
+The mean wet-day mean precipitation (intensity) during the monsoon months:
+
+```{r map_mu, warning=FALSE}
+attr(mu,'variable') <- 'mu'
+map(mu,new=FALSE)
+```
+
+The mean intensity $\mu$ over the monsoon season (Jun--Sep) suggests that part of the total rainfall amounts are due to higher intensities in the same region.
+
+```{r}
+map(mu,FUN='trend',new=FALSE,
+    colbar=list(pal='t2m',breaks=seq(-2.5,2.5,by=0.1),rev=TRUE))
+```
+
+Trend estimates over 1951--2007 give a mixed picture with increases in some locations and decreases in others. 
+
+The mean precipitation frequency during the monsoon months:
+
+```{r map_fw, warning=FALSE}
+attr(fw,'variable') <- 'f[w]'
+attr(fw,'unit') <- '%'
+fw <- fw*100
+map(fw,new=FALSE)
+```
+
+The regions with highest annual rainfall also are associated with highest wet-day frequencies, with rain up to 90\% of the days during the monsoon season. There are also some regions with fewer rainy days in the north west and east of the rainbelt (rain shadow) along the west coast. 
+
+```{r}
+map(fw,FUN='trend',new=FALSE,
+    colbar=list(pal='t2m',breaks=seq(-2.5,2.5,by=0.1),rev=TRUE))
+```
+
+Trend analysis for the monsoon wet-day frequency suggests a general reduction in the number of wet days over 1951--2007, but there have also been patches with increase in the number of rainy days in parts of southern India and along the northern border. 
+
+## Predictands:
+
+Prepare the predictands - use EOFs for the gridded wet-day mean precipitation for the monsoon season:.
+
+```{r mu_eof, warning=FALSE,fig.width=8, fig.height=8}
+index(mu) <- year(mu)
+eof.mu <- EOF(mu,n=5)
+plot(eof.mu,new=FALSE)
+```
+
+The leading EOF accounts for 22\% of the variance and its spatial structure has a uniform character over most of the country, with the exception in the far eastern part which is anti-correlated to the rest of the country. The principal component (PC) does not reveal any particular and clear trend. Second mode (not shown) has strongest weights along the west coast, also with little trend. The PC for the third mode (9.6\% of variance) has a suspect (spurious?) spike towards the end of the record.   
+
+EOFs for the gridded wet-day frequency for the monsoon season:
+
+```{r fw_eof, warning=FALSE,fig.width=8, fig.height=8}
+index(fw) <- year(fw)
+eof.fw <- EOF(fw,n=5)
+plot(eof.fw,new=FALSE)
+```
+
+The leading EOF for $f_w$ has greatest weights over the Mumbai region. The PC of the second mode has a suspicious peak towards the end of the record, associated with weights over southeastern India, which also were found to be a region with increasing rainy days in the trend analysis. The trend in this region is doubtful, however. The third EOF (9.2\% of the variance) has to a large extent geographically uniform weights, and is associated with a slight increasing trend.  
+
+## Predictors:
+
+Use different predictors for $\mu$ and $f_w$ because we expect different dependencies to large-scale conditions due to physical reasons. Use the large-scale vapour saturation pressure $e_s$ (`es`) for $\mu$ and mean sea-level pressure (SLP) for $f_w$. The leading EOF for $e_s$ accounts for 78.7\% of the variance and dominates the variability. The greatest weights are found east off Srilanka and southern India, and it is also associated with an increasing trend.
+
+```{r predictor_for_mu, warning=FALSE,fig.width=8, fig.height=8}
+predictor <- retrieve('air.mon.mean.nc',lon=c(60,100),lat=c(0,25))
+predictor <- mask(predictor,land=TRUE)
+es <- C.C.eq(predictor)
+attr(es,'variable') <- 'e[s]'
+attr(es,'unit') <- 'Pa'
+attr(es,'longname') <- 'saturated vapour pressure'
+predictor <- annual(subset(es,it=month.abb[6:9]),nmin=3)
+eof.es <- EOF(predictor,n=10)
+plot(eof.es,new=FALSE)
+```
+
+The leading EOF for the Jun--Sep SLP accounts for 82\% of the variance and has a character of long-term variability - possibly a trend. The spatial structure resembles a dipole with greater weights over the northwestern parts of India and the typical monsoon SLP pattern.
+
+```{r predictor_for_fw, warning=FALSE,fig.width=8, fig.height=8}
+predictor <- retrieve('slp.mon.mean.nc',lon=c(60,100),lat=c(0,25))
+predictor <- annual(subset(predictor,it=month.abb[6:9]),nmin=3)
+eof.slp <- EOF(predictor,n=10)
+plot(eof.slp,new=FALSE)
+```
+
+The second EOF (7.6\%) has a southwest-northeast dipole structure, but little trend in the PC.  
+
+## Downscaling
+
+The EOFs for $e_s$ from the NCEP/NCAR 1 reanalysis was used as a predictor to check the link between large and small scales for $\mu$, based on multiple regression (linear model, LM). The model was assessed through cross-validation analysis, which returned a correlation of 0.21. Changes in $\mu$ could to some extent be associated with increases in $e_s$ near Mumbai, and decreases elsewhere. 
+
+```{r DS_test_mu, warning=FALSE,fig.width=8, fig.height=8}
+class(eof.mu) <- c("eof", "field", "season", "zoo") # Fix some incorrect settings
+class(eof.es) <- c("eof", "field", "season", "zoo") # Fix some incorrect settings
+index(eof.mu) <- as.Date(paste(year(eof.mu),'-07-01',sep=''))
+index(eof.es) <- as.Date(paste(year(eof.es),'-07-01',sep=''))
+ds.test <- DS(eof.mu,eof.es,ip=1:6)
+plot(ds.test,new=FALSE)
+```
+
+The link between large and small scales for $f_w$ was analysed in a similar fashion, and the cross-validation found a close association between monsoon-type SLP anomalies and the number of rainy days over large parts over India, with a correlation score of 0.76.    
+
+```{r DS_test_fw, warning=FALSE,fig.width=8, fig.height=8}
+class(eof.fw) <- c("eof", "field", "season", "zoo") # Fix some incorrect settings
+class(eof.slp) <- c("eof", "field", "season", "zoo") # Fix some incorrect settings
+index(eof.fw) <- as.Date(paste(year(eof.fw),'-07-01',sep=''))
+index(eof.slp) <- as.Date(paste(year(eof.slp),'-07-01',sep=''))
+ds.test <- DS(eof.fw,eof.slp,ip=1:6)
+plot(ds.test,new=FALSE)
+```
+
+The total precipitation is the product $p_t = n f_w \mu$, where $n$ is the total number of days. The skill associated with downscaling precipitation is to a large extent associated with wet-day frequency rather than the intensity. However, the probability of heavy rain events taking place is proportional to the wet-day frequency is the wet-day amounts approximately follow the exponential distribution: $Pr(X>x) = f_w e^{-x/\mu}$.

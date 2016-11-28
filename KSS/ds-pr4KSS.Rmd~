@@ -1,0 +1,46 @@
+*Downscale precipitation for the Norwegian climate services (KSS)*
+-----------------------------------
+title: Downscling wet-day frequency and wet-day mean precipitation
+author: "Rasmus Benestad"
+date: "April 5, 2016"
+output: pdf_document
+    fig_width:  8
+    fig_height: 8
+---
+
+This analysis is based on publications on how to downscale wet-day mean precipitation iteratively from several predictors (representing different moisture sources) and mean sea-level pressure to capture the wet-day frequency <http://dx.doi.org/10.3402/tellusa.v67.25954> and making use of a group of stations together with principal component analysis (PCA) to maximise the use of available information <http://dx.doi.org/10.3402/tellusa.v67.28326>.
+
+**Analysis** 
+The downscaling of the wet-day mean precipitation used the surface temperature as predictor.
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. To execute this type: 
+
+```{r,eval=FALSE}
+library(rmarkdown); render('climatrans.Rmd',pdf_document())
+```
+
+Load the esd and ncdf packages.
+
+```{r}
+library(esd)
+```
+
+---------------------------------
+
+##*Predictands*
+
+```{r}
+if (!file.exists('precip.nordic.rda')) {
+  ## Read daily precipitation from the ECA&D data set
+  ss <- select.station(param='precip',src='ecad',
+                       lon=c(5,35),lat=c(55,72),nmin=60)
+  precip <- station(ss)
+  save(file='precip.nordic.rda',precip)
+} else load('dse.mu.climatrans.rda')
+mu.stations<-as.station(dse.mu)
+fw.stations<-as.station(dse.fw)
+mu.delhi <- dse.stations[[1]]
+plot(mu.delhi)
+```
+
+
