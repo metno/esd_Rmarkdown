@@ -2,7 +2,9 @@
 title: "eu-circle_case-study-1"
 author: "Rasmus Benestad"
 date: "May 2, 2016"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 bibliography: bibliography.bib
 ---
 
@@ -148,7 +150,7 @@ The second question is then: Are there any trends in the annual mean durations?
 
 ```{r,warning=FALSE}
 amncd <- annual(ncd)
-plot(amncd,col=c(rgb(0,0,1),rgb(1,0.3,0)),new=FALSE)
+plot(amncd,col=c(rgb(0,0,1),rgb(1,0.3,0)),new=FALSE,map.show=FALSE)
 grid()
 lines(trend(subset(amncd,is=1)),lty=2)
 mcdd <- trend(subset(amncd,is=2))
@@ -173,7 +175,7 @@ Linear trend analysis applied to both the duration of dry spells (solid line for
 The geographical pattern of trend in dry spell duration can be analysed using gridded data from EOBs (based on the ECA&D station records) Here gridded precipitation is represented with upper-case $X$. Gridded data are not ideal when it comes to extremes, as the gridding process makes the data spatially inhomogeneous. There are geographical variations in the climatological precipitation, with more precipitation over the higher elevations and the southern Alps.
 
 ```{r,warning=FALSE}
-X <- retrieve('data.ECAD/rr_0.25deg_reg_v12.0.nc',lon=c(4,8),lat=c(43,46))
+X <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=c(4,8),lat=c(43,46))
 map(X,new=FALSE)
 ```
 

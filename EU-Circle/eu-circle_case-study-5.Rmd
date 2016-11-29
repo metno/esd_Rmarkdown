@@ -2,7 +2,9 @@
 title: "EU-Circle Case study 5"
 author: "Rasmus Benestad"
 date: "May 2, 2016"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -15,10 +17,37 @@ Dresden is the largest city in the Eastern part of Germany, Saxony, near the Cze
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-## Analysis
+## Analysis: precipitation
 
 Data from ECA&D: precipitation. Snow depth?
 
+```{r}
+library(esd)
+ss <- select.station(param='precip',cntr='Germany',alt=250,nmin=75)
+map(ss,new=FALSE)
+Y <- subset(station(ss),it=c(1950,2015))
+diagnose(Y)
+```
+
+
 Area total precipitation from gridded EOBS.
+
+```{r}
+rr <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=c(5,15),lat=c(45,55))
+map(rr,new=FALSE)
+Arr <- aggregate.area(rr)
+plot(rr,new=FALSE)
+```
+
+
+## Analysis: temperature
+
+```{r}
+library(esd)
+ss <- select.station(param='temperature',cntr='Germany',alt=500,nmin=75)
+map(ss)
+X <- subset(station(ss),it='mam')
+diagnose(X)
+```
 
 
