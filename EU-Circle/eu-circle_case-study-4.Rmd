@@ -1,0 +1,35 @@
+---
+title: "Case 4"
+author: "Rasmus Benestad"
+date: "December 7, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Bangladesh: tropical cyclones and stormsurges, heavi precipitation. 
+
+Bangladesh is highly vulnerable to climate induced hazrds and disasters and its coastal part are mostly threatened for the impacts of climate change in case of cyclone, storm surges, flood, salinity and tsunami disaster. Even last twenty years the coastal peoples have suffered due to super cyclone SIDR and AILA devastations. Last two deacdes a lots of disaster coping interventions have been provided to the community to achieve resiliency in this areas. So really it will be a field laboratory for the research of Disaster Resilience and Climate Change: Science and innovation for adaptation to climate  change: from assessing costs, risks and opportunities to demonstration of options and practices.
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+
+
+```{r esd}
+library(esd)
+```
+
+## Analysis
+
+
+
+```{r pressure, echo=FALSE}
+# Daily precipitation from BMD 
+load('bmd.rda')
+```
+
+Scale the
