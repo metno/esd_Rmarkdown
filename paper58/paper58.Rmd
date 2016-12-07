@@ -258,7 +258,7 @@ mupredict <- function(x,pre,verbose=FALSE,prct=TRUE) {
 
 **Generation of graphics**
 
-The following functions are used for the presentation of the results  
+The following functions are used for the presentation of the results.
 
 ```{r}
 ## Generate a map for the PC weights for the different modes of the
@@ -327,11 +327,11 @@ The definition of functions is followed by code that carry out the analysis base
 
 if (!file.exists("mu.worstcasemu.rda") & figshare) {
   download.file("http://files.figshare.com/2193033/mu.worstcasemu.rda",destfile="mu.worstcasemu.rda") 
-}
+} 
 
 if (!file.exists("pre.worstcasemu.rda") & figshare) {
   download.file("http://files.figshare.com/2193038/pre.worstcasemu.rda",destfile="pre.worstcasemu.rda") 
-}
+} 
 
 if (!file.exists("cmip5.rda") & figshare) {
   download.file("http://files.figshare.com/2193041/cmip5.rda",destfile="cmip5.rda") 
@@ -433,8 +433,8 @@ r2 <- lapply(V,muskill)
 Figure 1 illustrates how the mean seasonal cycle in $\mu$ and the area mean predictor compare and what the regression results for one example station.  
 
 ```{r,echo=TRUE}
-## Extract the mean, min, max, wettest month, and driest months in terms of mu
-## for all stations:
+## Extract the mean, min, max, wettest month, and driest months 
+##  in terms of mu for all stations:
 print('muclim')
 X <- apply(mu,2,FUN='muclim')
 print(table(X[4,]))
@@ -488,7 +488,7 @@ print(cor.test(pca$v[,3],as.numeric(r2)))
 ```
 **Trend analysis**
 
-Estimate trend statistics and extract only the results for locations with a good match. The models calibrated here only seem to be valid for regions dominated by convective precipitation and are poor over regions where orographically forced precipitation dominate.   
+Estimate trend statistics if the historical wet-day mean and wet-day frequency. 
   
 ```{r,echo=TRUE}
 ## Estimate trend statistics for both fw and mu:
@@ -497,9 +497,13 @@ fw.trend <- 100*apply(subset(FW,it=c(1950,1990)),2,'trend.coef')/
                       apply(FW,2,'mean',na.rm=TRUE)
 mu.trend <- 100*apply(subset(MU,it=c(1950,1990)),2,'trend.coef')/
                       apply(MU,2,'mean',na.rm=TRUE)
-
+## Check data availability
 diagnose(MU)
+```
 
+Extract results (regression models, statistical information) only for locations where there is a good match between the seasonal cycles of $\mu$ and $e_s$ ($R^2 > 0.6$). The models calibrated here only seem to be valid for regions dominated by convective precipitation and are poor over regions where orographically forced precipitation dominate.   
+
+```{r,echo=TRUE}
 ## Select only the sites which have an R2 greater than 0.6:
 is <- (1:length(r2))[as.numeric(r2)> 0.6]
 mux <- subset(mu,is=is)
@@ -511,7 +515,7 @@ Vx <- V[is]
 
 **Aggregated results from the GCMs**
 
-Collect aggregated GCM projections (CMIP5) and apply the regression models to the ensembles. 
+Collect aggregated GCM projections (CMIP5) and apply the empirical models to the ensembles. 
   
 ```{r,echo=TRUE}
 ## Read the GCM ensembles andestimate the 5 and 95 percentiles as well as
@@ -533,15 +537,15 @@ Z.rcp8.5 <- lapply(Vx,'muproject',rcp8.5)
 Z.rcp2.6 <- lapply(Vx,'muproject',rcp2.6)
 t <- index(rcp4.5)
 ```
-Extract statistics of the wet-daymean associated with different emission scenarios and time slices and calculate the changes from the present (2010) to the far future (2100).
+Extract statistics of the wet-day mean associated with different emission scenarios and time slices and calculate the changes from the present (2010) to the far future (2100).
 
 ```{r,echo=TRUE}
 ## Estimates for mu in 2010:
 mu2010.rcp4.5 <- lapply(Z.rcp4.5,'window',start=2010,end=2010)
 mu2010.rcp8.5 <- lapply(Z.rcp8.5,'window',start=2010,end=2010)
 mu2010.rcp2.6 <- lapply(Z.rcp2.6,'window',start=2010,end=2010)
-x2010 <- as.numeric(lapply(mu2010.rcp4.5,function(x) x[[3]]))
-x2010u <- as.numeric(lapply(mu2010.rcp4.5,function(x) x[[2]]))
+x2010 <- as.numeric(lapply(mu2010.rcp4.5,function(x) x[[3]])) ## Median value
+x2010u <- as.numeric(lapply(mu2010.rcp4.5,function(x) x[[2]])) ## 95th percentile
 y2010 <- as.numeric(lapply(mu2010.rcp8.5,function(x) x[[3]]))
 y2010u <- as.numeric(lapply(mu2010.rcp8.5,function(x) x[[2]]))
 z2010 <- as.numeric(lapply(mu2010.rcp2.6,function(x) x[[3]]))
@@ -558,10 +562,10 @@ y2100u <- as.numeric(lapply(mu2100.rcp8.5,function(x) x[[2]]))
 z2100 <- as.numeric(lapply(mu2100.rcp2.6,function(x) x[[3]]))
 z2100u <- as.numeric(lapply(mu2100.rcp2.6,function(x) x[[2]]))
 
-## Data frams with changes in percentages:
-mu.2100 <- data.frame(mean.RCP4.5=x2100 - x2010,q95.RCP4.5=x2100u - x2010u,
-                      mean.RCP2.6=z2100 - z2010,q95.RCP4.5=z2100u - z2010u,
-                      mean.RCP8.5=y2100 - y2010,q95.RCP8.5=y2100u - y2010u)
+## Data frames with changes in percentages:
+mu.2100 <- data.frame(median.RCP4.5=x2100 - x2010,q95.RCP4.5=x2100u - x2010u,
+                      median.RCP2.6=z2100 - z2010,q95.RCP4.5=z2100u - z2010u,
+                      median.RCP8.5=y2100 - y2010,q95.RCP8.5=y2100u - y2010u)
 ```
 
 **Plot figure 3**
@@ -569,7 +573,7 @@ mu.2100 <- data.frame(mean.RCP4.5=x2100 - x2010,q95.RCP4.5=x2100u - x2010u,
 ```{r,echo=TRUE}
 ## Fig 3
 ## Plot a map of projected values:
-## Map showing RCP4.5 ensemble mean and the upper 95% change in the
+## Map showing RCP4.5 ensemble median and the upper 95% change in the
 ## outer part of the symbol. Also an insert with box-plot diagram
 ## showing the other RCPs.
 
@@ -583,7 +587,7 @@ coly <- cols[cx2100u]
 Cex <- 1.25
 
 print("Plot a map of projected values:")
-map(mux, xlim=xlim,ylim=ylim,cex=Cex,bg='grey70',gridlines=FALSE,
+map(mux, xlim=xlim,ylim=ylim,cex=Cex,bg='grey70',col='grey70',gridlines=FALSE,
     colbar=list(col=cols,n=12,type="p",h=0.6,v=1))
 points(lon(mux),lat(mux),pch=19,col=colx,cex=Cex)
 points(lon(mux),lat(mux),pch=21,col=coly,cex=Cex,lwd=2)
@@ -907,7 +911,7 @@ Additional analysis testing the connection between local temperature and wet-day
 
 **Regression analysis between the wet-day mean mu and the mean temperature**
 
-Load South American temperature and precipitation data from the climate database CLARIS and COST-VALUE(?). 
+Load South American temperature and precipitation data from the climate database CLARIS and European observations that were used in COST-VALUE experiment 1. 
 ```{r}
 ## CLARIS
 load('claris.Tx.rda')
@@ -966,7 +970,7 @@ if (!file.exists('mut2m.GDCN.rda')) {
 } else load('mut2m.GDCN.rda')
 ```
 
-Combine and aggregate the observational data from North America and South America, and then fit a regression model based on comparing the annual mean $\mu$ and $e_s$ at the different stations.  
+Combine the observational data from North America, Europe, and South America. Then fit a linear regression model comparing the mean $\mu$ and $e_s$ values at different locations.  
 ```{r}
 ## Aggregate annual statistics based on the combined data sources:
 MU <- combine(mu,annual(Pr1,FUN='wetmean'),annual(Pr2,FUN='wetmean'))
@@ -989,7 +993,7 @@ Fw <- apply(coredata(fw),2,'sum',na.rm=TRUE)
 
 ##** Figure SM8**
 
-Assess the connection between temperature and the wet-day mean precipitation.
+Assess the connection between temperature and the wet-day mean precipitation in space, based on the regression models defined above.
 
 ```{r}
 par(bty='n')
