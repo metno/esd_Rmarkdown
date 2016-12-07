@@ -2,7 +2,9 @@
 title: "EU-Circle Case study 5"
 author: "Rasmus Benestad"
 date: "May 2, 2016"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -15,10 +17,85 @@ Dresden is the largest city in the Eastern part of Germany, Saxony, near the Cze
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-## Analysis
+## Analysis: precipitation
 
 Data from ECA&D: precipitation. Snow depth?
 
+```{r}
+library(esd)
+ss <- select.station(param='precip',cntr='Germany',alt=250,nmin=75)
+map(ss,new=FALSE)
+Y <- station(ss)
+Y <- subset(Y,it=c(1950,2015))
+diagnose(Y)
+nv <- apply(coredata(Y),2,'nv')
+Y <- subset(Y,is=nv > 24000)
+```
+
+
+```{r}
+y <- subset(Y,is=1)
+coredata(y) <- rowMeans(coredata(Y))
+attr(y,'location') <- 'German higher elevation'
+attr(y,'longitude') <- mean(lon(Y))
+attr(y,'latitude') <- mean(lat(Y))
+attr(y,'altitude') <- min(alt(Y))
+plot(y)
+lines(trend(y),lty=2)
+grid()
+```
+
+
 Area total precipitation from gridded EOBS.
+
+```{r}
+rr <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=range(lon(Y)),lat=range(lat(Y)))
+map(rr,new=FALSE)
+Arr <- aggregate.area(rr)
+plot(rr,new=FALSE)
+```
+
+Wet day mean and frequency
+
+```{r}
+mu <- annual(rr,FUN='wetmean')
+fw <- annual(rr,FUN='wetfreq')
+MU <- aggregate.area(mu,FUN='mean')
+FW <- aggregate.area(fw,FUN='mean')
+plot(MU,new=FALSE)
+lines(trend(MU),lty=2)
+grid()
+plot(FW,new=FALSE)
+grid()
+lines(trend(FW),lty=2)
+```
+
+Plot the probability of more than 50mm/day
+
+```{r}
+Pr.50 <- FW*exp(-50/MU)
+plot(Pr.50)
+lines(trend(Pr.50),lty=2)
+grid()
+```
+
+
+## Analysis: temperature
+
+Check for melting.
+
+```{r}
+ss <- select.station(param='tn',cntr='Germany',alt=500,nmin=75)
+map(ss)
+X <- subset(station(ss),it=month.abb[1:4])
+diagnose(X)
+X <- subset(X,it=c(1940,2015))
+```
+
+```{r}
+tnx <- annual(X,FUN='max',nmin=100)
+plot(tnx,new=FALSE)
+grid()
+```
 
 
