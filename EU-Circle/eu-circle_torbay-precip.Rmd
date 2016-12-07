@@ -23,7 +23,7 @@ Rain gauges provide a very tiny sample of the rainfall, and previous work sugges
 
 ```{r predictand}
 library(esd)
-pr.eobs <- retrieve('data.ECAD/rr_0.25deg_reg_v12.0.nc',lon=c(-6,-1),lat=c(50,52))
+pr.eobs <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=c(-6,-1),lat=c(50,52))
 mu <- annual(pr.eobs,FUN='wetmean')
 fw <- annual(pr.eobs,FUN='wetfreq')
 ```
@@ -35,8 +35,12 @@ Climate change has taken place for some time, and past trends may provide some i
 ```{r trend}
 ## The area mean wet-day mean precipitation
 plot(mu,new=FALSE)
+grid()
+lines(trend(mu),lty=2)
 ## The area mean wet-day frequency
 plot(fw,new=FALSE)
+grid()
+lines(trend(mu),lty=2)
 ## The early part of the record looks suspect:
 mu <- subset(mu,it=c(1958,2015))
 fw <- subset(fw,it=c(1958,2015))
@@ -53,7 +57,7 @@ The trend analysis for the wet-day frequency suggest a general increase in the n
 The predictors can be organised as EOFs to simplify the analysis and make use of properties as the products being orthogonal. Here are the EOFS for the annual wet-day mean precipitation $\mu$
 
 
-```{r EOFs-in-precip-mu}
+```{r EOFs-in-precip-mu, fig.width=8, fig.height=8}
 ## The area mean wet-day mean precipitation
 eof.mu <- EOF(mu)
 ## The area mean wet-day frequency
@@ -63,7 +67,7 @@ plot(eof.mu)
 
 and the annual wet-day frequency $f_w$
 
-```{r EOFs-in-precip-fw}
+```{r EOFs-in-precip-fw, fig.width=8, fig.height=8}
 ## Show maps of trends for the wet-day mean precipitation
 eof.fw <- EOF(fw)
 ## Map of trends in wet-day frequency:
@@ -94,7 +98,7 @@ eof.es <- EOF(annual(es,FUN='mean'))
 
 Carry out canonical correlation analysis (CCA) to explore relationships between the large-scale conditions such as SLP/temperature and the precipitation over soutwestern England:
 
-```{r cca}
+```{r cca, fig.width=8, fig.height=8}
 ## The wet-day frequency and SLP
 cca.fw <- CCA(eof.fw,eof.slp)
 plot(cca.fw)
@@ -108,11 +112,11 @@ The CCA identifies the two patterns in the data that have the highest correlatio
 
 The downscaling emplies a multiple regression applied to each of the principal components for the EOFs of $\mu$ and $f_w$.
 
-```{r DS}
+```{r DS, fig.width=8, fig.height=8}
 ## The wet-day frequency and SLP
-ds.fw <- DS(subset(eof.fw,pattern=1:4),eof.slp,eofs=1:5)
+ds.fw <- DS(subset(eof.fw,ip=1:4),eof.slp,ip=1:5)
 plot(ds.fw)
-ds.mu <- DS(subset(eof.mu,pattern=1:4),eof.es,eofs=1:7)
+ds.mu <- DS(subset(eof.mu,ip=1:4),eof.es,ip=1:7)
 plot(ds.mu)
 ```
 
@@ -120,7 +124,7 @@ The downscaling includes cross-validation analysis, and the results shown are fo
 
 Extract the residual and examine to see if there is any temporal-stpatial structure left: a tell-tale sign for noise is a flat eigenspectrum 
 
-```{r residual for mu}
+```{r residual for mu, fig.width=8, fig.height=8}
 ## The residual of the wet-day precipitation
 z.mu <- as.field(ds.mu)
 #res.mu <- as.residual(z.mu)
@@ -132,13 +136,13 @@ plot(eof.res.mu)
 ```
 
 For comparison the original data look like this:
-```{r EOF for mu}
+```{r EOF for mu, fig.width=8, fig.height=8}
 ## The residual of the wet-day precipitation
 plot(EOF(mu))
 ```
 
 
-```{r residual for fw}
+```{r residual for fw, fig.width=8, fig.height=8}
 ## Repeat with the wet-day frequency for the benefit of comparison
 z.fw <- as.field(ds.fw)
 #res.fw <- as.residual(ds.fw)
@@ -151,7 +155,7 @@ plot(eof.res.fw)
 ```
 
 For comparison the original data look like this:
-```{r EOF for fw}
+```{r EOF for fw, fig.width=8, fig.height=8}
 ## The residual of the wet-day precipitation
 plot(EOF(fw))
 ```

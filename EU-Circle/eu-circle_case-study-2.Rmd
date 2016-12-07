@@ -1,0 +1,42 @@
+---
+title: "Case2"
+author: "Rasmus Benestad"
+date: "December 7, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Storm and Sea Surge at a Baltic Sea Port , Gdynia Poland
+
+### Scenario 1: Oil and Natural Gas Transport in port
+
+The oil piping transportation system is operating at one of the Baltic Oil Terminals that is designated for the reception from ships, the storage and sending by carriages or cars the oil products. It is also designated for receiving from carriages or cars, the storage and loading the tankers with oil products such like petrol and oil. On the basis of the piping system operation and safety statistical data coming from its operators its safety will be modelled, identified and predicted. Further, under the assumption of the possibility of the stress of weather influence on the operation conditions in the form of maritime storm and/or other hard sea conditions existence, the piping system safety will be examined and the results will be compared with the previous results. The piping system safety and operation optimization will be performed and practical suggestions and procedures improving its  safety will be worked out.
+Presentation: EU-CIRCLE Case Study 2 – Scenario 1
+
+### Scenario 2: Chemical Spill due to extreme sea surges
+
+The sea transport of dangerous chemicals is pretty safe at normal environmental conditions. However, the transported goods may be swept overboard as a result of bad weather and hard sea conditions. The released chemicals may create the threat for the crew and the ship as well as pollute the seawater and the coast. The Baltic Sea and nearby ecosystems are vulnerable to pollution and contamination as a result of sea accident during the dangerous goods transportation. Today, one major accident at the Baltic Sea happens every year approximately. There are more than 50,000 ships entering and leaving the Baltic Sea every year and about 2,000 vessels are at the Baltic Sea at any given moment as illustrated in Figure 1. This huge traffic across the Baltic Sea will be observed.
+
+On the basis of the statistical data coming from reports of chemical accidents at sea, the risk of dangerous chemicals accidents at sea and their dangerous consequences will be modelled, identified and predicted. Further, under the assumption of the stress of weather influence on the operation conditions in the form of maritime storm and/or other hard sea  conditions existence, the risk of chemical spills at sea will be examined and the results will be compared with the previous results. The risk of chemical spills at sea the environment degradation optimization will be performed and practical suggestions and procedures decreasing the risk of the environment degradation will be worked out.
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+
+```{r esd}
+library(esd)
+```
+
+## analysis
+
+Wind, stormtracks, wave heights, ans sea level.
+
+```{r pressure}
+data(imilast.M03)
+```
+
+
