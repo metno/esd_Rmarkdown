@@ -493,9 +493,11 @@ Estimate trend statistics if the historical wet-day mean and wet-day frequency.
 ```{r,echo=TRUE}
 ## Estimate trend statistics for both fw and mu:
 ## Use subset - in the PCA there is something strange in the 1990s.
-fw.trend <- 100*apply(subset(FW,it=c(1950,1990)),2,'trend.coef')/
+## But we use the data from the 1990s and 2000s in the rest of the analysis!
+## It makes no sense to exclude it here, and the results are similar.
+fw.trend <- 100*apply(subset(FW,it=c(1961,2014)),2,'trend.coef')/
                       apply(FW,2,'mean',na.rm=TRUE)
-mu.trend <- 100*apply(subset(MU,it=c(1950,1990)),2,'trend.coef')/
+mu.trend <- 100*apply(subset(MU,it=c(1961,2014)),2,'trend.coef')/
                       apply(MU,2,'mean',na.rm=TRUE)
 ## Check data availability
 diagnose(MU)
@@ -567,8 +569,18 @@ mu.2100 <- data.frame(median.RCP4.5=x2100 - x2010,q95.RCP4.5=x2100u - x2010u,
                       median.RCP2.6=z2100 - z2010,q95.RCP4.5=z2100u - z2010u,
                       median.RCP8.5=y2100 - y2010,q95.RCP8.5=y2100u - y2010u)
 ```
+Print the projected changes in return-values from 2010 to 2100.
 
-**Plot figure 3**
+```{r}
+## Print the numbers:
+print('--- Changes in 20% returnvalue in terms of % from 2010:')
+print(lapply(mu.2100,summary))
+print(paste('Summary for',length(mu.2100[[1]]),'locations'))
+```
+
+**Plot Figure 3**
+
+Figure 3 shows the projected changes in the median (inner marker) and 95th precentile of the wet-day mean from the present (2010) to the far future (2100).  
 
 ```{r,echo=TRUE}
 ## Fig 3
@@ -619,8 +631,7 @@ Extract and reorganise essential information from previous analysis that will be
   
 ```{r,echo=TRUE}
 ## Evaluation:
-## Use the calibration strategy to predict the annual mu based on the
-## predictor (t2m -> e_s)
+## Use the calibration strategy to predict the annual mu based on the predictor (t2m -> e_s)
 print('evaluation: correlation')
 mu.eval <- lapply(Vx,'mupredict',annual(pre),prct=FALSE)
 m <- length(mu.eval); n <- length(mu.eval[[1]])
@@ -675,6 +686,44 @@ figlab('Figure SM2')
 ##**Figure SM3**
 
 Figure SM3 compares the observed and predicted historical trends in the wet-day mean preciptation.
+First extract information about trends in $\mu$.
+
+```{r,echo=TRUE}
+## Trend in projected wet-day mean
+trendbeta <- unlist(lapply(Z.rcp4.5,function(x) trend.coef(x[,3])))
+## Strange results:
+print((1:N)[trendbeta < 0])
+
+## test: Does the model predict observed trends?
+print('evaluation: trends')
+
+## Make sure to compare series with data for same times
+mask <- !is.finite(coredata(MUx))
+class(MUz) <- class(MUx)
+muz <- coredata(MUz)
+muz[mask] <- NA; dim(muz) <- dim(MUz)
+coredata(MUz) <- muz
+
+## Only look at stations with more than 50 years with data
+ok <- (apply(coredata(MUx),2,nv) > 50)
+MUz <- subset(MUz,is=ok)
+MUx <- subset(MUx,is=ok)
+FWx <- subset(FWx,is=ok)
+
+trend.mux <- apply(MUx,2,'trend.coef')
+trend.pre <- apply(MUz,2,'trend.coef')
+trenderr.mux <- apply(MUx,2,'trend.err')
+trenderr.pre <- apply(MUz,2,'trend.err')
+
+## Need to get a picture whether the predictions gives a plausible
+## upper limit.
+trend.sense <- data.frame(x=c(-trend.mux,trend.mux),
+                          y=c(-trend.pre,trend.pre))
+
+xylim <- max(abs(c(trend.mux,trend.pre)))*c(-1,1)
+```
+
+Then make a scatterplot comparing the observed and predicted trends.
 
 ```{r}
 par(bty='n',col.sub='grey',cex.sub=0.8)
@@ -718,27 +767,9 @@ figlab('Figure SM4',ypos=0.999)
 figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),xpos=0.5,ypos=0.999)
 ```
 
-## Figure SM5 is not used in either the main paper of supplementary material
-<##**Figure SM5**>
+##**Figure SM5**
 
-#Figure SM5 is a histogram of the  shows the historical trends in the wet-day mean preciptation.
-
-#```{r}
-## 99-percentile wet-day mean and typical wet-day frequency
-## Prob(X>x) for annual maximum for 24hr precip
-## Pr(X > x) = 1/365.25 = fw*(1-p): p = 1 - 1/(365.25*fw)
-#par(bty='n')
-#W <- apply(fw,2,FUN='muclim')
-#hist(100*(1-1/(W[1,]*365.25)),col='steelblue',lwd=2,breaks=seq(90,100,by=0.1),
-#     main='Wet-day percentile for annual maximum 24-hr precipitation',
-#     xlab='p (%)')
-#grid()
-#figlab('Figure SM5')
-#```
-
-##**Figure SM6**
-
-Figure SM6 displays a histogram of historical trends in the wet-day frequency for the period... for the stations in Europe shown in Figure SM7. 
+Figure SM5 displays a histogram of historical trends in the wet-day frequency for the period... for the stations in Europe shown in Figure SM6. 
 
 ```{r}
 ## Statistics of trend in wet-day frequency
@@ -747,77 +778,30 @@ hist(fw.trend,breaks=seq(-50,50,by=1),col='grey',lwd=2,
      main='Trend in wet-day frequency',
      xlab=expression(paste(f[w],' (%/decade)')))
 grid()
-figlab('Figure SM6')
+figlab('Figure SM5')
 ```
 
-##**Figure SM7**
+##**Figure SM6**
 
-Figure SM7 shows the spatial distribution of the historical trends in wet-day frequency on a map.
+Figure SM6 shows the spatial distribution of the historical trends in wet-day frequency on a map.
 
 ```{r}
 ## Map showing trends in fw
 #dev.new()
-map(FW,FUN='trend',colbar=list(breaks=seq(-0.05,0.05,length=21),rev=TRUE),cex=cex)
-figlab('Figure SM7',ypos=0.999)
+map(FW,FUN='trend',colbar=list(pal="t2m",breaks=seq(-0.05,0.05,length=21)),cex=cex)
+figlab('Figure SM6',ypos=0.999)
 figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),xpos=0.5,ypos=0.999)
 ```
 
+Figures SM7-8 require additional data and will follow after Figures SM9-11
+
 ##**Figure SM9**
 
-```{r}
-## Print the numbers:
-print('--- Changes in 20% returnvalue in terms of % from 2010:')
-print(lapply(mu.2100,summary))
-print(paste('Summary for',length(mu.2100[[1]]),'locations'))
-
-## Compare the regression coefficients derived from individual
-## seasonal cycle with that derived from mean climatology.
-
-data(mu.eq.f.tx)
-
-col <- rgb(0.1,0.1,0.7,0.25)
-mutx <- summary(mu.eq.f.tx)$coefficients[c(2,4)]
-b1 <- as.numeric(lapply(Beta,function(x) x[1]))
-e1 <- as.numeric(lapply(Beta,function(x) x[2]))
-
-par(bty='n')
-plot(b1,pch=19,col=col,cex=cexr2,
-     main=expression(paste('Scaling coefficient for ',mu,' and ',e[s])),
-     xlab='',ylab=expression(beta))
-grid()
-for (i in 1:length(b1)) {
-  lines(rep(i,2),b1[i]+e1[i]*c(-2,2),col=col)
-  lines(i+c(-0.45,0.45),b1[i]+e1[i]*c(-2,-2),col=col)
-  lines(i+c(-0.45,0.45),b1[i]+e1[i]*c(2,2),col=col)
-}
-polygon(c(1,rep(length(b1),2),rep(1,2)),
-        mutx[1]+mutx[2]*c(-2,-2,2,2,-2),
-        border=rgb(0.5,0.5,0.5,0.4),col=rgb(0.5,0.5,0.5,0.3))
-lines(c(1,length(b1)),rep(mutx[1],2),lwd=3,col=rgb(0.5,0.5,0.5,0.3))
-figlab('Figure SM9')
-```
-
-##**Figure SM10: Map of the future return values**
-
-```{r}
-print('Map of return values for 2100 with RCP4.5')
-rv <- MUx
-## x2100u gives the percentage of mu,
-coredata(rv) <- t((x2100u/100)*apply(coredata(MUx),2,'mean')*log(365.25*t(coredata(FWx))))
-cexr2 <- 1.5*c(as.numeric(r2)) + 0.2
-map(rv,FUN='mean',cex=cexr2,colbar=list(breaks=seq(30,100,by=1)))
-figlab('Figure SM10',ypos=0.999)
-figlab('Return values for 2100 assuming RCP4.5',xpos=0.3,ypos=0.999)
-```
-
-
-##**Figure SM12**
-
-A figure showing one example of projections for one location, showing all three emission scenarios.
+Figure SM9 shows an example of projections of the wet-day mean for one location, showing all three emission scenarios.
 
 ```{r}
 ## Example of estimates for 2050:
-print('Example plot - evolution')
+print('Example plot - projections of mu')
 par(bty='n')
 i <- 1
 N <- length(Z.rcp4.5)
@@ -828,50 +812,29 @@ shade(Z.rcp4.5[[i]],col=rgb(0.5,0.5,0.5,0.3))
 shade(Z.rcp8.5[[i]],col=rgb(1,0.5,0.5,0.3))
 shade(Z.rcp2.6[[i]],col=rgb(0.5,1,0.5,0.3))
 grid()
-figlab('Figure SM12')
+legend("topleft",legend=c("RCP4.5","RCP8.5","RCP2.6"),lty=1,lwd=2,
+       bty="o",box.lwd=0.2,
+       col=c(rgb(0.5,0.5,0.5,0.5),rgb(1,0.5,0.5,0.5),rgb(0.5,1,0.5,0.5)))
+figlab('Figure SM9')
 ```
 
-Further processing for Fig SM3: extract information about trends in $\mu$.
+##**Figure SM10**
 
-```{r,echo=TRUE}
-## Trend in projected wet-day mean
-trendbeta <- unlist(lapply(Z.rcp4.5,function(x) trend.coef(x[,3])))
-## Strange results:
-print((1:N)[trendbeta < 0])
-
-## test: Does the model predict observed trends?
-print('evaluation: trends')
-
-## Make sure to compare series with data for same times
-mask <- !is.finite(coredata(MUx))
-class(MUz) <- class(MUx)
-muz <- coredata(MUz)
-muz[mask] <- NA; dim(muz) <- dim(MUz)
-coredata(MUz) <- muz
-
-## Only look at stations with more than 50 years with data
-ok <- (apply(coredata(MUx),2,nv) > 50)
-MUz <- subset(MUz,is=ok)
-MUx <- subset(MUx,is=ok)
-FWx <- subset(FWx,is=ok)
-
-trend.mux <- apply(MUx,2,'trend.coef')
-trend.pre <- apply(MUz,2,'trend.coef')
-trenderr.mux <- apply(MUx,2,'trend.err')
-trenderr.pre <- apply(MUz,2,'trend.err')
-
-## Need to get a picture whether the predictions gives a plausible
-## upper limit.
-trend.sense <- data.frame(x=c(-trend.mux,trend.mux),
-                          y=c(-trend.pre,trend.pre))
-
-xylim <- max(abs(c(trend.mux,trend.pre)))*c(-1,1)
-```
-
-
-##**Figure SM14: compare the mean seasonal variations in the different precipitation statistics**
+Figure SM10 presents a map of the NCEP reanalysis temperature for the North Atlantic region that is used as predictor for the downscaling (see e.g., Figure 1 and 3). 
 
 ```{r}
+## Show the predictor area:
+X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
+map(X,projection='sphere',colbar=list(breaks=seq(8,28,by=0.5)))
+figlab('Figure SM10',xpos=0.8,ypos=0.999)
+```
+
+##**Figure SM11**
+
+Figure SM11 show the seasonal cycles of various precipitation statistics (mean, wet-day mean, wet-day frequency, mean consecutive wet days and dry days), calculated based on ECA&D observations for stations with long precipitation records. 
+
+```{r}
+# y1 contains precipitation observations from ECA&D stations with long records
 pr.mean <- aggregate(y1,by=month,FUN='mean')
 pr.mu <- aggregate(y1,by=month,FUN='wetmean')
 pr.fw <- aggregate(y1,by=month,FUN='wetfreq')
@@ -890,18 +853,9 @@ axis(4,at=10*pretty(pr.fw),pretty(pr.fw),col='grey')
 
 legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
                expression(bar(n[c*w*d])),expression(bar(n[c*d*d]))),bty='n',
-       col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1))
-figlab('Figure SM9')
-```
-
-
-##**Figure SM13**
-
-```{r}
-## Show the predictor area:
-X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
-map(X,projection='sphere',colbar=list(breaks=seq(8,28,by=0.5)))
-figlab('Figure SM13',xpos=0.8,ypos=0.999)
+       col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1),
+       ncol=2)
+figlab('Figure SM11')
 ```
 
 
@@ -921,7 +875,7 @@ Tx1 <- Tx
 Pr1 <- Pr
 
 ## COST-VALUE
-load('VALUE_ECA_86_v2/stationsVALUE-exp1a.rda')
+load('stationsVALUE-exp1a.rda')
 Tx2 <- Tx
 Pr2 <- Pr
 ```
@@ -991,43 +945,8 @@ data(geoborders)
 Fw <- apply(coredata(fw),2,'sum',na.rm=TRUE)
 ```
 
-##** Figure SM8**
-
-Assess the connection between temperature and the wet-day mean precipitation in space, based on the regression models defined above.
-
 ```{r}
-par(bty='n')
-col <- rgb((1+sin(pi*calmu$lat/180))/2,
-           cos(pi*calmu$lon/180)^2,
-           1-(1+sin(pi*calmu$lat/180))/2,0.15)
-cex <- 1.5*Fw/max(Fw,na.rm=TRUE)
-plot(calmu$x,calmu$y,pch=19,col=col,cex=cex,
-     main='Wet-day mean precipitation temperature dependency',
-     ylab=expression(mu*phantom(0)*(mm/day)),
-     xlab=expression(e[s]*phantom(0)**(Pa)))
-points(calmu$x,calmu$y,pch=21,col=rgb(0.5,0.5,0.5,0.2),cex=cex)
-lines(calmu$x,predict(model.mutx),col=rgb(0.4,0.4,0.4,0.1),lwd=2)
-
-par(new=TRUE,fig=c(0.15,0.45,0.7,0.9),mar=rep(0,4),xaxt="n",yaxt="n")
-plot(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
-lines(geoborders,col='grey')
-points(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
-figlab('Figure SM8')
-
-mu.eq.f.tx <- model.mutx
-attr(mu.eq.f.tx,'input') <- 'saturation water pressure e_s (Pa)'
-attr(mu.eq.f.tx,'predictand') <- 'C.C.eq(tmax)' 
-attr(mu.eq.f.tx,'output') <- 'wet-day mean precipitation (mm/day)'
-attr(mu.eq.f.tx,'calibration') <- 'mean climatology'
-attr(mu.eq.f.tx,'source script') <- 'mut2m.R'
-attr(mu.eq.f.tx,'timestamp') <- date()
-attr(mu.eq.f.tx,'calibration_data') <- calmu
-save(file='esd/data/mu.eq.f.tx.rda',mu.eq.f.tx)
-```
-
-
-```{r}
-## Estimate the year-by-year correlation in es and mu
+## Estimate the correlation between the annual mean es and mu at the different sites
 corhalf <- function(x) {
   n <- length(x)
   x1 <- x[1:(n/2)]; x2 <- x[(n/2+1):n]
@@ -1045,3 +964,69 @@ r <- apply(Z,2,corhalf)
 hist(r)
 ```
 
+##** Figure SM7**
+
+Assess the connection between temperature and the wet-day mean precipitation in space, based on the regression models defined above.
+
+```{r}
+par(bty='n')
+col <- rgb((1+sin(pi*calmu$lat/180))/2,
+           cos(pi*calmu$lon/180)^2,
+           1-(1+sin(pi*calmu$lat/180))/2,0.45)
+cex <- 1.5*Fw/max(Fw,na.rm=TRUE)
+plot(calmu$x,calmu$y,pch=19,col=col,cex=cex,
+     main='Wet-day mean precipitation temperature dependency',
+     ylab=expression(mu*phantom(0)*(mm/day)),
+     xlab=expression(e[s]*phantom(0)**(Pa)))
+points(calmu$x,calmu$y,pch=21,col=rgb(0.5,0.5,0.5,0.2),cex=cex)
+lines(calmu$x,predict(model.mutx),col=rgb(0.4,0.4,0.4,0.1),lwd=2)
+
+par(new=TRUE,fig=c(0.15,0.45,0.7,0.9),mar=rep(0,4),xaxt="n",yaxt="n")
+plot(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
+lines(geoborders,col='grey')
+points(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
+figlab('Figure SM7')
+
+mu.eq.f.tx <- model.mutx
+attr(mu.eq.f.tx,'input') <- 'saturation water pressure e_s (Pa)'
+attr(mu.eq.f.tx,'predictand') <- 'C.C.eq(tmax)' 
+attr(mu.eq.f.tx,'output') <- 'wet-day mean precipitation (mm/day)'
+attr(mu.eq.f.tx,'calibration') <- 'mean climatology'
+attr(mu.eq.f.tx,'source script') <- 'mut2m.R'
+attr(mu.eq.f.tx,'timestamp') <- date()
+attr(mu.eq.f.tx,'calibration_data') <- calmu
+save(file='mu.eq.f.tx.rda',mu.eq.f.tx)
+```
+
+##**Figure SM8**
+
+Figure SM9 compares the regression coefficients derived from the seasonal cycles of $\mu$ and the North Atlantic $\e_s$ (see e.g. Figures 1 and 3), to the regression coefficient from the comparison between the mean $\mu$ and $e_s$ from various sites (see Figure SM8).
+
+```{r}
+
+## Compare the regression coefficients derived from individual
+## seasonal cycles with that derived from mean climatology at different sites.
+
+data(mu.eq.f.tx)
+
+col <- rgb(0.1,0.1,0.7,0.25)
+mutx <- summary(mu.eq.f.tx)$coefficients[c(2,4)]
+b1 <- as.numeric(lapply(Beta,function(x) x[1]))
+e1 <- as.numeric(lapply(Beta,function(x) x[2]))
+
+par(bty='n')
+plot(b1,pch=19,col=col,cex=cexr2,
+     main=expression(paste('Scaling coefficient for ',mu,' and ',e[s])),
+     xlab='',ylab=expression(beta))
+grid()
+for (i in 1:length(b1)) {
+  lines(rep(i,2),b1[i]+e1[i]*c(-2,2),col=col)
+  lines(i+c(-0.45,0.45),b1[i]+e1[i]*c(-2,-2),col=col)
+  lines(i+c(-0.45,0.45),b1[i]+e1[i]*c(2,2),col=col)
+}
+polygon(c(1,rep(length(b1),2),rep(1,2)),
+        mutx[1]+mutx[2]*c(-2,-2,2,2,-2),
+        border=rgb(0.5,0.5,0.5,0.4),col=rgb(0.5,0.5,0.5,0.3))
+lines(c(1,length(b1)),rep(mutx[1],2),lwd=3,col=rgb(0.5,0.5,0.5,0.3))
+figlab('Figure SM8')
+```
