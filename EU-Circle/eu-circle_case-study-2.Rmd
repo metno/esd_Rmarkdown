@@ -33,10 +33,17 @@ library(esd)
 
 ## analysis
 
-Wind, stormtracks, wave heights, ans sea level.
+Wind, stormtracks, wave heights, and sea level.
 
 ```{r pressure}
-data(imilast.M03)
+data(imilast.M03) 
+Baltic <- subset(imilast.M03,is=list(lon=c(15,25),lat=c(55,60)))
+map(Baltic,new=FALSE)
 ```
 
+```{r}
+nstorms <- plot(Baltic,new=FALSE)
+grid()
+lines(trend(nstorms),lty=2)
+```
 

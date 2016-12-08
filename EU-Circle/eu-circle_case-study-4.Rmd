@@ -32,4 +32,45 @@ library(esd)
 load('bmd.rda')
 ```
 
-Scale the
+Scale the precipitation according to the indididual wet-day mean. Then take the mean of the station series to get an index of large-scale precipitation intensity.
+
+```{r}
+mu <- apply(coredata(pr.bmd),2,'wetmean')
+nv <- apply(coredata(pr.bmd),1,'nv')
+X <- zoo(rowMeans(t(t(pr.bmd)/mu),na.rm=TRUE),order.by=index(pr.bmd))
+X[nv < 11] <- NA
+X <- as.station(X,param='rain-index',unit='dimensionless',loc='Bangladesh',
+                lon=mean(lon(pr.bmd)),lat=mean(lat(pr.bmd)),alt=0)
+```
+
+Examine the index:
+
+```{r}
+plot(X,new=FALSE)
+```
+
+Check the seasonality
+
+```{r}
+wheel(X,new=FALSE)
+```
+
+The long-term perspective of the rainfall intensity
+
+```{r}
+plot(annual(X,'wetmean'),new=FALSE)
+grid()
+lines(trend(annual(X,'wetmean')),lty=2)
+```
+
+The long-term perspective of the wet-day frequency
+
+```{r}
+plot(annual(X,'wetfreq'),new=FALSE)
+grid()
+lines(trend(annual(X,'wetfreq')),lty=2)
+```
+
+Get data on storm tracks... IMILAST
+Correlation between storm tracks and stations.
+

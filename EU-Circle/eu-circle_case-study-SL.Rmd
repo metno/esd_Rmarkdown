@@ -22,15 +22,81 @@ library(esd)
 library(RgoogleMaps)
 ```
 
+```{r}
+dm <- function(x) {
+  if (!is.null(dim(x))) y <- zoo(t(t(coredata(x)) -                      colMeans(coredata(x),na.rm=TRUE)),order.by=index(x)) else
+                        y <- zoo(x - mean(x,na.rm=TRUE), order.by=index(x))
+  y <- attrcp(x,y)
+  class(y) <- class(x)
+  y
+}
+```
+
+
+
 ## Analysis
 
 You can also embed plots, for example:
 
 ```{r sea-level-data}
 gsl <- GSL()
-gloss <- station.gcloss()
+gloss <- station.gloss()
 sonel <- station.sonel()
-newlin <- station.newlin()
+#newlyn <- station.newlyn()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Examine the mean seasonal cycle in the tide gauge records:
+
+```{r}
+plot(aggregate(dm(gloss),month,'mean'),map.show=FALSE,new=FALSE)
+lines(aggregate(dm(gsl),month,'mean'))
+
+plot(aggregate(dm(sonel),month,'mean'),new=FALSE)
+```
+
+Examine globally distributed tide gauge data.
+
+```{r, fig.height=8}
+gloss <- subset(gloss,it=c(1950,1992))
+nv <- apply(coredata(gloss),2,'nv')
+gloss <- subset(gloss,is=nv > 400)
+gloss <- pcafill(gloss)
+pca <- PCA(annual(gloss))
+plot(pca,new=FALSE)
+```
+
+Tide gauge data from the coast of northern France. There are some missing data gaps, but ignore those.  
+
+```{r, fig.height=8}
+sonel <- annual(sonel,nmin=275)
+sonel <- subset(sonel,it=c(1976,2015))
+nv <- apply(coredata(sonel),2,'nv')
+sonel <- subset(sonel,is=nv > 30)
+sonel <- pcafill(sonel)
+pca <- PCA(annual(sonel),n=3)
+plot(pca,new=FALSE)
+```
+
+Connect to the global mean sea level
+
+```{r}
+gsl <- annual(gsl); index(gsl) <- year(gsl)
+xy <- merge(zoo(annual(gsl)),zoo(pca),all=TRUE)
+cal.sl <- data.frame(y = xy[,2],x=xy[,1])
+slfit <- lm(y ~ x, data=cal.sl)
+print(summary(slfit))
+```
+
+Construct the effect of a global sea level rise on the local tide levels using the leading PC only:
+
+```{r}
+z <- gsl; dim(z) <- c(length(z),1)
+U <- attr(pca,'pattern')[,1]; dim(U) <- c(1,length(U))
+## Need to apply the matrix product to recover the original data. 
+y <- zoo((attr(pca,'eigenvalues')[1] * slfit$coefficient[2]) * (z %*% U),order.by=index(gsl))
+plot(y,plot.type='single')
+grid()
+```
+
+This regression model can now be applied to projected global mean sea levels from e.g. CMIP. Need to use the `slfit$coefficient[2]` together with `U`, `attr(pca,'eigenvalues')[1]` and the global sea level.
