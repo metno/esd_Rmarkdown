@@ -36,11 +36,11 @@ Climate change has taken place for some time, and past trends may provide some i
 ## The area mean wet-day mean precipitation
 plot(mu,new=FALSE)
 grid()
-lines(trend(mu),lty=2)
+#lines(trend(mu),lty=2)
 ## The area mean wet-day frequency
 plot(fw,new=FALSE)
 grid()
-lines(trend(mu),lty=2)
+#lines(trend(fw),lty=2)
 ## The early part of the record looks suspect:
 mu <- subset(mu,it=c(1958,2015))
 fw <- subset(fw,it=c(1958,2015))
