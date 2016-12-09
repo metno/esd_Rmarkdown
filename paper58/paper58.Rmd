@@ -37,11 +37,13 @@ library(esd)
 sessionInfo()
 ```
 
-Below are definition of a number of functions used in the data processing and analysis. The first are simple functions used in ploting.
+##**Tools and functions**
+
+Below we define a number of functions used in the data processing and analysis. These functions are used to make the R-code more simple and improve clarity.
 
 **Simple functions to estimate various statistics**
 
-  Functions to extract the numbers for mean, min, max, wettest month, driest month, estimate percentiles assuming an exponential distribution, skill-scores, and regression coefficients. These are used to make the R-code simpler, shorter, and improve clarity.
+First we define the methods for calculating statistical measures of precipitation (mean, min, max, wettest month, and driest month), estimating percentiles assuming an exponential distribution, calculating skill-scores and regression coefficients. 
   
 ```{r}
 ## Return statistics for mean,min,max,wettest month,driest month
@@ -95,10 +97,10 @@ beta <- function(x,verbose=FALSE) {
 
 **Data input and procesing**
 
-Functions for reading the data and processing it so that it can readily be handelled in the analysis.  
+Here we define functions for reading and processing data so that it can be readily handled in the analysis.  
 
-## Read the data from the CMIP5 GCMs
 ```{r}
+## Read the data from the CMIP5 GCMs
 readGCMs <- function(path='CMIP5.monthly/rcp45/',pattern='tas',
                      lon=c(-100,30),lat=c(0,40)) {
     ncfiles <- list.files(path=path,pattern=pattern,full.names=TRUE)
@@ -135,7 +137,7 @@ readGCMs <- function(path='CMIP5.monthly/rcp45/',pattern='tas',
 
 **Model calibration and regression analysis**
 
-Main function that is used for calibrating the statistical model based on the mean seasonal cycle.
+This is the main function that is used for calibrating the statistical model based on the mean seasonal cycles of the predictand ($\mu$) and predictor ($e_s$, calculated from the temperature).
   
 ```{r}
 ## Calibrate a model for the wet-day mean mu using temperature as input
@@ -205,7 +207,7 @@ mucal <- function(x,pre=NULL,lon=c(-100,30),lat=c(0,40),
 }
 ```
 
-Functions for projection and prediction for the future/past:
+These functions apply the statistical model to GCM or reanalysis data in order to produce projections and predictions for the future/past:
 
 ```{r}
 ## Projection based on the calibration with the annual cycle:
@@ -316,7 +318,7 @@ cormu <- function(x) {
 
 ##**Calculations and analysis**
 
-The definition of functions is followed by code that carry out the analysis based on these.  First get the data needed - if they are not stored locally, download from Figshare where they are stored.:
+The definition of functions is followed by code that carry out the analysis based on these. First get the data needed - if they are not stored locally, download from Figshare where they are stored.
 
 **Access and prepare data**
 
@@ -373,7 +375,7 @@ if (!file.exists('mu.worstcasemu.rda')) {
 } else load('mu.worstcasemu.rda')
 ```
 
-The convention here is that the wet-day mean precipitation (precipitation intensity) is represented by symbol $\mu$ and the variable name 'mu' in the R-scripts. The wet-day frequency $f_w$ is referret to as 'fw'. Lower and upper case refer to the mean seasonal cycle and annually aggregated values respectively. There are some stations with many missing values and some with short series. Also exclude data records with unrealistic long-term trends (due to dubious data or short series).
+The convention here is that the wet-day mean precipitation (precipitation intensity) is represented by symbol $\mu$ and the variable name 'mu' in the R-scripts. The wet-day frequency $f_w$ is referred to as 'fw'. Lower and upper case refer to the mean seasonal cycle and annually aggregated values respectively. There are some stations with many missing values and some with short series. Also exclude data records with unrealistic long-term trends (due to dubious data or short series).
 
 ```{r}
 ## Keep stations with no missing data and stations
@@ -428,7 +430,7 @@ print('muskill')
 r2 <- lapply(V,muskill)
 ```
 
-**Plot figure 1**
+**Figure 1**
 
 Figure 1 illustrates how the mean seasonal cycle in $\mu$ and the area mean predictor compare and what the regression results for one example station.  
 
@@ -692,6 +694,7 @@ First extract information about trends in $\mu$.
 ## Trend in projected wet-day mean
 trendbeta <- unlist(lapply(Z.rcp4.5,function(x) trend.coef(x[,3])))
 ## Strange results:
+N <- length(Z.rcp4.5)
 print((1:N)[trendbeta < 0])
 
 ## test: Does the model predict observed trends?
@@ -972,7 +975,7 @@ Assess the connection between temperature and the wet-day mean precipitation in 
 par(bty='n')
 col <- rgb((1+sin(pi*calmu$lat/180))/2,
            cos(pi*calmu$lon/180)^2,
-           1-(1+sin(pi*calmu$lat/180))/2,0.45)
+           1-(1+sin(pi*calmu$lat/180))/2,0.4)
 cex <- 1.5*Fw/max(Fw,na.rm=TRUE)
 plot(calmu$x,calmu$y,pch=19,col=col,cex=cex,
      main='Wet-day mean precipitation temperature dependency',
@@ -1000,7 +1003,7 @@ save(file='mu.eq.f.tx.rda',mu.eq.f.tx)
 
 ##**Figure SM8**
 
-Figure SM9 compares the regression coefficients derived from the seasonal cycles of $\mu$ and the North Atlantic $\e_s$ (see e.g. Figures 1 and 3), to the regression coefficient from the comparison between the mean $\mu$ and $e_s$ from various sites (see Figure SM8).
+Figure SM8 compares the regression coefficients derived from the seasonal cycles of $\mu$ and the North Atlantic $\e_s$ (see e.g. Figures 1 and 3), to the regression coefficient from the comparison between the mean $\mu$ and $e_s$ from various sites (see Figure SM8).
 
 ```{r}
 
@@ -1013,11 +1016,13 @@ col <- rgb(0.1,0.1,0.7,0.25)
 mutx <- summary(mu.eq.f.tx)$coefficients[c(2,4)]
 b1 <- as.numeric(lapply(Beta,function(x) x[1]))
 e1 <- as.numeric(lapply(Beta,function(x) x[2]))
+cex.r2 <- 1.5*unlist(r2) + 0.2
 
 par(bty='n')
-plot(b1,pch=19,col=col,cex=cexr2,
+plot(b1,pch=19,col=col,cex=cex.r2,xaxt="n",
      main=expression(paste('Scaling coefficient for ',mu,' and ',e[s])),
-     xlab='',ylab=expression(beta))
+     xlab='Observation site',ylab=expression(beta))
+axis(side=1, seq(0,1000,200), labels = FALSE)
 grid()
 for (i in 1:length(b1)) {
   lines(rep(i,2),b1[i]+e1[i]*c(-2,2),col=col)
@@ -1028,5 +1033,9 @@ polygon(c(1,rep(length(b1),2),rep(1,2)),
         mutx[1]+mutx[2]*c(-2,-2,2,2,-2),
         border=rgb(0.5,0.5,0.5,0.4),col=rgb(0.5,0.5,0.5,0.3))
 lines(c(1,length(b1)),rep(mutx[1],2),lwd=3,col=rgb(0.5,0.5,0.5,0.3))
+legend(200,-4e-3,legend=c("seasonal regression","spatial regression"),
+       col=c(col,rgb(0.5,0.5,0.5,0.4)),cex=0.8,lwd=2,box.lwd=0.5,
+       lty=c(1,1),pch=c(19,NA),fill=c(NA,rgb(0.5,0.5,0.5,0.3)),
+       border=c(NA,rgb(0.5,0.5,0.5,0.4)))
 figlab('Figure SM8')
 ```
