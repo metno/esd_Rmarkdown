@@ -136,7 +136,7 @@ mucal <- function(x,pre=NULL,lon=c(-100,30),lat=c(0,40),
                ylab=expression(paste(mu,' (mm/day)')),
                xlab=expression(paste(e[s],' (Pa)')),
                ylim=ylim,xlim=xlim,
-               main='"Worst-case" fit based on seasonal variations',
+               main='Regression based on seasonal variations',
                sub=paste(loc(x),' (',round(lon(x),2),'E/',round(lat(x),2),'N; ',
                          alt(x),'m.a.s.l.)',sep=''))
           segments(x0=cal$x,y0=cal$y,x1=cal$x,y1=cal$y+2*attr(x,'standard.error'),
@@ -387,9 +387,11 @@ pca <- svd(Mu)
 
 ## Plot maps with PCs:
 print('Maps with PCs')
+dev.new()
 mupcamap(mu,pca,1,xlim,ylim,r2)
 figlab('Figure 2a')
 dev.copy2pdf(file='figure2a.pdf')
+dev.new()
 mupcamap(mu,pca,2,xlim,ylim,r2)
 figlab('Figure 2b')
 dev.copy2pdf(file='figure2b.pdf')
@@ -410,6 +412,7 @@ fw.trend <- 100*apply(subset(FW,it=c(1961,2014)),2,'trend.coef')/
 mu.trend <- 100*apply(subset(MU,it=c(1961,2014)),2,'trend.coef')/
   apply(MU,2,'mean',na.rm=TRUE)
 ## Check data availability
+dev.new()
 diagnose(MU)
 
 ## Extract results (regression models, statistical information) for locations 
@@ -488,6 +491,7 @@ coly <- cols[cx2100u]
 Cex <- 1.25
 
 print("Plot a map of projected values:")
+dev.new()
 map(mux, xlim=xlim,ylim=ylim,cex=Cex,bg='grey70',col='grey70',gridlines=FALSE,
     colbar=list(col=cols,n=12,type="p",h=0.6,v=1))
 points(lon(mux),lat(mux),pch=19,col=colx,cex=Cex)
@@ -529,12 +533,20 @@ FWx <- subset(FWx,it=MUz)
 r.eval <- apply(rbind(coredata(MUz),coredata(MUx)),2,'cormu')
 print(summary(r.eval))
 
+## Supporting figures
+dev.new()
+par(xaxt='n',yaxt='n',bty='n')
+plot(c(0,1),c(0,1),type='n',xlab='',ylab='')
+text(0.5,0.5,'Supporting figures',cex=2,font=2)
+dev.copy2pdf(file='figureSM0.pdf')
+
 ## Figure SM1.
 ## test: See if the quantiles are consistent when the mean mu varies.
 qtest <- aggregate(y1,year,FUN='qqexp')
 qx <- c(coredata(qtest[,1:101]))
 qy <- c(coredata(qtest[,102:202]))
 
+dev.new()
 par(bty='n')
 plot(qx,qy,xlim=c(0,40),ylim=c(0,40),
      pch=19,col=rgb(0.2,0.2,0.7,0.3),cex=cex,
@@ -545,11 +557,8 @@ figlab('Figure SM1')
 dev.copy2pdf(file='figureSM1.pdf')
 
 ## Figure SM2
-par(xaxt='n',yaxt='n',bty='n')
-plot(c(0,1),c(0,1),type='n',xlab='',ylab='')
-text(0.5,0.5,'Supporting figures',cex=2,font=2)
-
 ## Plot the statistics of R2:
+dev.new()
 hist(100*as.numeric(r2),breaks=seq(0,100,by=5),lwd=2,col=rgb(0,0.3,0.5),
      xlab=expression(paste(R^2,' (%)')),freq=TRUE,
      main="Summary of regression scores")
@@ -592,6 +601,7 @@ trend.sense <- data.frame(x=c(-trend.mux,trend.mux),
 
 xylim <- max(abs(c(trend.mux,trend.pre)))*c(-1,1)
 
+dev.new()
 par(bty='n',col.sub='grey',cex.sub=0.8)
 plot(trend.mux,trend.pre,pch=19,col=rgb(0.6,0.2,0,0.3),cex=1.5,
      xlab=expression(paste('Observed trend in ',mu,' (mm/decade)')),
@@ -624,16 +634,19 @@ dev.copy2pdf(file='figureSM3.pdf')
 
 ## Figure SM4
 ## Map showing trends in mu
+dev.new()
 map(MU,FUN='trend',colbar=list(pal="burd",breaks=seq(-1,1,length=21)),cex=cex)
-figlab('Figure SM4',ypos=0.999)
-figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),xpos=0.5,ypos=0.999)
+figlab('Figure SM4',xpos=0.8,ypos=0.999)
+figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),ypos=0.999)
+figlab(paste(range(year(MU)),collapse="-"),ypos=0.96)
 dev.copy2pdf(file='figureSM4.pdf')
 
 ## Figure SM5
 ## Statistics of trend in wet-day frequency
 print('Wet-day frequency statistics')
+dev.new()
 hist(fw.trend,breaks=seq(-50,50,by=1),col='grey',lwd=2,
-     main='Trend in wet-day frequency',
+     main=paste('Trend in wet-day frequency (',paste(range(year(FW)),collapse="-"),")",sep=""),
      xlab=expression(paste(f[w],' (%/decade)')))
 grid()
 figlab('Figure SM5')
@@ -641,20 +654,22 @@ dev.copy2pdf(file='figureSM5.pdf')
 
 ## Figure SM6
 ## Map showing trends in fw
-#dev.new()
+dev.new()
 map(FW,FUN='trend',colbar=list(pal="t2m",breaks=seq(-0.05,0.05,length=21)),cex=cex)
-figlab('Figure SM6',ypos=0.999)
-figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),xpos=0.5,ypos=0.999)
+figlab('Figure SM6',xpos=0.8,ypos=0.999)
+figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),ypos=0.999)
+figlab(paste(range(year(MU)),collapse="-"),ypos=0.96)
 dev.copy2pdf(file='figureSM6.pdf')
 
 ## Figure SM9
 ## Example of estimates for 2050:
 print('Example plot - projections of mu')
-par(bty='n')
 i <- 1
 N <- length(Z.rcp4.5)
+dev.new()
+par(bty='n')
 plot(Z.rcp4.5[[i]],plot.type='single',lty=c(2,2,1),lwd=c(1,1,2),
-     ylab='%',ylim=c(80,150),
+     xlab='Year',ylab='%',ylim=c(80,150),
      main=paste('Wet-day mean at',loc(subset(mux,is=i))))
 shade(Z.rcp4.5[[i]],col=rgb(0.5,0.5,0.5,0.3))
 shade(Z.rcp8.5[[i]],col=rgb(1,0.5,0.5,0.3))
@@ -669,6 +684,7 @@ dev.copy2pdf(file='figureSM9.pdf')
 ## Figure SM10
 ## Show the predictor area:
 X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
+dev.new()
 map(X,projection='sphere',colbar=list(breaks=seq(8,28,by=0.5)))
 figlab('Figure SM10',xpos=0.8,ypos=0.999)
 dev.copy2pdf(file='figureSM10.pdf')
@@ -682,17 +698,17 @@ y1.l <- spell(y1,threshold=1)
 pr.wet <- aggregate(subset(y1.l,is=1),by=month,FUN='mean')
 pr.dry <- aggregate(subset(y1.l,is=2),by=month,FUN='mean')
 
+dev.new()
 par(bty='n',xaxt='n')
 plot(merge(pr.mean,pr.mu,10*pr.fw,pr.wet,pr.dry),plot.type='single',
-     col=c('steelblue','darkblue','grey','darkgreen','red'),
+     col=c('steelblue','darkblue','grey','darkgreen','red'),new=FALSE,
      lwd=c(3,3,1,1,1),ylab="",xlab="Calendar month",main=loc(y1))
 grid()
 par(yaxt='s',xaxt='s')
 axis(1,at=1:12,labels=month.abb,cex.lab=0.7, col='grey')
 axis(4,at=10*pretty(pr.fw),pretty(pr.fw),col='grey')
-
 legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
-               expression(bar(n[c*w*d])),expression(bar(n[c*d*d]))),bty='n',
+               expression(bar(n)[c*w*d]),expression(bar(n)[c*d*d])),bty='n',
        col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1),
        ncol=2)
 figlab('Figure SM11')
@@ -722,6 +738,7 @@ if (!file.exists('mut2m.GDCN.rda')) {
   gdcn <- gdcn[fok]
   n <- length(gdcn)
   
+  dev.new()
   plot(c(-180,180),c(-90,90),type='n',xlab='',ylab='')
   data(geoborders)
   lines(geoborders)
@@ -785,9 +802,11 @@ w <- apply(coredata(fw),2,'mean')
 ok <- w > 0.25
 Z <- rbind(coredata(X),coredata(Y))
 r <- apply(Z,2,corhalf)
+dev.new()
 hist(r)
 
 ## Figure SM7
+dev.new()
 par(bty='n')
 col <- rgb((1+sin(pi*calmu$lat/180))/2,
            cos(pi*calmu$lon/180)^2,
@@ -829,6 +848,7 @@ b1 <- as.numeric(lapply(Beta,function(x) x[1]))
 e1 <- as.numeric(lapply(Beta,function(x) x[2]))
 cex.r2 <- 1.5*unlist(r2) + 0.2
 
+dev.new()
 par(bty='n')
 plot(b1,pch=19,col=col,cex=cex.r2,xaxt="n",
      main=expression(paste('Scaling coefficient for ',mu,' and ',e[s])),

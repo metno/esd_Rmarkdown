@@ -7,6 +7,7 @@ output: pdf_document
 ---
 
 ##**R set-up**
+
 First pre-amble that checks whether the esd-package is installed and installs it if needed. If it is not installed, install it from GitHub using devtools. Also install devtools if needed. This is only done once. 
   
 ```{r,echo=TRUE}
@@ -172,7 +173,7 @@ mucal <- function(x,pre=NULL,lon=c(-100,30),lat=c(0,40),
            ylab=expression(paste(mu,' (mm/day)')),
          xlab=expression(paste(e[s],' (Pa)')),
          ylim=ylim,xlim=xlim,
-         main='"Worst-case" fit based on seasonal variations',
+         main='Regression based on seasonal variations',
          sub=paste(loc(x),' (',round(lon(x),2),'E/',round(lat(x),2),'N; ',
              alt(x),'m.a.s.l.)',sep=''))
       segments(x0=cal$x,y0=cal$y,x1=cal$x,y1=cal$y+2*attr(x,'standard.error'),
@@ -494,9 +495,6 @@ Estimate trend statistics if the historical wet-day mean and wet-day frequency.
   
 ```{r,echo=TRUE}
 ## Estimate trend statistics for both fw and mu:
-## Use subset - in the PCA there is something strange in the 1990s.
-## But we use the data from the 1990s and 2000s in the rest of the analysis!
-## It makes no sense to exclude it here, and the results are similar.
 fw.trend <- 100*apply(subset(FW,it=c(1961,2014)),2,'trend.coef')/
                       apply(FW,2,'mean',na.rm=TRUE)
 mu.trend <- 100*apply(subset(MU,it=c(1961,2014)),2,'trend.coef')/
@@ -580,7 +578,7 @@ print(lapply(mu.2100,summary))
 print(paste('Summary for',length(mu.2100[[1]]),'locations'))
 ```
 
-**Plot Figure 3**
+**Figure 3**
 
 Figure 3 shows the projected changes in the median (inner marker) and 95th precentile of the wet-day mean from the present (2010) to the far future (2100).  
 
@@ -624,7 +622,8 @@ grid()
 
 figlab('Figure 3')
 ```
-##** ----------- Supporting Material ------------------------**
+
+##**Supporting Material**
 
 The supporting material includes diagnostics and plots that checks a number of assumptions made in this study.
 
@@ -646,7 +645,16 @@ r.eval <- apply(rbind(coredata(MUz),coredata(MUx)),2,'cormu')
 print(summary(r.eval))
 ```
 
-##**Figure SM1**
+Now prepare the supporting figures. 
+
+```{r,echo=TRUE}
+## Supporting figures
+par(xaxt='n',yaxt='n',bty='n')
+plot(c(0,1),c(0,1),type='n',xlab='',ylab='')
+text(0.5,0.5,'Supporting figures',cex=2,font=2)
+```
+
+**Figure SM1**
 
 Figure SM1 shows a test of the assumption that that the wet-day daily precipitation is approximately exponentially distributed, by comparing the actual percentiles with quantiles estimated for different samples 
 with different annual mean wet-day precipitation using the formula for exponentially distributed data: $q_p = -ln(1-p)\mu$.
@@ -667,16 +675,11 @@ lines(c(0,40),c(0,40),col='grey')
 figlab('Figure SM1')
 ```
 
-
-##**Figure SM2**
+**Figure SM2**
 
 Figure SM2 presents the $R^2$ statistics from the model calibration (i.e., the regression between the seasonal cycles of $\mu$ and $e_s$) for different locations.
 
 ```{r,echo=TRUE}
-par(xaxt='n',yaxt='n',bty='n')
-plot(c(0,1),c(0,1),type='n',xlab='',ylab='')
-text(0.5,0.5,'Supporting figures',cex=2,font=2)
-
 ## Plot the statistics of R2:
 hist(100*as.numeric(r2),breaks=seq(0,100,by=5),lwd=2,col=rgb(0,0.3,0.5),
      xlab=expression(paste(R^2,' (%)')),freq=TRUE,
@@ -685,7 +688,7 @@ grid()
 figlab('Figure SM2')
 ```
 
-##**Figure SM3**
+**Figure SM3**
 
 Figure SM3 compares the observed and predicted historical trends in the wet-day mean preciptation.
 First extract information about trends in $\mu$.
@@ -759,7 +762,7 @@ apply(rbind(trend.mux,trend.pre,trenderr.mux,trenderr.pre),2,
 figlab('Figure SM3')
 ```
 
-##**Figure SM4**
+**Figure SM4**
 
 Figure SM4 shows the historical trends in the wet-day mean preciptation.
 
@@ -770,7 +773,7 @@ figlab('Figure SM4',ypos=0.999)
 figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),xpos=0.5,ypos=0.999)
 ```
 
-##**Figure SM5**
+**Figure SM5**
 
 Figure SM5 displays a histogram of historical trends in the wet-day frequency for the period... for the stations in Europe shown in Figure SM6. 
 
@@ -784,7 +787,7 @@ grid()
 figlab('Figure SM5')
 ```
 
-##**Figure SM6**
+**Figure SM6**
 
 Figure SM6 shows the spatial distribution of the historical trends in wet-day frequency on a map.
 
@@ -796,9 +799,9 @@ figlab('Figure SM6',ypos=0.999)
 figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),xpos=0.5,ypos=0.999)
 ```
 
-Figures SM7-8 require additional data and will follow after Figures SM9-11
+Figures SM7-8 require additional data and will follow after Figures SM9-11.
 
-##**Figure SM9**
+**Figure SM9**
 
 Figure SM9 shows an example of projections of the wet-day mean for one location, showing all three emission scenarios.
 
@@ -809,7 +812,7 @@ par(bty='n')
 i <- 1
 N <- length(Z.rcp4.5)
 plot(Z.rcp4.5[[i]],plot.type='single',lty=c(2,2,1),lwd=c(1,1,2),
-     ylab='%',ylim=c(80,150),
+     xlab='Year',ylab='%',ylim=c(80,150),
      main=paste('Wet-day mean at',loc(subset(mux,is=i))))
 shade(Z.rcp4.5[[i]],col=rgb(0.5,0.5,0.5,0.3))
 shade(Z.rcp8.5[[i]],col=rgb(1,0.5,0.5,0.3))
@@ -821,7 +824,7 @@ legend("topleft",legend=c("RCP4.5","RCP8.5","RCP2.6"),lty=1,lwd=2,
 figlab('Figure SM9')
 ```
 
-##**Figure SM10**
+**Figure SM10**
 
 Figure SM10 presents a map of the NCEP reanalysis temperature for the North Atlantic region that is used as predictor for the downscaling (see e.g., Figure 1 and 3). 
 
@@ -832,7 +835,7 @@ map(X,projection='sphere',colbar=list(breaks=seq(8,28,by=0.5)))
 figlab('Figure SM10',xpos=0.8,ypos=0.999)
 ```
 
-##**Figure SM11**
+**Figure SM11**
 
 Figure SM11 show the seasonal cycles of various precipitation statistics (mean, wet-day mean, wet-day frequency, mean consecutive wet days and dry days), calculated based on ECA&D observations for stations with long precipitation records. 
 
@@ -861,8 +864,7 @@ legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
 figlab('Figure SM11')
 ```
 
-
-##**Analysis from other continents and with local temperature**
+**Figures SM7-8: Analysis from other continents and with local temperature**
 
 Additional analysis testing the connection between local temperature and wet-day mean precipitation.
 
@@ -928,6 +930,7 @@ if (!file.exists('mut2m.GDCN.rda')) {
 ```
 
 Combine the observational data from North America, Europe, and South America. Then fit a linear regression model comparing the mean $\mu$ and $e_s$ values at different locations.  
+
 ```{r}
 ## Aggregate annual statistics based on the combined data sources:
 MU <- combine(mu,annual(Pr1,FUN='wetmean'),annual(Pr2,FUN='wetmean'))
@@ -967,7 +970,7 @@ r <- apply(Z,2,corhalf)
 hist(r)
 ```
 
-##** Figure SM7**
+**Figure SM7**
 
 Assess the connection between temperature and the wet-day mean precipitation in space, based on the regression models defined above.
 
@@ -1001,7 +1004,7 @@ attr(mu.eq.f.tx,'calibration_data') <- calmu
 save(file='mu.eq.f.tx.rda',mu.eq.f.tx)
 ```
 
-##**Figure SM8**
+**Figure SM8**
 
 Figure SM8 compares the regression coefficients derived from the seasonal cycles of $\mu$ and the North Atlantic $\e_s$ (see e.g. Figures 1 and 3), to the regression coefficient from the comparison between the mean $\mu$ and $e_s$ from various sites (see Figure SM8).
 
