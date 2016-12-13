@@ -656,11 +656,41 @@ text(0.5,0.5,'Supporting figures',cex=2,font=2)
 
 **Figure SM1**
 
-Figure SM1 shows a test of the assumption that that the wet-day daily precipitation is approximately exponentially distributed, by comparing the actual percentiles with quantiles estimated for different samples 
+Figure SM1 show the seasonal cycles of various precipitation statistics (mean, wet-day mean, wet-day frequency, mean consecutive wet days and dry days), calculated based on ECA&D observations for stations with long precipitation records. 
+
+```{r}
+# y1 contains precipitation observations from ECA&D stations with long records
+pr.mean <- aggregate(y1,by=month,FUN='mean')
+pr.mu <- aggregate(y1,by=month,FUN='wetmean')
+pr.fw <- aggregate(y1,by=month,FUN='wetfreq')
+y1.l <- spell(y1,threshold=1)
+pr.wet <- aggregate(subset(y1.l,is=1),by=month,FUN='mean')
+pr.dry <- aggregate(subset(y1.l,is=2),by=month,FUN='mean')
+
+par(bty='n',xaxt='n')
+plot(merge(pr.mean,pr.mu,10*pr.fw,pr.wet,pr.dry),plot.type='single',
+     col=c('steelblue','darkblue','grey','darkgreen','red'),
+     lwd=c(3,3,1,1,1),ylab="",xlab="Calendar month",main=loc(y1))
+grid()
+par(yaxt='s',xaxt='s')
+axis(1,at=1:12,labels=month.abb,cex.lab=0.7, col='grey')
+axis(4,at=10*pretty(pr.fw),pretty(pr.fw),col='grey')
+
+legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
+               expression(bar(n[c*w*d])),expression(bar(n[c*d*d]))),bty='n',
+       col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1),
+       ncol=2)
+figlab('Figure SM1')
+```
+
+
+**Figure SM2**
+
+Figure SM2 shows a test of the assumption that that the wet-day daily precipitation is approximately exponentially distributed, by comparing the actual percentiles with quantiles estimated for different samples 
 with different annual mean wet-day precipitation using the formula for exponentially distributed data: $q_p = -ln(1-p)\mu$.
  
 ```{r}
-## Figure SM1.
+## Figure SM2.
 ## test: See if the quantiles are consistent when the mean mu varies.
 qtest <- aggregate(y1,year,FUN='qqexp')
 qx <- c(coredata(qtest[,1:101]))
@@ -672,12 +702,47 @@ plot(qx,qy,xlim=c(0,40),ylim=c(0,40),
      main='Test: exponential distribution & changing mean',
      xlab=expression(q[p]),ylab=expression(-log(1-p)*mu))
 lines(c(0,40),c(0,40),col='grey')
-figlab('Figure SM1')
+figlab('Figure SM2')
 ```
 
-**Figure SM2**
+**Figure SM3**
 
-Figure SM2 presents the $R^2$ statistics from the model calibration (i.e., the regression between the seasonal cycles of $\mu$ and $e_s$) for different locations.
+Figure SM3 presents a map of the NCEP reanalysis temperature for the North Atlantic region that is used as predictor for the downscaling (see e.g., Figure 1 and 3). 
+
+```{r}
+## Show the predictor area:
+X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
+map(X,projection='sphere',colbar=list(breaks=seq(8,28,by=0.5)))
+figlab('Figure SM3',xpos=0.8,ypos=0.999)
+```
+
+
+**Figure SM4**
+
+Figure SM4 shows an example of projections of the wet-day mean for one location, showing all three emission scenarios.
+
+```{r}
+## Example of estimates for 2050:
+print('Example plot - projections of mu')
+par(bty='n')
+i <- 1
+N <- length(Z.rcp4.5)
+plot(Z.rcp4.5[[i]],plot.type='single',lty=c(2,2,1),lwd=c(1,1,2),
+     xlab='Year',ylab='%',ylim=c(80,150),
+     main=paste('Wet-day mean at',loc(subset(mux,is=i))))
+shade(Z.rcp4.5[[i]],col=rgb(0.5,0.5,0.5,0.3))
+shade(Z.rcp8.5[[i]],col=rgb(1,0.5,0.5,0.3))
+shade(Z.rcp2.6[[i]],col=rgb(0.5,1,0.5,0.3))
+grid()
+legend("topleft",legend=c("RCP4.5","RCP8.5","RCP2.6"),lty=1,lwd=2,
+       bty="o",box.lwd=0.2,
+       col=c(rgb(0.5,0.5,0.5,0.5),rgb(1,0.5,0.5,0.5),rgb(0.5,1,0.5,0.5)))
+figlab('Figure SM4')
+```
+
+**Figure SM5**
+
+Figure SM5 presents the $R^2$ statistics from the model calibration (i.e., the regression between the seasonal cycles of $\mu$ and $e_s$) for different locations.
 
 ```{r,echo=TRUE}
 ## Plot the statistics of R2:
@@ -685,12 +750,12 @@ hist(100*as.numeric(r2),breaks=seq(0,100,by=5),lwd=2,col=rgb(0,0.3,0.5),
      xlab=expression(paste(R^2,' (%)')),freq=TRUE,
      main="Summary of regression scores")
 grid()
-figlab('Figure SM2')
+figlab('Figure SM5')
 ```
 
-**Figure SM3**
+**Figure SM6**
 
-Figure SM3 compares the observed and predicted historical trends in the wet-day mean preciptation.
+Figure SM6 compares the observed and predicted historical trends in the wet-day mean preciptation.
 First extract information about trends in $\mu$.
 
 ```{r,echo=TRUE}
@@ -759,23 +824,23 @@ apply(rbind(trend.mux,trend.pre,trenderr.mux,trenderr.pre),2,
                        lines(x[1]+c(-2,-2)*x[3],x[2]+c(-1,1)*0.01,col=rgb(0.6,0.2,0,0.05))
                        lines(x[1]+c(2,2)*x[3],x[2]+c(-1,1)*0.01,col=rgb(0.6,0.2,0,0.05))
                      })
-figlab('Figure SM3')
+figlab('Figure SM6')
 ```
 
-**Figure SM4**
+**Figure SM7**
 
-Figure SM4 shows the historical trends in the wet-day mean preciptation.
+Figure SM7 shows the historical trends in the wet-day mean preciptation.
 
 ```{r}
 ## Map showing trends in mu
 map(MU,FUN='trend',colbar=list(pal="burd",breaks=seq(-1,1,length=21)),cex=cex)
-figlab('Figure SM4',ypos=0.999)
+figlab('Figure SM7',ypos=0.999)
 figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),xpos=0.5,ypos=0.999)
 ```
 
-**Figure SM5**
+**Figure SM8**
 
-Figure SM5 displays a histogram of historical trends in the wet-day frequency for the period... for the stations in Europe shown in Figure SM6. 
+Figure SM8 displays a histogram of historical trends in the wet-day frequency for the period... for the stations in Europe shown in Figure SM8. 
 
 ```{r}
 ## Statistics of trend in wet-day frequency
@@ -784,87 +849,22 @@ hist(fw.trend,breaks=seq(-50,50,by=1),col='grey',lwd=2,
      main='Trend in wet-day frequency',
      xlab=expression(paste(f[w],' (%/decade)')))
 grid()
-figlab('Figure SM5')
+figlab('Figure SM8')
 ```
 
-**Figure SM6**
+**Figure SM9**
 
-Figure SM6 shows the spatial distribution of the historical trends in wet-day frequency on a map.
+Figure SM9 shows the spatial distribution of the historical trends in wet-day frequency on a map.
 
 ```{r}
 ## Map showing trends in fw
 #dev.new()
 map(FW,FUN='trend',colbar=list(pal="t2m",breaks=seq(-0.05,0.05,length=21)),cex=cex)
-figlab('Figure SM6',ypos=0.999)
+figlab('Figure SM9',ypos=0.999)
 figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),xpos=0.5,ypos=0.999)
 ```
 
-Figures SM7-8 require additional data and will follow after Figures SM9-11.
-
-**Figure SM9**
-
-Figure SM9 shows an example of projections of the wet-day mean for one location, showing all three emission scenarios.
-
-```{r}
-## Example of estimates for 2050:
-print('Example plot - projections of mu')
-par(bty='n')
-i <- 1
-N <- length(Z.rcp4.5)
-plot(Z.rcp4.5[[i]],plot.type='single',lty=c(2,2,1),lwd=c(1,1,2),
-     xlab='Year',ylab='%',ylim=c(80,150),
-     main=paste('Wet-day mean at',loc(subset(mux,is=i))))
-shade(Z.rcp4.5[[i]],col=rgb(0.5,0.5,0.5,0.3))
-shade(Z.rcp8.5[[i]],col=rgb(1,0.5,0.5,0.3))
-shade(Z.rcp2.6[[i]],col=rgb(0.5,1,0.5,0.3))
-grid()
-legend("topleft",legend=c("RCP4.5","RCP8.5","RCP2.6"),lty=1,lwd=2,
-       bty="o",box.lwd=0.2,
-       col=c(rgb(0.5,0.5,0.5,0.5),rgb(1,0.5,0.5,0.5),rgb(0.5,1,0.5,0.5)))
-figlab('Figure SM9')
-```
-
-**Figure SM10**
-
-Figure SM10 presents a map of the NCEP reanalysis temperature for the North Atlantic region that is used as predictor for the downscaling (see e.g., Figure 1 and 3). 
-
-```{r}
-## Show the predictor area:
-X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
-map(X,projection='sphere',colbar=list(breaks=seq(8,28,by=0.5)))
-figlab('Figure SM10',xpos=0.8,ypos=0.999)
-```
-
-**Figure SM11**
-
-Figure SM11 show the seasonal cycles of various precipitation statistics (mean, wet-day mean, wet-day frequency, mean consecutive wet days and dry days), calculated based on ECA&D observations for stations with long precipitation records. 
-
-```{r}
-# y1 contains precipitation observations from ECA&D stations with long records
-pr.mean <- aggregate(y1,by=month,FUN='mean')
-pr.mu <- aggregate(y1,by=month,FUN='wetmean')
-pr.fw <- aggregate(y1,by=month,FUN='wetfreq')
-y1.l <- spell(y1,threshold=1)
-pr.wet <- aggregate(subset(y1.l,is=1),by=month,FUN='mean')
-pr.dry <- aggregate(subset(y1.l,is=2),by=month,FUN='mean')
-
-par(bty='n',xaxt='n')
-plot(merge(pr.mean,pr.mu,10*pr.fw,pr.wet,pr.dry),plot.type='single',
-     col=c('steelblue','darkblue','grey','darkgreen','red'),
-     lwd=c(3,3,1,1,1),ylab="",xlab="Calendar month",main=loc(y1))
-grid()
-par(yaxt='s',xaxt='s')
-axis(1,at=1:12,labels=month.abb,cex.lab=0.7, col='grey')
-axis(4,at=10*pretty(pr.fw),pretty(pr.fw),col='grey')
-
-legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
-               expression(bar(n[c*w*d])),expression(bar(n[c*d*d]))),bty='n',
-       col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1),
-       ncol=2)
-figlab('Figure SM11')
-```
-
-**Figures SM7-8: Analysis from other continents and with local temperature**
+**Analysis from other continents and with local temperature**
 
 Additional analysis testing the connection between local temperature and wet-day mean precipitation.
 
@@ -970,7 +970,7 @@ r <- apply(Z,2,corhalf)
 hist(r)
 ```
 
-**Figure SM7**
+**Figure SM10**
 
 Assess the connection between temperature and the wet-day mean precipitation in space, based on the regression models defined above.
 
@@ -991,7 +991,7 @@ par(new=TRUE,fig=c(0.15,0.45,0.7,0.9),mar=rep(0,4),xaxt="n",yaxt="n")
 plot(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
 lines(geoborders,col='grey')
 points(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
-figlab('Figure SM7')
+figlab('Figure SM10')
 
 mu.eq.f.tx <- model.mutx
 attr(mu.eq.f.tx,'input') <- 'saturation water pressure e_s (Pa)'
@@ -1004,9 +1004,9 @@ attr(mu.eq.f.tx,'calibration_data') <- calmu
 save(file='mu.eq.f.tx.rda',mu.eq.f.tx)
 ```
 
-**Figure SM8**
+**Figure SM11**
 
-Figure SM8 compares the regression coefficients derived from the seasonal cycles of $\mu$ and the North Atlantic $\e_s$ (see e.g. Figures 1 and 3), to the regression coefficient from the comparison between the mean $\mu$ and $e_s$ from various sites (see Figure SM8).
+Figure SM11 compares the regression coefficients derived from the seasonal cycles of $\mu$ and the North Atlantic $\e_s$ (see e.g. Figures 1 and 3), to the regression coefficient from the comparison between the mean $\mu$ and $e_s$ from various sites (see Figure SM10).
 
 ```{r}
 
@@ -1040,5 +1040,5 @@ legend(200,-4e-3,legend=c("seasonal regression","spatial regression"),
        col=c(col,rgb(0.5,0.5,0.5,0.4)),cex=0.8,lwd=2,box.lwd=0.5,
        lty=c(1,1),pch=c(19,NA),fill=c(NA,rgb(0.5,0.5,0.5,0.3)),
        border=c(NA,rgb(0.5,0.5,0.5,0.4)))
-figlab('Figure SM8')
+figlab('Figure SM11')
 ```

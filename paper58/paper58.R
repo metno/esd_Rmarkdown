@@ -540,7 +540,32 @@ plot(c(0,1),c(0,1),type='n',xlab='',ylab='')
 text(0.5,0.5,'Supporting figures',cex=2,font=2)
 dev.copy2pdf(file='figureSM0.pdf')
 
-## Figure SM1.
+## Figure SM1
+# y1 contains precipitation observations from ECA&D stations with long records
+pr.mean <- aggregate(y1,by=month,FUN='mean')
+pr.mu <- aggregate(y1,by=month,FUN='wetmean')
+pr.fw <- aggregate(y1,by=month,FUN='wetfreq')
+y1.l <- spell(y1,threshold=1)
+pr.wet <- aggregate(subset(y1.l,is=1),by=month,FUN='mean')
+pr.dry <- aggregate(subset(y1.l,is=2),by=month,FUN='mean')
+
+dev.new()
+par(bty='n',xaxt='n')
+plot(merge(pr.mean,pr.mu,10*pr.fw,pr.wet,pr.dry),plot.type='single',
+     col=c('steelblue','darkblue','grey','darkgreen','red'),new=FALSE,
+     lwd=c(3,3,1,1,1),ylab="",xlab="Calendar month",main=loc(y1))
+grid()
+par(yaxt='s',xaxt='s')
+axis(1,at=1:12,labels=month.abb,cex.lab=0.7, col='grey')
+axis(4,at=10*pretty(pr.fw),pretty(pr.fw),col='grey')
+legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
+               expression(bar(n)[c*w*d]),expression(bar(n)[c*d*d])),bty='n',
+       col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1),
+       ncol=2)
+figlab('Figure SM1')
+dev.copy2pdf(file='figureSM1.pdf')
+
+## Figure SM2.
 ## test: See if the quantiles are consistent when the mean mu varies.
 qtest <- aggregate(y1,year,FUN='qqexp')
 qx <- c(coredata(qtest[,1:101]))
@@ -553,20 +578,48 @@ plot(qx,qy,xlim=c(0,40),ylim=c(0,40),
      main='Test: exponential distribution & changing mean',
      xlab=expression(q[p]),ylab=expression(-log(1-p)*mu))
 lines(c(0,40),c(0,40),col='grey')
-figlab('Figure SM1')
-dev.copy2pdf(file='figureSM1.pdf')
+figlab('Figure SM2')
+dev.copy2pdf(file='figureSM2.pdf')
 
-## Figure SM2
+## Figure SM3
+## Show the predictor area:
+X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
+dev.new()
+map(X,projection='sphere',colbar=list(breaks=seq(8,28,by=0.5)))
+figlab('Figure SM3',xpos=0.8,ypos=0.999)
+dev.copy2pdf(file='figureSM3.pdf')
+
+## Figure SM4
+## Example of estimates for 2050:
+print('Example plot - projections of mu')
+i <- 1
+N <- length(Z.rcp4.5)
+dev.new()
+par(bty='n')
+plot(Z.rcp4.5[[i]],plot.type='single',lty=c(2,2,1),lwd=c(1,1,2),
+     xlab='Year',ylab='%',ylim=c(80,150),
+     main=paste('Wet-day mean at',loc(subset(mux,is=i))))
+shade(Z.rcp4.5[[i]],col=rgb(0.5,0.5,0.5,0.3))
+shade(Z.rcp8.5[[i]],col=rgb(1,0.5,0.5,0.3))
+shade(Z.rcp2.6[[i]],col=rgb(0.5,1,0.5,0.3))
+grid()
+legend("topleft",legend=c("RCP4.5","RCP8.5","RCP2.6"),lty=1,lwd=2,
+       bty="o",box.lwd=0.2,
+       col=c(rgb(0.5,0.5,0.5,0.5),rgb(1,0.5,0.5,0.5),rgb(0.5,1,0.5,0.5)))
+figlab('Figure SM4')
+dev.copy2pdf(file='figureSM4.pdf')
+
+## Figure SM5
 ## Plot the statistics of R2:
 dev.new()
 hist(100*as.numeric(r2),breaks=seq(0,100,by=5),lwd=2,col=rgb(0,0.3,0.5),
      xlab=expression(paste(R^2,' (%)')),freq=TRUE,
      main="Summary of regression scores")
 grid()
-figlab('Figure SM2')
-dev.copy2pdf(file='figureSM2.pdf')
+figlab('Figure SM5')
+dev.copy2pdf(file='figureSM5.pdf')
 
-## Figure SM3
+## Figure SM6
 ## Trend in projected wet-day mean
 trendbeta <- unlist(lapply(Z.rcp4.5,function(x) trend.coef(x[,3])))
 ## Strange results:
@@ -629,19 +682,19 @@ apply(rbind(trend.mux,trend.pre,trenderr.mux,trenderr.pre),2,
         lines(x[1]+c(-2,-2)*x[3],x[2]+c(-1,1)*0.01,col=rgb(0.6,0.2,0,0.05))
         lines(x[1]+c(2,2)*x[3],x[2]+c(-1,1)*0.01,col=rgb(0.6,0.2,0,0.05))
       })
-figlab('Figure SM3')
-dev.copy2pdf(file='figureSM3.pdf')
+figlab('Figure SM6')
+dev.copy2pdf(file='figureSM6.pdf')
 
-## Figure SM4
+## Figure SM7
 ## Map showing trends in mu
 dev.new()
 map(MU,FUN='trend',colbar=list(pal="burd",breaks=seq(-1,1,length=21)),cex=cex)
-figlab('Figure SM4',xpos=0.8,ypos=0.999)
+figlab('Figure SM7',xpos=0.8,ypos=0.999)
 figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),ypos=0.999)
 figlab(paste(range(year(MU)),collapse="-"),ypos=0.96)
-dev.copy2pdf(file='figureSM4.pdf')
+dev.copy2pdf(file='figureSM7.pdf')
 
-## Figure SM5
+## Figure SM8
 ## Statistics of trend in wet-day frequency
 print('Wet-day frequency statistics')
 dev.new()
@@ -649,70 +702,17 @@ hist(fw.trend,breaks=seq(-50,50,by=1),col='grey',lwd=2,
      main=paste('Trend in wet-day frequency (',paste(range(year(FW)),collapse="-"),")",sep=""),
      xlab=expression(paste(f[w],' (%/decade)')))
 grid()
-figlab('Figure SM5')
-dev.copy2pdf(file='figureSM5.pdf')
+figlab('Figure SM8')
+dev.copy2pdf(file='figureSM8.pdf')
 
-## Figure SM6
+## Figure SM9
 ## Map showing trends in fw
 dev.new()
 map(FW,FUN='trend',colbar=list(pal="t2m",breaks=seq(-0.05,0.05,length=21)),cex=cex)
-figlab('Figure SM6',xpos=0.8,ypos=0.999)
+figlab('Figure SM9',xpos=0.8,ypos=0.999)
 figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),ypos=0.999)
 figlab(paste(range(year(MU)),collapse="-"),ypos=0.96)
-dev.copy2pdf(file='figureSM6.pdf')
-
-## Figure SM9
-## Example of estimates for 2050:
-print('Example plot - projections of mu')
-i <- 1
-N <- length(Z.rcp4.5)
-dev.new()
-par(bty='n')
-plot(Z.rcp4.5[[i]],plot.type='single',lty=c(2,2,1),lwd=c(1,1,2),
-     xlab='Year',ylab='%',ylim=c(80,150),
-     main=paste('Wet-day mean at',loc(subset(mux,is=i))))
-shade(Z.rcp4.5[[i]],col=rgb(0.5,0.5,0.5,0.3))
-shade(Z.rcp8.5[[i]],col=rgb(1,0.5,0.5,0.3))
-shade(Z.rcp2.6[[i]],col=rgb(0.5,1,0.5,0.3))
-grid()
-legend("topleft",legend=c("RCP4.5","RCP8.5","RCP2.6"),lty=1,lwd=2,
-       bty="o",box.lwd=0.2,
-       col=c(rgb(0.5,0.5,0.5,0.5),rgb(1,0.5,0.5,0.5),rgb(0.5,1,0.5,0.5)))
-figlab('Figure SM9')
 dev.copy2pdf(file='figureSM9.pdf')
-
-## Figure SM10
-## Show the predictor area:
-X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
-dev.new()
-map(X,projection='sphere',colbar=list(breaks=seq(8,28,by=0.5)))
-figlab('Figure SM10',xpos=0.8,ypos=0.999)
-dev.copy2pdf(file='figureSM10.pdf')
-
-## Figure SM11
-# y1 contains precipitation observations from ECA&D stations with long records
-pr.mean <- aggregate(y1,by=month,FUN='mean')
-pr.mu <- aggregate(y1,by=month,FUN='wetmean')
-pr.fw <- aggregate(y1,by=month,FUN='wetfreq')
-y1.l <- spell(y1,threshold=1)
-pr.wet <- aggregate(subset(y1.l,is=1),by=month,FUN='mean')
-pr.dry <- aggregate(subset(y1.l,is=2),by=month,FUN='mean')
-
-dev.new()
-par(bty='n',xaxt='n')
-plot(merge(pr.mean,pr.mu,10*pr.fw,pr.wet,pr.dry),plot.type='single',
-     col=c('steelblue','darkblue','grey','darkgreen','red'),new=FALSE,
-     lwd=c(3,3,1,1,1),ylab="",xlab="Calendar month",main=loc(y1))
-grid()
-par(yaxt='s',xaxt='s')
-axis(1,at=1:12,labels=month.abb,cex.lab=0.7, col='grey')
-axis(4,at=10*pretty(pr.fw),pretty(pr.fw),col='grey')
-legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
-               expression(bar(n)[c*w*d]),expression(bar(n)[c*d*d])),bty='n',
-       col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1),
-       ncol=2)
-figlab('Figure SM11')
-dev.copy2pdf(file='figureSM11.pdf')
 
 ## Analysis from other continents and with local temperature
 
@@ -805,7 +805,7 @@ r <- apply(Z,2,corhalf)
 dev.new()
 hist(r)
 
-## Figure SM7
+## Figure SM10
 dev.new()
 par(bty='n')
 col <- rgb((1+sin(pi*calmu$lat/180))/2,
@@ -823,8 +823,8 @@ par(new=TRUE,fig=c(0.15,0.45,0.7,0.9),mar=rep(0,4),xaxt="n",yaxt="n")
 plot(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
 lines(geoborders,col='grey')
 points(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
-figlab('Figure SM7')
-dev.copy2pdf(file='figureSM7.pdf')
+figlab('Figure SM10')
+dev.copy2pdf(file='figureSM10.pdf')
 
 mu.eq.f.tx <- model.mutx
 attr(mu.eq.f.tx,'input') <- 'saturation water pressure e_s (Pa)'
@@ -836,7 +836,7 @@ attr(mu.eq.f.tx,'timestamp') <- date()
 attr(mu.eq.f.tx,'calibration_data') <- calmu
 save(file='mu.eq.f.tx.rda',mu.eq.f.tx)
 
-## Figure SM8
+## Figure SM11
 ## Compare the regression coefficients derived from individual
 ## seasonal cycles with that derived from mean climatology at different sites.
 
@@ -868,5 +868,5 @@ legend(200,-4e-3,legend=c("seasonal regression","spatial regression"),
        col=c(col,rgb(0.5,0.5,0.5,0.4)),cex=0.8,lwd=2,box.lwd=0.5,
        lty=c(1,1),pch=c(19,NA),fill=c(NA,rgb(0.5,0.5,0.5,0.3)),
        border=c(NA,rgb(0.5,0.5,0.5,0.4)))
-figlab('Figure SM8')
-dev.copy2pdf(file='figureSM8.pdf')
+figlab('Figure SM11')
+dev.copy2pdf(file='figureSM11.pdf')
