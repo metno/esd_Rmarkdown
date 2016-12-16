@@ -238,7 +238,7 @@ mupcamap <- function(mu,pca,ipca,xlim,ylim,r2) {
   text(10,73,paste('Annual cycle in PC',ipca,
                    'with variance of',round(100*pca$d[ipca]^2/sum(pca$d^2)),'%'),pos=4)
   
-  colbar(pretty(pca$v[,ipca],n=100),colpc,fig = c(0.05, 0.1, 0.05, 0.2))
+  colbar(pretty(pca$v[,ipca],n=100),colpc,fig = c(0.08, 0.12, 0.05, 0.2))
   
   par(xaxt = "n", yaxt = "s", fig = c(0.05,0.25,0.80,0.95),
       mar = c(0, 1, 0, 0), new = TRUE, las = 1, cex.axis = 0.5,bty='n')
@@ -690,7 +690,8 @@ dev.copy2pdf(file='figureSM6.pdf')
 ## Figure SM7
 ## Map showing trends in mu
 dev.new()
-map(MU,FUN='trend',colbar=list(pal="burd",breaks=seq(-1,1,length=21)),cex=cex)
+map(MU,FUN='trend',cex=1,
+    colbar=list(pal="budrd",breaks=pretty(c(-0.5,0.5),n=21)))
 figlab('Figure SM7',xpos=0.8,ypos=0.999)
 figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),ypos=0.999)
 figlab(paste(range(year(MU)),collapse="-"),ypos=0.96)
@@ -710,7 +711,8 @@ dev.copy2pdf(file='figureSM8.pdf')
 ## Figure SM9
 ## Map showing trends in fw
 dev.new()
-map(FW,FUN='trend',colbar=list(pal="t2m",breaks=seq(-0.05,0.05,length=21)),cex=cex)
+map(FW,FUN='trend',cex=1,
+    colbar=list(pal="budrd",breaks=pretty(c(-0.03,0.03),n=12)))
 figlab('Figure SM9',xpos=0.8,ypos=0.999)
 figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),ypos=0.999)
 figlab(paste(range(year(MU)),collapse="-"),ypos=0.96)
