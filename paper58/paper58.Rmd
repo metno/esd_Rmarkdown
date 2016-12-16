@@ -269,7 +269,6 @@ The following functions are used for the presentation of the results.
 mupcamap <- function(mu,pca,ipca,xlim,ylim,r2) {
   r2 <- as.numeric(r2)
   colpc <- rev(colscal("budrd",n=100))
-  print(colpc)
   cz <- round(100*abs(pca$v[,ipca])/quantile(abs(pca$v[,ipca]),0.95))
   cz[cz > 100] <- 100; cz[cz < 1] <- 1
   col <- colpc[cz]
