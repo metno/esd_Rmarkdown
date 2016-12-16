@@ -268,7 +268,8 @@ The following functions are used for the presentation of the results.
 ## wet-day mean mu annual cycle.
 mupcamap <- function(mu,pca,ipca,xlim,ylim,r2) {
   r2 <- as.numeric(r2)
-  colpc <- rev(colscal("t2m",n=100))
+  colpc <- rev(colscal("budrd",n=100))
+  print(colpc)
   cz <- round(100*abs(pca$v[,ipca])/quantile(abs(pca$v[,ipca]),0.95))
   cz[cz > 100] <- 100; cz[cz < 1] <- 1
   col <- colpc[cz]
@@ -277,9 +278,8 @@ mupcamap <- function(mu,pca,ipca,xlim,ylim,r2) {
   hi <- c(r2) > 0.6
   pch[!hi] <- 1
   pch[!mo] <- 4
-  cex <- 1.5*c(r2) + 0.2
-  
-  map(mu, xlim=xlim,ylim=ylim,bg='grey80',new=FALSE)
+  cex <- 1.2*c(r2) + 0.5
+  map(mu, xlim=xlim,ylim=ylim,bg='grey90',col='grey90',cex=0.5,new=FALSE)
   points(lon(mu),lat(mu),pch=pch,col=col,cex=cex)
   par(xpd=TRUE)
   text(10,73,paste('Annual cycle in PC',ipca,
@@ -712,7 +712,7 @@ Figure SM3 presents a map of the NCEP reanalysis temperature for the North Atlan
 ```{r}
 ## Show the predictor area:
 X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
-map(X,projection='sphere',colbar=list(breaks=seq(8,28,by=0.5)))
+map(X,projection='sphere',colbar=list(pal="budrd",breaks=seq(8,28,by=0.5)))
 figlab('Figure SM3',xpos=0.8,ypos=0.999)
 ```
 
