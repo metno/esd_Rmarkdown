@@ -1,4 +1,7 @@
-*Benestad et al - Upper-limit estimation of future precipitation return-values* 
+---
+output: html_document
+---
+*Benestad et al - Simple and approximate estimation of future precipitation return-values* 
 -----------------------------------
 title: "Analysis and calculations in manuscript"
 author: "Rasmus Benestad"
@@ -7,6 +10,7 @@ output: pdf_document
 ---
 
 ##**R set-up**
+
 First pre-amble that checks whether the esd-package is installed and installs it if needed. If it is not installed, install it from GitHub using devtools. Also install devtools if needed. This is only done once. 
   
 ```{r,echo=TRUE}
@@ -37,11 +41,13 @@ library(esd)
 sessionInfo()
 ```
 
-Below are definition of a number of functions used in the data processing and analysis. The first are simple functions used in ploting.
+##**Tools and functions**
 
-**Simple functions which estimate various statistics**
+Below we define a number of functions used in the data processing and analysis. These functions are used to make the R-code more simple and improve clarity.
 
-  Functions to extract the numbers for mean,min,max,wettest month,driest month, estimate percentiles assuming an exponential distribution, skill-scores, and regression coefficients. These are used to make the R-code simpler, shorter, and improve clarity.
+**Simple functions to estimate various statistics**
+
+First we define the methods for calculating statistical measures of precipitation (mean, min, max, wettest month, and driest month), estimating percentiles assuming an exponential distribution, calculating skill-scores and regression coefficients. 
   
 ```{r}
 ## Return statistics for mean,min,max,wettest month,driest month
@@ -95,10 +101,10 @@ beta <- function(x,verbose=FALSE) {
 
 **Data input and procesing**
 
-Functions for reading the data and processing it so that it can readily be handelled in the analysis.  
+Here we define functions for reading and processing data so that it can be readily handled in the analysis.  
 
-## Read the data from the CMIP5 GCMs
 ```{r}
+## Read the data from the CMIP5 GCMs
 readGCMs <- function(path='CMIP5.monthly/rcp45/',pattern='tas',
                      lon=c(-100,30),lat=c(0,40)) {
     ncfiles <- list.files(path=path,pattern=pattern,full.names=TRUE)
@@ -135,7 +141,7 @@ readGCMs <- function(path='CMIP5.monthly/rcp45/',pattern='tas',
 
 **Model calibration and regression analysis**
 
-Main function that is used for calibrating the statistical model based on the mean seasonal cycle.
+This is the main function that is used for calibrating the statistical model based on the mean seasonal cycles of the predictand ($\mu$) and predictor ($e_s$, calculated from the temperature).
   
 ```{r}
 ## Calibrate a model for the wet-day mean mu using temperature as input
@@ -170,7 +176,7 @@ mucal <- function(x,pre=NULL,lon=c(-100,30),lat=c(0,40),
            ylab=expression(paste(mu,' (mm/day)')),
          xlab=expression(paste(e[s],' (Pa)')),
          ylim=ylim,xlim=xlim,
-         main='"Worst-case" fit based on seasonal variations',
+         main='Regression based on seasonal variations',
          sub=paste(loc(x),' (',round(lon(x),2),'E/',round(lat(x),2),'N; ',
              alt(x),'m.a.s.l.)',sep=''))
       segments(x0=cal$x,y0=cal$y,x1=cal$x,y1=cal$y+2*attr(x,'standard.error'),
@@ -205,7 +211,7 @@ mucal <- function(x,pre=NULL,lon=c(-100,30),lat=c(0,40),
 }
 ```
 
-Functions for projection and prediction for the future/past:
+These functions apply the statistical model to GCM or reanalysis data in order to produce projections and predictions for the future/past:
 
 ```{r}
 ## Projection based on the calibration with the annual cycle:
@@ -256,16 +262,16 @@ mupredict <- function(x,pre,verbose=FALSE,prct=TRUE) {
 }
 ```
 
-**Generation of graphics/maps**
+**Generation of graphics**
 
-The following functions are used for the presentation of the results  
+The following functions are used for the presentation of the results.
 
 ```{r}
 ## Generate a map for the PC weights for the different modes of the
 ## wet-day mean mu annual cycle.
 mupcamap <- function(mu,pca,ipca,xlim,ylim,r2) {
   r2 <- as.numeric(r2)
-  colpc <- rev(colscal("t2m",n=100))
+  colpc <- rev(colscal("budrd",n=100))
   cz <- round(100*abs(pca$v[,ipca])/quantile(abs(pca$v[,ipca]),0.95))
   cz[cz > 100] <- 100; cz[cz < 1] <- 1
   col <- colpc[cz]
@@ -274,15 +280,14 @@ mupcamap <- function(mu,pca,ipca,xlim,ylim,r2) {
   hi <- c(r2) > 0.6
   pch[!hi] <- 1
   pch[!mo] <- 4
-  cex <- 1.5*c(r2) + 0.2
-  
-  map(mu, xlim=xlim,ylim=ylim,bg='grey80',new=FALSE)
+  cex <- 1.2*c(r2) + 0.5
+  map(mu, xlim=xlim,ylim=ylim,bg='grey90',col='grey90',cex=0.5,new=FALSE)
   points(lon(mu),lat(mu),pch=pch,col=col,cex=cex)
   par(xpd=TRUE)
   text(10,73,paste('Annual cycle in PC',ipca,
       'with variance of',round(100*pca$d[ipca]^2/sum(pca$d^2)),'%'),pos=4)
 
-  colbar(pretty(pca$v[,ipca],n=100),colpc,fig = c(0.05, 0.1, 0.05, 0.2))
+  colbar(pretty(pca$v[,ipca],n=100),colpc,fig = c(0.08, 0.12, 0.05, 0.2))
 
   par(xaxt = "n", yaxt = "s", fig = c(0.05,0.25,0.80,0.95),
       mar = c(0, 1, 0, 0), new = TRUE, las = 1, cex.axis = 0.5,bty='n')
@@ -314,7 +319,11 @@ cormu <- function(x) {
 }
 ```
 
-The definition of functions is followed by code that carry out the analysis based on these.  First get the data needed - if they are not stored locally, download from Figshare where they are stored.:
+##**Calculations and analysis**
+
+The definition of functions is followed by code that carry out the analysis based on these. First get the data needed - if they are not stored locally, download from Figshare where they are stored.
+
+**Access and prepare data**
 
 ```{r}
 ##-----------------------------------------------------------------------------------------
@@ -323,11 +332,11 @@ The definition of functions is followed by code that carry out the analysis base
 
 if (!file.exists("mu.worstcasemu.rda") & figshare) {
   download.file("http://files.figshare.com/2193033/mu.worstcasemu.rda",destfile="mu.worstcasemu.rda") 
-}
+} 
 
 if (!file.exists("pre.worstcasemu.rda") & figshare) {
   download.file("http://files.figshare.com/2193038/pre.worstcasemu.rda",destfile="pre.worstcasemu.rda") 
-}
+} 
 
 if (!file.exists("cmip5.rda") & figshare) {
   download.file("http://files.figshare.com/2193041/cmip5.rda",destfile="cmip5.rda") 
@@ -369,7 +378,7 @@ if (!file.exists('mu.worstcasemu.rda')) {
 } else load('mu.worstcasemu.rda')
 ```
 
-The convention here is that the wet-day mean precipitation (precipitation intensity) is represented by symbol $\mu$ and the variable name 'mu' in the R-scripts. The wet-day frequency $f_w$ is referret to as 'fw'. Lower and upper case refer to the mean seasonal cycle and annually aggregated values respectively. There are some stations with many missing values and some with short series. Also exclude data records with unrealistic long-term trends (due to dubious data or short series).
+The convention here is that the wet-day mean precipitation (precipitation intensity) is represented by symbol $\mu$ and the variable name 'mu' in the R-scripts. The wet-day frequency $f_w$ is referred to as 'fw'. Lower and upper case refer to the mean seasonal cycle and annually aggregated values respectively. There are some stations with many missing values and some with short series. Also exclude data records with unrealistic long-term trends (due to dubious data or short series).
 
 ```{r}
 ## Keep stations with no missing data and stations
@@ -409,7 +418,9 @@ if (!file.exists('pre.worstcasemu.rda')) {
 } else load('pre.worstcasemu.rda')
 ```
 
-Now the data is ready for the analysis. Calibrate the regression models and extract the regression coeffieients. Use 'apply' to speed up the process for multiple stations.
+**Statistical downscaling and analysis**
+
+Now the data is ready for the analysis. Calibrate the regression models and extract the regression coefficients. Use 'apply' to speed up the process for multiple stations.
 
 ```{r}
 ## Extract the monthly aggregates for all stations
@@ -422,13 +433,13 @@ print('muskill')
 r2 <- lapply(V,muskill)
 ```
 
-**Plot figure 1**
+**Figure 1**
 
 Figure 1 illustrates how the mean seasonal cycle in $\mu$ and the area mean predictor compare and what the regression results for one example station.  
 
 ```{r,echo=TRUE}
-## Extract the mean, min, max, wettest month, and driest months in terms of mu
-## for all stations:
+## Extract the mean, min, max, wettest month, and driest months 
+##  in terms of mu for all stations:
 print('muclim')
 X <- apply(mu,2,FUN='muclim')
 print(table(X[4,]))
@@ -482,18 +493,21 @@ print(cor.test(pca$v[,3],as.numeric(r2)))
 ```
 **Trend analysis**
 
-Estimate trend statistics and extract only the results for locations with a good match. The models calibrated here only seem to be valid for regions dominated by convective precipitation and are poor over regions where orographically forced precipitation dominate.   
+Estimate trend statistics if the historical wet-day mean and wet-day frequency. 
   
 ```{r,echo=TRUE}
 ## Estimate trend statistics for both fw and mu:
-## Use subset - in the PCA there is something strange in the 1990s.
-fw.trend <- 100*apply(subset(FW,it=c(1950,1990)),2,'trend.coef')/
+fw.trend <- 100*apply(subset(FW,it=c(1961,2014)),2,'trend.coef')/
                       apply(FW,2,'mean',na.rm=TRUE)
-mu.trend <- 100*apply(subset(MU,it=c(1950,1990)),2,'trend.coef')/
+mu.trend <- 100*apply(subset(MU,it=c(1961,2014)),2,'trend.coef')/
                       apply(MU,2,'mean',na.rm=TRUE)
-
+## Check data availability
 diagnose(MU)
+```
 
+Extract results (regression models, statistical information) only for locations where there is a good match between the seasonal cycles of $\mu$ and $e_s$ ($R^2 > 0.6$). The models calibrated here only seem to be valid for regions dominated by convective precipitation and are poor over regions where orographically forced precipitation dominate.   
+
+```{r,echo=TRUE}
 ## Select only the sites which have an R2 greater than 0.6:
 is <- (1:length(r2))[as.numeric(r2)> 0.6]
 mux <- subset(mu,is=is)
@@ -505,7 +519,7 @@ Vx <- V[is]
 
 **Aggregated results from the GCMs**
 
-Need to collect aggregated results based on the ensembles of GCM projections. 
+Collect aggregated GCM projections (CMIP5) and apply the empirical models to the ensembles. 
   
 ```{r,echo=TRUE}
 ## Read the GCM ensembles andestimate the 5 and 95 percentiles as well as
@@ -527,15 +541,15 @@ Z.rcp8.5 <- lapply(Vx,'muproject',rcp8.5)
 Z.rcp2.6 <- lapply(Vx,'muproject',rcp2.6)
 t <- index(rcp4.5)
 ```
-Extract the statistics of the different emission scenarios and time slices
+Extract statistics of the wet-day mean associated with different emission scenarios and time slices and calculate the changes from the present (2010) to the far future (2100).
 
 ```{r,echo=TRUE}
 ## Estimates for mu in 2010:
 mu2010.rcp4.5 <- lapply(Z.rcp4.5,'window',start=2010,end=2010)
 mu2010.rcp8.5 <- lapply(Z.rcp8.5,'window',start=2010,end=2010)
 mu2010.rcp2.6 <- lapply(Z.rcp2.6,'window',start=2010,end=2010)
-x2010 <- as.numeric(lapply(mu2010.rcp4.5,function(x) x[[3]]))
-x2010u <- as.numeric(lapply(mu2010.rcp4.5,function(x) x[[2]]))
+x2010 <- as.numeric(lapply(mu2010.rcp4.5,function(x) x[[3]])) ## Median value
+x2010u <- as.numeric(lapply(mu2010.rcp4.5,function(x) x[[2]])) ## 95th percentile
 y2010 <- as.numeric(lapply(mu2010.rcp8.5,function(x) x[[3]]))
 y2010u <- as.numeric(lapply(mu2010.rcp8.5,function(x) x[[2]]))
 z2010 <- as.numeric(lapply(mu2010.rcp2.6,function(x) x[[3]]))
@@ -552,18 +566,28 @@ y2100u <- as.numeric(lapply(mu2100.rcp8.5,function(x) x[[2]]))
 z2100 <- as.numeric(lapply(mu2100.rcp2.6,function(x) x[[3]]))
 z2100u <- as.numeric(lapply(mu2100.rcp2.6,function(x) x[[2]]))
 
-## Data frams with changes in percentages:
-mu.2100 <- data.frame(mean.RCP4.5=x2100 - x2010,q95.RCP4.5=x2100u - x2010u,
-                      mean.RCP2.6=z2100 - z2010,q95.RCP4.5=z2100u - z2010u,
-                      mean.RCP8.5=y2100 - y2010,q95.RCP8.5=y2100u - y2010u)
+## Data frames with changes in percentages:
+mu.2100 <- data.frame(median.RCP4.5=x2100 - x2010,q95.RCP4.5=x2100u - x2010u,
+                      median.RCP2.6=z2100 - z2010,q95.RCP4.5=z2100u - z2010u,
+                      median.RCP8.5=y2100 - y2010,q95.RCP8.5=y2100u - y2010u)
+```
+Print the projected changes in return-values from 2010 to 2100.
+
+```{r}
+## Print the numbers:
+print('--- Changes in 20% returnvalue in terms of % from 2010:')
+print(lapply(mu.2100,summary))
+print(paste('Summary for',length(mu.2100[[1]]),'locations'))
 ```
 
-**Plot figure 3**
+**Figure 3**
+
+Figure 3 shows the projected changes in the median (inner marker) and 95th precentile of the wet-day mean from the present (2010) to the far future (2100).  
 
 ```{r,echo=TRUE}
 ## Fig 3
 ## Plot a map of projected values:
-## Map showing RCP4.5 ensemble mean and the upper 95% change in the
+## Map showing RCP4.5 ensemble median and the upper 95% change in the
 ## outer part of the symbol. Also an insert with box-plot diagram
 ## showing the other RCPs.
 
@@ -577,7 +601,7 @@ coly <- cols[cx2100u]
 Cex <- 1.25
 
 print("Plot a map of projected values:")
-map(mux, xlim=xlim,ylim=ylim,cex=Cex,bg='grey70',gridlines=FALSE,
+map(mux, xlim=xlim,ylim=ylim,cex=Cex,bg='grey70',col='grey70',gridlines=FALSE,
     colbar=list(col=cols,n=12,type="p",h=0.6,v=1))
 points(lon(mux),lat(mux),pch=19,col=colx,cex=Cex)
 points(lon(mux),lat(mux),pch=21,col=coly,cex=Cex,lwd=2)
@@ -601,14 +625,16 @@ grid()
 figlab('Figure 3')
 ```
 
-**Supporting material/analysis (SM)**
+##**Supporting Material**
 
-Extract the essential information
+The supporting material includes diagnostics and plots that checks a number of assumptions made in this study.
+
+**Reorganise data and statistical information**
+Extract and reorganise essential information from previous analysis that will be used in the SM.
   
 ```{r,echo=TRUE}
 ## Evaluation:
-## Use the calibration strategy to predict the annual mu based on the
-## predictor (t2m -> e_s)
+## Use the calibration strategy to predict the annual mu based on the predictor (t2m -> e_s)
 print('evaluation: correlation')
 mu.eval <- lapply(Vx,'mupredict',annual(pre),prct=FALSE)
 m <- length(mu.eval); n <- length(mu.eval[[1]])
@@ -621,53 +647,124 @@ r.eval <- apply(rbind(coredata(MUz),coredata(MUx)),2,'cormu')
 print(summary(r.eval))
 ```
 
-
-##** ----------- Supporting Material ------------------------**
-
-The supporting material includes a number of diagnostics and plots that chencks a number of assumptions made in this study.
-
-##**figure SM2**
-
-Presents the statistics of $R^2$ from the model calibration based on the different locations.
+Now prepare the supporting figures. 
 
 ```{r,echo=TRUE}
+## Supporting figures
 par(xaxt='n',yaxt='n',bty='n')
 plot(c(0,1),c(0,1),type='n',xlab='',ylab='')
 text(0.5,0.5,'Supporting figures',cex=2,font=2)
+```
 
-## Plot the statistics of R2:
-hist(100*as.numeric(r2),breaks=seq(0,100,by=5),lwd=2,col=rgb(0,0.3,0.5),
-     xlab=expression(paste(R^2,' (%)')),freq=TRUE,
-     main="Summary of regression scores")
+**Figure SM1**
+
+Figure SM1 show the seasonal cycles of various precipitation statistics (mean, wet-day mean, wet-day frequency, mean consecutive wet days and dry days), calculated based on ECA&D observations for stations with long precipitation records. 
+
+```{r}
+# y1 contains precipitation observations from ECA&D stations with long records
+pr.mean <- aggregate(y1,by=month,FUN='mean')
+pr.mu <- aggregate(y1,by=month,FUN='wetmean')
+pr.fw <- aggregate(y1,by=month,FUN='wetfreq')
+y1.l <- spell(y1,threshold=1)
+pr.wet <- aggregate(subset(y1.l,is=1),by=month,FUN='mean')
+pr.dry <- aggregate(subset(y1.l,is=2),by=month,FUN='mean')
+
+par(bty='n',xaxt='n')
+plot(merge(pr.mean,pr.mu,10*pr.fw,pr.wet,pr.dry),plot.type='single',
+     col=c('steelblue','darkblue','grey','darkgreen','red'),
+     lwd=c(3,3,1,1,1),ylab="",xlab="Calendar month",main=loc(y1))
 grid()
+par(yaxt='s',xaxt='s')
+axis(1,at=1:12,labels=month.abb,cex.lab=0.7, col='grey')
+axis(4,at=10*pretty(pr.fw),pretty(pr.fw),col='grey')
+
+legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
+               expression(bar(n[c*w*d])),expression(bar(n[c*d*d]))),bty='n',
+       col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1),
+       ncol=2)
+figlab('Figure SM1')
+```
+
+
+**Figure SM2**
+
+Figure SM2 shows a test of the assumption that that the wet-day daily precipitation is approximately exponentially distributed, by comparing the actual percentiles with quantiles estimated for different samples 
+with different annual mean wet-day precipitation using the formula for exponentially distributed data: $q_p = -ln(1-p)\mu$.
+ 
+```{r}
+## Figure SM2.
+## test: See if the quantiles are consistent when the mean mu varies.
+qtest <- aggregate(y1,year,FUN='qqexp')
+qx <- c(coredata(qtest[,1:101]))
+qy <- c(coredata(qtest[,102:202]))
+
+par(bty='n')
+plot(qx,qy,xlim=c(0,40),ylim=c(0,40),
+     pch=19,col=rgb(0.2,0.2,0.7,0.3),cex=cex,
+     main='Test: exponential distribution & changing mean',
+     xlab=expression(q[p]),ylab=expression(-log(1-p)*mu))
+lines(c(0,40),c(0,40),col='grey')
 figlab('Figure SM2')
 ```
-##**Figure SM12**
 
-A figure showing one example of projections for one location, showing all three emission scenarios.
+**Figure SM3**
+
+Figure SM3 presents a map of the NCEP reanalysis temperature for the North Atlantic region that is used as predictor for the downscaling (see e.g., Figure 1 and 3). 
+
+```{r}
+## Show the predictor area:
+X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
+map(X,projection='sphere',colbar=list(pal="budrd",breaks=seq(8,28,by=0.5)))
+figlab('Figure SM3',xpos=0.8,ypos=0.999)
+```
+
+
+**Figure SM4**
+
+Figure SM4 shows an example of projections of the wet-day mean for one location, showing all three emission scenarios.
 
 ```{r}
 ## Example of estimates for 2050:
-print('Example plot - evolution')
+print('Example plot - projections of mu')
 par(bty='n')
 i <- 1
 N <- length(Z.rcp4.5)
 plot(Z.rcp4.5[[i]],plot.type='single',lty=c(2,2,1),lwd=c(1,1,2),
-     ylab='%',ylim=c(80,150),
+     xlab='Year',ylab='%',ylim=c(80,150),
      main=paste('Wet-day mean at',loc(subset(mux,is=i))))
 shade(Z.rcp4.5[[i]],col=rgb(0.5,0.5,0.5,0.3))
 shade(Z.rcp8.5[[i]],col=rgb(1,0.5,0.5,0.3))
 shade(Z.rcp2.6[[i]],col=rgb(0.5,1,0.5,0.3))
 grid()
-figlab('Figure SM12')
+legend("topleft",legend=c("RCP4.5","RCP8.5","RCP2.6"),lty=1,lwd=2,
+       bty="o",box.lwd=0.2,
+       col=c(rgb(0.5,0.5,0.5,0.5),rgb(1,0.5,0.5,0.5),rgb(0.5,1,0.5,0.5)))
+figlab('Figure SM4')
 ```
 
-Further processing for Fig SM3: extract information about trends in $\mu$.
+**Figure SM5**
+
+Figure SM5 presents the $R^2$ statistics from the model calibration (i.e., the regression between the seasonal cycles of $\mu$ and $e_s$) for different locations.
+
+```{r,echo=TRUE}
+## Plot the statistics of R2:
+hist(100*as.numeric(r2),breaks=seq(0,100,by=5),lwd=2,col=rgb(0,0.3,0.5),
+     xlab=expression(paste(R^2,' (%)')),freq=TRUE,
+     main="Summary of regression scores")
+grid()
+figlab('Figure SM5')
+```
+
+**Figure SM6**
+
+Figure SM6 compares the observed and predicted historical trends in the wet-day mean preciptation.
+First extract information about trends in $\mu$.
 
 ```{r,echo=TRUE}
 ## Trend in projected wet-day mean
 trendbeta <- unlist(lapply(Z.rcp4.5,function(x) trend.coef(x[,3])))
 ## Strange results:
+N <- length(Z.rcp4.5)
 print((1:N)[trendbeta < 0])
 
 ## test: Does the model predict observed trends?
@@ -699,15 +796,13 @@ trend.sense <- data.frame(x=c(-trend.mux,trend.mux),
 xylim <- max(abs(c(trend.mux,trend.pre)))*c(-1,1)
 ```
 
-##**Figure SM3**
-
-Historical trends in the wet-day mean preciptation
+Then make a scatterplot comparing the observed and predicted trends.
 
 ```{r}
 par(bty='n',col.sub='grey',cex.sub=0.8)
 plot(trend.mux,trend.pre,pch=19,col=rgb(0.6,0.2,0,0.3),cex=1.5,
-     main=expression(paste('Trends in ',mu,': observed and predicted upper limit')),
-     xlab='Observed trend (mm/decade)',ylab='predicted trend (mm/decade)',
+     xlab=expression(paste('Observed trend in ',mu,' (mm/decade)')),
+     ylab=expression(paste('Predicted trend in ',mu,'(mm/decade)')),
      xlim=xylim,ylim=xylim,
      sub=paste('Mean correlation for local year-to-year variations over t=[',
        start(MUx),',',end(MUx),
@@ -731,34 +826,23 @@ apply(rbind(trend.mux,trend.pre,trenderr.mux,trenderr.pre),2,
                        lines(x[1]+c(-2,-2)*x[3],x[2]+c(-1,1)*0.01,col=rgb(0.6,0.2,0,0.05))
                        lines(x[1]+c(2,2)*x[3],x[2]+c(-1,1)*0.01,col=rgb(0.6,0.2,0,0.05))
                      })
-figlab('Figure SM3')
+figlab('Figure SM6')
 ```
 
-##**Figure SM4**
+**Figure SM7**
+
+Figure SM7 shows the historical trends in the wet-day mean preciptation.
 
 ```{r}
 ## Map showing trends in mu
-map(MU,FUN='trend',colbar=list(breaks=seq(-1,1,length=21),rev=TRUE),cex=cex)
-figlab('Figure SM4',ypos=0.999)
+map(MU,FUN='trend',cex=1,colbar=list(pal="budrd",breaks=pretty(c(-0.5,0.5),n=21)))
+figlab('Figure SM7',ypos=0.999)
 figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),xpos=0.5,ypos=0.999)
 ```
-##**Figure SM5**
 
-```{r}
-## 99-percentile wet-day mean and typical wet-day frequency
-## The Tellus paper on specification approximately annual maximum.
-## Prob(X>x) for annual maximum for 24hr precip
-## Pr(X > x) = 1/365.25 = fw*(1-p): p = 1 - 1/(365.25*fw)
-par(bty='n')
-W <- apply(fw,2,FUN='muclim')
-hist(100*(1-1/(W[1,]*365.25)),col='steelblue',lwd=2,breaks=seq(90,100,by=0.1),
-     main='Wet-day percentile for annual maximum 24-precipitation',
-     xlab='p (%)')
-grid()
-figlab('Figure SM5')
-```
+**Figure SM8**
 
-##**Figure SM6**
+Figure SM8 displays a histogram of historical trends in the wet-day frequency for the period... for the stations in Europe shown in Figure SM8. 
 
 ```{r}
 ## Statistics of trend in wet-day frequency
@@ -767,134 +851,28 @@ hist(fw.trend,breaks=seq(-50,50,by=1),col='grey',lwd=2,
      main='Trend in wet-day frequency',
      xlab=expression(paste(f[w],' (%/decade)')))
 grid()
-figlab('Figure SM6')
+figlab('Figure SM8')
 ```
-##**Figure SM7**
+
+**Figure SM9**
+
+Figure SM9 shows the spatial distribution of the historical trends in wet-day frequency on a map.
 
 ```{r}
 ## Map showing trends in fw
 #dev.new()
-map(FW,FUN='trend',colbar=list(breaks=seq(-0.05,0.05,length=21),rev=TRUE),cex=cex)
-figlab('Figure SM7',ypos=0.999)
+map(FW,FUN='trend',cex=1,colbar=list(pal="budrd",breaks=pretty(c(-0.03,0.03),n=21)))
+figlab('Figure SM9',ypos=0.999)
 figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),xpos=0.5,ypos=0.999)
 ```
 
-##**Figure SM1**
+**Analysis from other continents and with local temperature**
 
-```{r}
-## Figure SM1.
-## test: See if the quantiles are consistent when the mean mu varies.
-qtest <- aggregate(y1,year,FUN='qqexp')
-qx <- c(coredata(qtest[,1:101]))
-qy <- c(coredata(qtest[,102:202]))
+Additional analysis testing the connection between local temperature and wet-day mean precipitation.
 
-par(bty='n')
-plot(qx,qy,xlim=c(0,40),ylim=c(0,40),
-     pch=19,col=rgb(0.2,0.2,0.7,0.3),cex=cex,
-     main='Test: exponential distribution & changing mean',
-     xlab=expression(q[p]),ylab=expression(-log(1-p)*mu))
-lines(c(0,40),c(0,40),col='grey')
-figlab('Figure SM1')
-```
+**Regression analysis between the wet-day mean mu and the mean temperature**
 
-##**Figure SM14: compare the mean seasonal variations in the different precipitation statistics**
-
-```{r}
-pr.mean <- aggregate(y1,by=month,FUN='mean')
-pr.mu <- aggregate(y1,by=month,FUN='wetmean')
-pr.fw <- aggregate(y1,by=month,FUN='wetfreq')
-y1.l <- spell(y1,threshold=1)
-pr.wet <- aggregate(subset(y1.l,is=1),by=month,FUN='mean')
-pr.dry <- aggregate(subset(y1.l,is=2),by=month,FUN='mean')
-
-par(bty='n',xaxt='n')
-plot(merge(pr.mean,pr.mu,10*pr.fw,pr.wet,pr.dry),plot.type='single',
-     col=c('steelblue','darkblue','grey','darkgreen','red'),
-     lwd=c(3,3,1,1,1),ylab="",xlab="Calendar month",main=loc(y1))
-grid()
-par(yaxt='s',xaxt='s')
-axis(1,at=1:12,labels=month.abb,cex.lab=0.7, col='grey')
-axis(4,at=10*pretty(pr.fw),pretty(pr.fw),col='grey')
-
-legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
-               expression(bar(n[c*w*d])),expression(bar(n[c*d*d]))),bty='n',
-       col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1))
-figlab('Figure SM9')
-```
-
-##**Figure SM10: Map of the future return values**
-
-```{r}
-print('Map of return values for 2100 with RCP4.5')
-rv <- MUx
-## x2100u gives the percentage of mu,
-coredata(rv) <- t((x2100u/100)*apply(coredata(MUx),2,'mean')*log(365.25*t(coredata(FWx))))
-cexr2 <- 1.5*c(as.numeric(r2)) + 0.2
-map(rv,FUN='mean',cex=cexr2,colbar=list(breaks=seq(30,100,by=1)))
-figlab('Figure SM10',ypos=0.999)
-figlab('Return values for 2100 assuming RCP4.5',xpos=0.3,ypos=0.999)
-```
-
-##**Figure SM9**
-
-```{r}
-## Print the numbers:
-print('--- Changes in 20% returnvalue in terms of % from 2010:')
-print(lapply(mu.2100,summary))
-print(paste('Summary for',length(mu.2100[[1]]),'locations'))
-
-## Compare the regression coefficients derived from individual
-## seasonal cycle with that derived from mean climatology.
-
-data(mu.eq.f.tx)
-
-col <- rgb(0.1,0.1,0.7,0.25)
-mutx <- summary(mu.eq.f.tx)$coefficients[c(2,4)]
-b1 <- as.numeric(lapply(Beta,function(x) x[1]))
-e1 <- as.numeric(lapply(Beta,function(x) x[2]))
-
-par(bty='n')
-plot(b1,pch=19,col=col,cex=cexr2,
-     main=expression(paste('Scaling coefficient for ',mu,' and ',e[s])),
-     xlab='',ylab=expression(beta))
-grid()
-for (i in 1:length(b1)) {
-  lines(rep(i,2),b1[i]+e1[i]*c(-2,2),col=col)
-  lines(i+c(-0.45,0.45),b1[i]+e1[i]*c(-2,-2),col=col)
-  lines(i+c(-0.45,0.45),b1[i]+e1[i]*c(2,2),col=col)
-}
-polygon(c(1,rep(length(b1),2),rep(1,2)),
-        mutx[1]+mutx[2]*c(-2,-2,2,2,-2),
-        border=rgb(0.5,0.5,0.5,0.4),col=rgb(0.5,0.5,0.5,0.3))
-lines(c(1,length(b1)),rep(mutx[1],2),lwd=3,col=rgb(0.5,0.5,0.5,0.3))
-figlab('Figure SM9')
-```
-
-##**Figure SM13**
-
-```{r}
-## Show the predictor area:
-X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
-map(X,projection='sphere',colbar=list(breaks=seq(8,28,by=0.5)))
-figlab('Figure SM13',xpos=0.8,ypos=0.999)
-```
-
-##**Analysis from other continents and with local temperature**
-
-Additional analysis testing the connection between local temperature and wet-day mean precipitation
-
-```{r}
-## Regression analysis between the wet-day mean mu and the mean temperature.
-
-corhalf <- function(x) {
-  n <- length(x)
-  x1 <- x[1:(n/2)]; x2 <- x[(n/2+1):n]
-  ok <- is.finite(x1) & is.finite(x2)
-  r <- cor(x1[ok],x2[ok])
-  return(r)
-}
-```
-
+Load South American temperature and precipitation data from the climate database CLARIS and European observations that were used in COST-VALUE experiment 1. 
 ```{r}
 ## CLARIS
 load('claris.Tx.rda')
@@ -904,10 +882,12 @@ Tx1 <- Tx
 Pr1 <- Pr
 
 ## COST-VALUE
-load('VALUE_ECA_86_v2/stationsVALUE-exp1a.rda')
+load('stationsVALUE-exp1a.rda')
 Tx2 <- Tx
 Pr2 <- Pr
 ```
+
+Load and prepare temperature and precipitation data from North America from the GDCN database. 
 
 ```{r}
 ## Read North american data:
@@ -951,6 +931,7 @@ if (!file.exists('mut2m.GDCN.rda')) {
 } else load('mut2m.GDCN.rda')
 ```
 
+Combine the observational data from North America, Europe, and South America. Then fit a linear regression model comparing the mean $\mu$ and $e_s$ values at different locations.  
 
 ```{r}
 ## Aggregate annual statistics based on the combined data sources:
@@ -961,9 +942,6 @@ nval <- apply(coredata(MU),2,'nv')
 attr(T2M,'variable') <- 't2m'
 es <- C.C.eq(T2M)
 
-#map(MU,FUN='mean',cex=0)
-#map(MU,FUN='trend',cex=0,colbar=list(rev=TRUE,breaks=seq(-1,1,length=21)))
-#map(FW,FUN='trend',cex=0,colbar=list(rev=TRUE,breaks=seq(-0.01,0.01,length=21)))
 calmu <- data.frame(x=as.numeric(apply(coredata(es),2,'mean',na.rm=TRUE)),
                     y=as.numeric(apply(coredata(MU),2,'mean',na.rm=TRUE)),
                     fw=as.numeric(apply(coredata(FW),2,'mean',na.rm=TRUE)),
@@ -975,15 +953,34 @@ data(geoborders)
 Fw <- apply(coredata(fw),2,'sum',na.rm=TRUE)
 ```
 
-##** Figure SM8**
+```{r}
+## Estimate the correlation between the annual mean es and mu at the different sites
+corhalf <- function(x) {
+  n <- length(x)
+  x1 <- x[1:(n/2)]; x2 <- x[(n/2+1):n]
+  ok <- is.finite(x1) & is.finite(x2)
+  r <- cor(x1[ok],x2[ok])
+  return(r)
+}
 
-Assess the connection between temperature and the wet-day mean precipitation.
+X <- matchdate(MU,es)
+Y <- matchdate(es,MU)
+w <- apply(coredata(fw),2,'mean')
+ok <- w > 0.25
+Z <- rbind(coredata(X),coredata(Y))
+r <- apply(Z,2,corhalf)
+hist(r)
+```
+
+**Figure SM10**
+
+Assess the connection between temperature and the wet-day mean precipitation in space, based on the regression models defined above.
 
 ```{r}
 par(bty='n')
 col <- rgb((1+sin(pi*calmu$lat/180))/2,
            cos(pi*calmu$lon/180)^2,
-           1-(1+sin(pi*calmu$lat/180))/2,0.15)
+           1-(1+sin(pi*calmu$lat/180))/2,0.4)
 cex <- 1.5*Fw/max(Fw,na.rm=TRUE)
 plot(calmu$x,calmu$y,pch=19,col=col,cex=cex,
      main='Wet-day mean precipitation temperature dependency',
@@ -996,7 +993,7 @@ par(new=TRUE,fig=c(0.15,0.45,0.7,0.9),mar=rep(0,4),xaxt="n",yaxt="n")
 plot(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
 lines(geoborders,col='grey')
 points(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
-figlab('Figure SM8')
+figlab('Figure SM10')
 
 mu.eq.f.tx <- model.mutx
 attr(mu.eq.f.tx,'input') <- 'saturation water pressure e_s (Pa)'
@@ -1006,18 +1003,44 @@ attr(mu.eq.f.tx,'calibration') <- 'mean climatology'
 attr(mu.eq.f.tx,'source script') <- 'mut2m.R'
 attr(mu.eq.f.tx,'timestamp') <- date()
 attr(mu.eq.f.tx,'calibration_data') <- calmu
-save(file='esd/data/mu.eq.f.tx.rda',mu.eq.f.tx)
+save(file='mu.eq.f.tx.rda',mu.eq.f.tx)
 ```
 
+**Figure SM11**
+
+Figure SM11 compares the regression coefficients derived from the seasonal cycles of $\mu$ and the North Atlantic $e_s$ (see e.g. Figures 1 and 3), to the regression coefficient from the comparison between the mean $\mu$ and $e_s$ from various sites (see Figure SM10).
 
 ```{r}
-## Estimate the year-by-year correlation in es and mu
 
-X <- matchdate(MU,es)
-Y <- matchdate(es,MU)
-w <- apply(coredata(fw),2,'mean')
-ok <- w > 0.25
-Z <- rbind(coredata(X),coredata(Y))
-r <- apply(Z,2,corhalf)
-hist(r)
+## Compare the regression coefficients derived from individual
+## seasonal cycles with that derived from mean climatology at different sites.
+
+data(mu.eq.f.tx)
+
+col <- rgb(0.1,0.1,0.7,0.25)
+mutx <- summary(mu.eq.f.tx)$coefficients[c(2,4)]
+b1 <- as.numeric(lapply(Beta,function(x) x[1]))
+e1 <- as.numeric(lapply(Beta,function(x) x[2]))
+cex.r2 <- 1.5*unlist(r2) + 0.2
+
+par(bty='n')
+plot(b1,pch=19,col=col,cex=cex.r2,xaxt="n",
+     main=expression(paste('Scaling coefficient for ',mu,' and ',e[s])),
+     xlab='Observation site',ylab=expression(beta))
+axis(side=1, seq(0,1000,200), labels = FALSE)
+grid()
+for (i in 1:length(b1)) {
+  lines(rep(i,2),b1[i]+e1[i]*c(-2,2),col=col)
+  lines(i+c(-0.45,0.45),b1[i]+e1[i]*c(-2,-2),col=col)
+  lines(i+c(-0.45,0.45),b1[i]+e1[i]*c(2,2),col=col)
+}
+polygon(c(1,rep(length(b1),2),rep(1,2)),
+        mutx[1]+mutx[2]*c(-2,-2,2,2,-2),
+        border=rgb(0.5,0.5,0.5,0.4),col=rgb(0.5,0.5,0.5,0.3))
+lines(c(1,length(b1)),rep(mutx[1],2),lwd=3,col=rgb(0.5,0.5,0.5,0.3))
+legend(200,-4e-3,legend=c("seasonal regression","spatial regression"),
+       col=c(col,rgb(0.5,0.5,0.5,0.4)),cex=0.8,lwd=2,box.lwd=0.5,
+       lty=c(1,1),pch=c(19,NA),fill=c(NA,rgb(0.5,0.5,0.5,0.3)),
+       border=c(NA,rgb(0.5,0.5,0.5,0.4)))
+figlab('Figure SM11')
 ```
