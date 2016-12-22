@@ -74,3 +74,10 @@ lines(trend(annual(X,'wetfreq')),lty=2)
 Get data on storm tracks... IMILAST
 Correlation between storm tracks and stations.
 
+## Tidal measurements
+
+```{r}
+load('Bangladesh-tidal-stations.rda')
+plot(Z,zoom=8)
+```
+
