@@ -1,14 +1,15 @@
 ## Script that applies MOS to SPECS decadal forecasts
 
 library(esd)
-library(ncdf)
+#library(ncdf)
 
 downloadfromunican <- FALSE   # Preparations - get the data
 downscaledreanalysis <- FALSE # SM: Assessment of large-small scale link
 looexperiments <- FALSE        # Cross-validation MOS on forecasts
 diagnoseFCST <- FALSE          # Show correlation & common EOFs of reanalysis+fcsts
 
-source("~/Dropbox/Public/SPECS/R/udg2esd_met.R") ## Upload udg2esd function
+#source("~/Dropbox/Public/SPECS/R/udg2esd_met.R") ## Upload udg2esd function
+source('~/disk1/SPECS/R/udg2esd_met.R')
 
 ## This variable is needed because CDO did not fix the times properly
 ## for the predictands (EOBS)...
@@ -123,7 +124,7 @@ Xpredictor <- function(x,m=1:3,it=NULL,is=NULL,mask=FALSE,
 }
 
 aggregatedailyfield <- function(fname,cline='cdo monmean',
-                                output='mu_0.25deg_reg_v12.0.nc') {
+                                output='mu_0.25deg.nc') {
   print('This function only works if you have CDO installed')
   print(paste(cline,fname,output))
   system(paste(cline,fname,output))
@@ -144,7 +145,7 @@ wetdaymean <- function(ifile,cline='cdo yearmean',fname='data/wetdaymean.nc') {
   ##  print(paste('cdo ifthen -gtc,0',ifile,ifile,fname))
   ##  system(paste('cdo ifthen -gtc,0',ifile,ifile,fname))
   X <- aggregatedailyfield(fname=fname,cline=cline)
-  Y <- aggregatedailyfield(fname=,'data/mask.nc',cline=cline,output='fw_0.25deg_reg_v12.0.nc')
+  Y <- aggregatedailyfield(fname=,'data/mask.nc',cline=cline,output='fw_0.25deg.nc')
   file.remove(fname); file.remove('data/mask.nc')
 }
 
@@ -383,9 +384,9 @@ if (downloadfromunican) {
 
 print('Get the predictands: mu & fw from EOBS')
 if (!file.exists('mu_0.25deg_reg_v12.0.nc'))
-  mu.eobs <-  wetdaymean('data.ECAD/rr_0.25deg_reg_v12.0.nc') else
-  mu.eobs <- retrieve('mu_0.25deg_reg_v12.0.nc')
-fw.eobs <- retrieve('fw_0.25deg_reg_v12.0.nc')
+  mu.eobs <-  wetdaymean('data.ECAD/rr_0.25deg.nc') else
+  mu.eobs <- retrieve('mu_0.25deg.nc')
+fw.eobs <- retrieve('fw_0.25deg.nc')
 attr(mu.eobs,'variable') <- 'mu'
 attr(fw.eobs,'variable') <- 'fw'
 attr(fw.eobs,'unit') <- 'fraction'

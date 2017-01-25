@@ -79,6 +79,18 @@ lines(trend(Pr.50),lty=2)
 grid()
 ```
 
+Test to see if the long-wave outgoing radiation (OLR) can be used as a predictor for the winter-time wet-day mean precipitation over Germany. It contains information about cloud tops, and the hypothesis is that heavy precipitation comes from clouds with high (and cold) cloud tops.
+
+```{r, fig.width=8, fig.height=8}
+olr <- retrieve('~/Downloads/ERAINT-OLR-mon.nc', lon=c(-50,40),lat=c(40,70))
+olr <- subset(as.4seasons(olr),it='djf')
+eof.olr<- EOF(olr,n=5)
+class(eof.olr)[3] <- "season"
+mu.djf <- subset(as.4seasons(Y,FUN='wetmean'),it='djf')
+pca.mu <- PCA(pcafill(mu.djf),n=5)
+ds.mu.orl <- DS(pca.mu,eof.olr)
+plot(ds.mu.orl,new=FALSE)
+```
 
 ## Analysis: temperature
 
@@ -97,5 +109,6 @@ tnx <- annual(X,FUN='max',nmin=100)
 plot(tnx,new=FALSE)
 grid()
 ```
+
 
 

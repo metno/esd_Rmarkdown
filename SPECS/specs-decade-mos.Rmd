@@ -23,15 +23,15 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 ## Script that applies MOS to SPECS decadal forecasts
 
 library(esd)
-library(ncdf)
+#library(ncdf)
 setwd("~/R")
 
-downloadfromunican <- FALSE   # Preparations - get the data
-downscaledreanalysis <- FALSE # SM: Assessment of large-small scale link
+downloadfromunican <- FALSE    # Preparations - get the data
+downscaledreanalysis <- FALSE  # SM: Assessment of large-small scale link
 looexperiments <- FALSE        # Cross-validation MOS on forecasts
 diagnoseFCST <- FALSE          # Show correlation & common EOFs of reanalysis+fcsts
 
-source("~/Dropbox/Public/SPECS/R/udg2esd_met.R") ## Upload udg2esd function
+source("/home/rasmusb/disk1/SPECS/R/udg2esd_met.R") ## Upload udg2esd function
 
 ## This variable is needed because CDO did not fix the times properly
 ## for the predictands (EOBS)...
@@ -162,7 +162,7 @@ Aggregate daily data from the EOBS data, using CDO (because the data size is too
 
 ```{r aggregate}
 aggregatedailyfield <- function(fname,cline='cdo monmean',
-                                output='mu_0.25deg_reg_v12.0.nc') {
+                                output='mu_0.25deg_reg.nc') {
   print('This function only works if you have CDO installed')
   print(paste(cline,fname,output))
   system(paste(cline,fname,output))
@@ -178,7 +178,7 @@ Estimating the wet-day mean from the EOBS data using CDO (because the data size 
 ```{r wetdaymean}
 wetdaymean <- function(ifile,cline='cdo yearmean',fname='data/wetdaymean.nc') {
   print('calculate mask')
-  system(paste('cdo gtc,1',ifile,'data/mask.nc'))
+  system(paste('cdo gtc,1',ifile,'~/data/mask.nc'))
   ## her blir ofile en mask med 1 i alle tidsskritt med data over konstanten (satt til 0),
   ## og verdi 0 i alle andre
   print('apply mask')
@@ -189,8 +189,8 @@ wetdaymean <- function(ifile,cline='cdo yearmean',fname='data/wetdaymean.nc') {
   ##  print(paste('cdo ifthen -gtc,0',ifile,ifile,fname))
   ##  system(paste('cdo ifthen -gtc,0',ifile,ifile,fname))
   X <- aggregatedailyfield(fname=fname,cline=cline)
-  Y <- aggregatedailyfield(fname=,'data/mask.nc',cline=cline,output='fw_0.25deg_reg_v12.0.nc')
-  file.remove(fname); file.remove('data/mask.nc')
+  Y <- aggregatedailyfield(fname=,'~/data/mask.nc',cline=cline,output='fw_0.25deg_reg.nc')
+  file.remove(fname); file.remove('~/data/mask.nc')
 }
 
 ```
@@ -453,10 +453,10 @@ if (downloadfromunican) {
 }
 
 print('Get the predictands: mu & fw from EOBS')
-if (!file.exists('mu_0.25deg_reg_v12.0.nc'))
-  mu.eobs <-  wetdaymean('data.ECAD/rr_0.25deg_reg_v12.0.nc') else
-  mu.eobs <- retrieve('mu_0.25deg_reg_v12.0.nc')
-fw.eobs <- retrieve('fw_0.25deg_reg_v12.0.nc')
+if (!file.exists('~/data/mu_0.25deg_reg.nc'))
+  mu.eobs <-  wetdaymean('~/data/data.ECAD/rr_0.25deg_reg.nc') else
+  mu.eobs <- retrieve('~/data/mu_0.25deg_reg.nc')
+fw.eobs <- retrieve('~/data/fw_0.25deg_reg.nc')
 attr(mu.eobs,'variable') <- 'mu'
 attr(fw.eobs,'variable') <- 'fw'
 attr(fw.eobs,'unit') <- 'fraction'
