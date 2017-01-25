@@ -92,6 +92,27 @@ ds.mu.orl <- DS(pca.mu,eof.olr)
 plot(ds.mu.orl,new=FALSE)
 ```
 
+The calibration is fairly successful in identifying a connection between OLR and precipitation intencity. To see if other factors such as moisture has an effect, we estimate the residual from this regression analysis and repeat the analysis using saturation water vapour as predictor.
+
+```{r, fig.width=8, fig.height=8}
+## Estimate the residuals
+pca.res <- subset(pca.mu,it=ds.mu.orl)
+coredata(pca.res) <- coredata(pca.res) - coredata(ds.mu.orl)
+plot(pca.res)
+```
+
+```{r, fig.width=8, fig.height=8}
+mat <- retrieve('~/Downloads/ERAINT-t2m-mon.nc', lon=c(-90,40),lat=c(30,70))
+es <- C.C.eq(mat)
+es <- subset(as.4seasons(es),it='djf')
+es <- mask(es,land=TRUE)
+eof.es<- EOF(es,n=10)
+class(eof.es)[3] <- "season"
+ds.mu.es <- DS(pca.res,eof.es)
+plot(ds.mu.es,new=FALSE)
+```
+
+
 ## Analysis: temperature
 
 Check for melting.
