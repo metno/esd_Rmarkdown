@@ -19,6 +19,61 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 ## Analysis: precipitation
 
+```{r, eval=FALSE}
+## Get files on the outgoing long-wave radiation (OLR).
+cmip5.urls <- function(experiment='rcp45',varid='rlut',
+                       url="http://climexp.knmi.nl/CMIP5/monthly/", 
+                       path=NULL,off=FALSE,force=FALSE,verbose=FALSE) {
+  urlfiles <- "NA"
+  if(verbose) print("cmip5.urls")
+  if(is.null(path)) path <- getwd()
+  for (iexp in experiment) {
+    if(verbose) print(iexp)
+    for (ivar in varid) {
+      if(verbose) print(ivar)
+      ## Loop on the number of experiments
+      for (irun in 0:110) { ## 
+        if(verbose) print(paste(irun))
+        ## Update experiment number
+        if (irun < 10) run.id = paste("00",as.character(irun),sep="")
+        else if (irun < 100) run.id = paste("0",as.character(irun),sep="")
+        else run.id <- as.character(irun)
+        
+        ## Create output directory for the climate experiment
+        path.exp <- file.path(path,experiment[grep(iexp,experiment)],
+                              fsep = .Platform$file.sep)
+        if (!file.exists(path.exp)) dir.create(path.exp)
+        if (verbose) print(path.exp[grep(iexp,experiment)])
+        ## Define the output file
+        destfile <- paste(path.exp,varid[grep(ivar,varid)],sep="/") 
+        destfile <- paste(destfile,"_Amon_ens_",sep="")
+        destfile <- paste(destfile,iexp,sep="")
+        destfile <- paste(destfile,run.id,sep="_")
+        destfile <- paste(destfile,".nc",sep="")
+        
+        if (!file.exists(destfile) | force) {
+          ## Update output filename with attributes:
+          urlfile  <- paste(url,ivar,sep="")             # add var directory
+          urlfile  <- paste(urlfile,ivar,sep="/")        # add v.name
+          urlfile  <- paste(urlfile,"_Amon_ens_",sep="") # add text
+          urlfile  <- paste(urlfile,iexp,sep="")         # add exp.name
+          urlfile  <- paste(urlfile,run.id,sep="_")      # add exp ID number
+          urlfile  <- paste(urlfile,".nc",sep="")        # add file ext
+        }
+        urlfiles <- c(urlfiles,urlfile)
+        if (verbose) print(urlfile)
+      }
+    } # End for   
+  }
+  return(urlfiles[-1])
+}
+
+## download the CMIP5-files from the KNMI ClimateExplorer
+urls <- cmip5.urls()
+for (i in 1:length(urls)) if (!file.exists(substr(urls[i],43,70))) download.file(urls[i],substr(urls[i],43,70))
+
+```
+
 Data from ECA&D: precipitation. Snow depth?
 
 ```{r}
@@ -111,6 +166,8 @@ class(eof.es)[3] <- "season"
 ds.mu.es <- DS(pca.res,eof.es)
 plot(ds.mu.es,new=FALSE)
 ```
+
+A projection of future wet-day mean precipitation based on DSensemble will be carried out in two steps. First use the PCA from the original data as predictands in a set of runs with OLR as predictors. Then use the residual as estimated above as predictand for a set of DSensembles runs with the water vapour pressure as predictors. The final result is the sum of these two steps.The wet-day mean precipitation is projected through s single stemp where DSensemble uses SLP as predictor. The seasonal means are then estimated as the product between the wet-day frequency and the wet-day mean precipitation.
 
 
 ## Analysis: temperature

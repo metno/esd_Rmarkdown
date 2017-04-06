@@ -1,0 +1,1 @@
+pdfjam figure2a.pdf figure2b.pdf --nup 1x2 --no-landscape --outfile figure2.test.pdf

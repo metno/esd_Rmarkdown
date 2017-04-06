@@ -12,6 +12,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
+Load the R-library ```esd``` which is used for data analysis.
+
+```{r,message=FALSE}
+library(esd)
+```
+
 ## Storm and Sea Surge at a Baltic Sea Port
 
 An oil piping transportation system is operating at Gdynia Port, Poland, one of the Baltic Oil Terminals. The system is designated to receive, store and send carriages and cars containing oil products and loading oil tankers. The purpose of the case study is to identify and predict safety risks associated with maritime transportation of petrol and oil. The transport of dangerous chemicals on sea is reasonably safe at normal environmental conditions. However, the transported goods may be swept overboard as a result of rough weather and hard sea conditions. The Baltic Sea and nearby ecosystems are vulnerable to pollution and contamination as a result of maritime accidents during the transporation of dangerous goods. Approximately one major accident happen at the Baltic Sea every year. There are more than 50,000 ships entering and leaving the Baltic Sea every year and about 2,000 vessels are at the Baltic Sea at any given moment. 
@@ -20,21 +26,28 @@ Here, we consider the potential stress of weather on the operation conditions, f
 
 **Wind**
 
-Observations of the wind are sparse in the Baltic region, but approximate values of wind speed and direction can be calculated from the sea level pressure (slp). A gridded slp product from E-OBS dataset is used which is made available by the EU-FP6 project ENSEMBLES (http://ensembles-eu.metoffice.com) and the data providers in the ECA&D project (http://www.ecad.eu). 
+Synoptic storms are associated with winds, storm surges and waves. 
+
+```{r}
+load('cyclones.baltic.rda')
+map(cyclones.baltic)
+```
+
+Plot the number of trajectories over time
+
+```{r}
+plot(cyclones.baltic)
+```
 
 ***Import E-OBS data***
 
-Load the R-library ```esd``` which is used for data analysis.
-
-```{r,message=FALSE}
-library(esd)
-```
+Observations of the wind are sparse in the Baltic region, but approximate values of wind speed and direction can be calculated from the sea level pressure (slp). A gridded slp product from E-OBS dataset is used which is made available by the EU-FP6 project ENSEMBLES (http://ensembles-eu.metoffice.com) and the data providers in the ECA&D project (http://www.ecad.eu). 
 
 Import the E-OBS slp data using the retrieve function of the esd package. The data is represented with lower-case $x$.
 
 ```{r,warning=FALSE}
 if (!file.exists('eu-circle_case-study-2_slp.rda')) {
-  x <- retrieve('pp_0.25deg_reg_v13.1.nc',path='~/Data/data.EOBS',
+  x <- retrieve('pp_0.25deg_reg.nc',path='~/storeB/data/data.ECAD',
                 lon=c(10,30),lat=c(53,66))
   save(file='eu-circle_case-study-2_slp.rda',x)
 } else load('eu-circle_case-study-2_slp.rda')
@@ -47,20 +60,14 @@ diagnose(x)
 
 Calculate the geostrophic wind based on the slp data. 
 
-```{r,warning=FALSE}
-if (!file.exists('eu-circle_case-study-2_slp.rda')) {
-  x <- retrieve('pp_0.25deg_reg_v13.1.nc',path='~/Data/data.EOBS',
-                lon=c(10,30),lat=c(53,66))
-  save(file='eu-circle_case-study-2_slp.rda',x)
-} else load('eu-circle_case-study-2_slp.rda')
-## Only keep the ECAD data
-map(x,FUN='q95',new=TRUE)
-diagnose(x)
+**Ship accidents in the Baltic Sea**
+
+```{r}
+baltic.events <- c(19931010,20000328,20010328,20040313,20060330,20081017,20081202,20091002,20100128)
+uv <- geostrophicwind(x)
 ```
 
 
-**Ship accidents in the Baltic Sea**
-baltic.events <- c(19931010,20000328,20010328,20040313,20060330,20081017,20081202,20091002,20100128)
 
 **Precipitation**
 

@@ -1,0 +1,202 @@
+---
+title: "spell-statistics"
+author: "Rasmus Benestad"
+date: "February 7, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Assess the duration of warm spells in Indian tmax data. 
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+
+```{r tmax}
+library(esd)
+if (!file.exists("tmax.india.rda")) {
+  ss <- select.station(param='tmax',src='GHCND',cntr='India',nmin=50)
+  tmax <- station(ss)
+  map(tmax,FUN='nv')
+} else load("tmax.india.rda")
+```
+
+## Data quality
+
+You can also embed plots, for example:
+
+```{r data-quality-control}
+diagnose(tmax)
+## Remove periods with mostly missing data and stations with few valid data
+Y <- subset(tmax,it=c(1970,2015))
+nv <- apply(coredata(Y),2,FUN='nv')
+Y <- subset(Y,is=nv > 10290)
+```
+
+## Spell sttatistics
+
+Wheat: sowing: Upper temperature limit: 15.7C; T>31C for 5 days induces pollen sterility before the flowering phase; 
+```{r, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
+d <- dim(Y)
+for (i in 1:d[2]) {
+  sds <- spell(subset(Y,is=i),threshold=31)
+  if (i==1) lws <- subset(sds,is=1) else
+            lws <- combine.stations(lws,subset(sds,is=1))
+  hist(sds,new=FALSE)
+}
+```
+
+
+```{r}
+tmax.jja <- subset(as.4seasons(Y),it='jja')
+lws.jja <- subset(as.4seasons(lws),it='jja')
+```
+
+```{r}
+## Figure 4.
+xy <- merge(zoo(lws.jja),zoo(tmax.jja),all=FALSE)
+cal.tmax.lws <- data.frame(x=c(coredata(xy)[,36:70]),y=c(coredata(xy[,1:35])))
+cal.tmax.lws.log <- data.frame(x=log(c(coredata(xy)[,36:70])),y=log(c(coredata(xy[,1:35]))))
+summary(lm(y ~x, data=cal.tmax.lws.log))
+fit <- glm(y ~ x, data=cal.tmax.lws,family='poisson')
+plot(cal.tmax.lws,xlab=expression(bar(T[max])),ylab=expression(bar(L[hot])))
+pre <- data.frame(x=seq(28,42,by=0.1))
+lines(pre$x,exp(predict(fit,newdata=pre)),col=rgb(1,0,0,0.4),lwd=3)
+grid()
+```
+
+## Downscaling
+
+### Prepare rthe preictand
+
+```{r, fig.width=8, fig.height=8}
+pca.lws <- PCA(pcafill(lws.jja),n=5)
+pca.tmax <- PCA(pcafill(tmax.jja),n=5)
+plot(pca.lws,new=FALSE)
+plot(pca.tmax,new=FALSE)
+```
+
+
+```{r}
+if (!file.exists("dse.tmax.india.rda")) {
+  T2m <- subset(as.4seasons(retrieve("~/Downloads//air.mon.mean.nc",lon=c(65,95),lat=c(5,27))),it='jja')
+  dse.tmax.india <- DSensemble.pca(pca.tmax,predictor=T2m,biascorrect = TRUE,ip=1:4)
+  save(dse.tmax.india,file="dse.tmax.india.rda")
+} else load("dse.tmax.india.rda")
+
+```
+
+
+
+## Supporting analysis
+
+```{r}
+#3 Function: autocorrelation
+
+AR <- function(n,mean=1,sd=1,a1=0.8) {
+  rn <- rnorm(n,mean=mean,sd=sd)
+  for (i in 2:n) rn[i] <- (a1*rn[i-1] + (1-a1)*rn[i])
+  invisible(rn)
+}
+
+```
+
+Compare the mean temperature and spell length statistics for data in Europe.  
+
+```{r, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
+## Script that reads European temperature data and explores the connection between 
+## the seasonal mean temperature and the mean length of the warm/cold spells 
+it <- 'jja'
+if (it =='djf') {
+  cold <- TRUE
+  threshold <- 0
+  is <- 2
+} else {
+  cold <- FALSE
+  threshold <- 20
+  is <- 1
+}
+
+ss <- select.station(src='ecad',param='tg',nmin=75)
+d <- dim(ss)
+x <- rep(NA,d[1]); y <- x; std <- y
+q.spell <- rep(NA,d[1]*10); dim(q.spell) <- c(d[1],10); q.geom <- q.spell
+
+if (!file.exists(paste('ecad.tg.',it,'.rda',sep=''))) {
+  for (i in 1:d[1]) {
+   z <- station(ss[i,])
+   print(loc(z))
+   ## Make sure that there are values above and below the given threshold - otherwise
+   ## spell will not work.
+   if ( (sum(z > threshold,na.rm=TRUE)>1000) & (sum(z < threshold,na.rm=TRUE)> 1000) ) {
+    s <- spell(z,threshold=threshold)
+    y[i] <- mean(subset(subset(s,is=is),it=it),na.rm=TRUE)
+    
+    ## Compare the spell-distribution with a geometric distribution
+    q.spell[i,] <- quantile(subset(subset(s,is=is),it=it),probs=seq(0.05,0.95,by=0.1),na.rm=TRUE)
+    q.geom[i,] <- qgeom(p=seq(0.05,0.95,by=0.1),prob=1/y[i])
+    std[i] <- sd(subset(z,it=it),na.rm=TRUE)
+    x[i] <- mean(subset(z,it=it),na.rm=TRUE)
+    }
+  }
+  save(x,y,s,std,q.spell,q.geom,file=paste('ecad.tg.',it,'.rda',sep=''))
+} else load(paste('ecad.tg.',it,'.rda',sep=''))
+## Plot results
+
+plot(x,y,main=paste('Mean',it,'temperature & mean length of intervals',
+                    c('below','above')[c(cold,!cold)],threshold,'C'),
+     sub='source: ECA&D',pch=19,col=rgb(0.5,0,0,0.3),
+     xlab=expression(bar(T)),ylab=expression(bar(tau)))
+grid()
+
+## Monte-Carlo simulations to compare spell length with 
+mstd <- 2*max(std,na.rm=TRUE)
+if (!cold) mx <- mean(x,na.rm=TRUE) else mx <- 0
+nmc <- 300
+ymc <- rep(NA,nmc); xmc <- ymc
+for (m in seq(mx-mstd,mx+mstd,length=nmc)) {
+  coredata(z) <- AR(length(z),mean=m,sd=mstd)
+  s <- spell(z,threshold=threshold)
+  ymc[i] <- mean(subset(subset(s,is=is),it=it),na.rm=TRUE)
+  xmc[i] <- m
+  points(xmc,ymc,pch=19,col='grey75')
+}
+
+points(x,y,pch=19,col=rgb(0.5,0,0,0.3))
+
+ix <- order(x); x <- x[ix]; y <- y[ix]
+ok <- is.finite(x) & is.finite(y)
+x <- x[ok]; y <- y[ok]; std <- std[ok]
+calfit <- data.frame(x=x,y=y)
+attr(calfit,'max(x)') <- max(x,na.rm=TRUE)
+#fit <- lm(y ~ I(x) + I(x^2),data=calfit)
+fit <- glm(y ~ x,data=calfit,family='poisson')
+lines(calfit$x,exp(predict(fit)),col='red')
+
+attr(x,'description') <- paste(it,'mean temperature (degC)')
+if (cold) attr(y,'description') <- 'mean cold spell length (days)' else
+          attr(y,'description') <- 'mean warm spell length (days)'
+attr(y,'threshold') <- threshold
+attr(x,'label') <- expression(bar(T))
+attr(x,'Monte-Carlo') <- xmc
+attr(y,'label') <- expression(bar(tau[T < T0]))
+attr(y,'Monte-Carlo)') <- ymc
+meanspell <- data.frame(meanT=x,meanL=y,std=std)
+attr(meanspell,'fit') <- fit
+attr(meanspell,'geometric.fit') <- data.frame(q.spell=q.spell,q.geom = q.geom)
+save(meanspell,file=paste('meanspell',it,c('below','above')[c(cold,!cold)],threshold,'.rda',sep=''))
+
+## Test if the spell length statistics is close to geometric
+plot(c(q.spell),c(q.geom),main='Spell length statistics & the geometric distribution',
+     xlim=range(q.spell,q.geom,na.rm=TRUE),
+     ylim=range(q.spell,q.geom,na.rm=TRUE),pch=19,col=rgb(0,0,0,0.2),
+     xlab=expression(q[p]),ylab='qgeom(p,1/mean)')
+grid()
+lines(range(q.spell,q.geom,na.rm=TRUE),range(q.spell,q.geom,na.rm=TRUE),col='red')
+
+```
+

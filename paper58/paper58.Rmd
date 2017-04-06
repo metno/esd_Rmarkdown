@@ -1,5 +1,7 @@
 ---
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 *Benestad et al - Simple and approximate estimation of future precipitation return-values* 
 -----------------------------------
@@ -46,6 +48,8 @@ sessionInfo()
 Below we define a number of functions used in the data processing and analysis. These functions are used to make the R-code more simple and improve clarity.
 
 **Simple functions to estimate various statistics**
+
+
 
 First we define the methods for calculating statistical measures of precipitation (mean, min, max, wettest month, and driest month), estimating percentiles assuming an exponential distribution, calculating skill-scores and regression coefficients. 
   
@@ -281,7 +285,7 @@ mupcamap <- function(mu,pca,ipca,xlim,ylim,r2) {
   pch[!hi] <- 1
   pch[!mo] <- 4
   cex <- 1.2*c(r2) + 0.5
-  map(mu, xlim=xlim,ylim=ylim,bg='grey90',col='grey90',cex=0.5,new=FALSE)
+  map(mu, xlim=xlim,ylim=ylim,bg='grey90',col='grey90',cex=0.5,gridlines=FALSE,new=FALSE)
   points(lon(mu),lat(mu),pch=pch,col=col,cex=cex)
   par(xpd=TRUE)
   text(10,73,paste('Annual cycle in PC',ipca,
@@ -606,7 +610,7 @@ map(mux, xlim=xlim,ylim=ylim,cex=Cex,bg='grey70',col='grey70',gridlines=FALSE,
 points(lon(mux),lat(mux),pch=19,col=colx,cex=Cex)
 points(lon(mux),lat(mux),pch=21,col=coly,cex=Cex,lwd=2)
 par(xpd=TRUE)
-text(20,73,'Wet-day mean: 2100')
+text(20,72,'Wet-day mean: 2100')
 legend(20,32,c(expression(bar(x)),expression(q[95])),
        pch=c(21,19),bty='n',col='grey',text.col='grey',horiz=TRUE)
 
@@ -656,7 +660,41 @@ plot(c(0,1),c(0,1),type='n',xlab='',ylab='')
 text(0.5,0.5,'Supporting figures',cex=2,font=2)
 ```
 
-**Figure SM1**
+
+
+**Figure SM2**
+
+Figure SM2 shows a test of the assumption that that the wet-day daily precipitation is approximately exponentially distributed, by comparing the actual percentiles with quantiles estimated for different samples 
+with different annual mean wet-day precipitation using the formula for exponentially distributed data: $q_p = -ln(1-p)\mu$.
+ 
+```{r}
+## Figure SM1.
+## test: See if the quantiles are consistent when the mean mu varies.
+qtest <- aggregate(y1,year,FUN='qqexp')
+qx <- c(coredata(qtest[,1:101]))
+qy <- c(coredata(qtest[,102:202]))
+
+par(bty='n')
+plot(qx,qy,xlim=c(0,40),ylim=c(0,40),
+     pch=19,col=rgb(0.2,0.2,0.7,0.3),cex=cex,
+     main='Test: exponential distribution & changing mean',
+     xlab=expression(q[p]),ylab=expression(-log(1-p)*mu))
+lines(c(0,40),c(0,40),col='grey')
+figlab('Figure SM1')
+```
+
+**Figure SM2**
+
+Figure SM3 presents a map of the NCEP reanalysis temperature for the North Atlantic region that is used as predictor for the downscaling (see e.g., Figure 1 and 3). 
+
+```{r}
+## Show the predictor area:
+X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
+map(X,projection='sphere',colbar=list(pal="budrd",breaks=seq(8,28,by=0.5)))
+figlab('Figure SM2',xpos=0.8,ypos=0.999)
+```
+
+**Figure SM3**
 
 Figure SM1 show the seasonal cycles of various precipitation statistics (mean, wet-day mean, wet-day frequency, mean consecutive wet days and dry days), calculated based on ECA&D observations for stations with long precipitation records. 
 
@@ -682,42 +720,8 @@ legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
                expression(bar(n[c*w*d])),expression(bar(n[c*d*d]))),bty='n',
        col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1),
        ncol=2)
-figlab('Figure SM1')
+figlab('Figure SM3')
 ```
-
-
-**Figure SM2**
-
-Figure SM2 shows a test of the assumption that that the wet-day daily precipitation is approximately exponentially distributed, by comparing the actual percentiles with quantiles estimated for different samples 
-with different annual mean wet-day precipitation using the formula for exponentially distributed data: $q_p = -ln(1-p)\mu$.
- 
-```{r}
-## Figure SM2.
-## test: See if the quantiles are consistent when the mean mu varies.
-qtest <- aggregate(y1,year,FUN='qqexp')
-qx <- c(coredata(qtest[,1:101]))
-qy <- c(coredata(qtest[,102:202]))
-
-par(bty='n')
-plot(qx,qy,xlim=c(0,40),ylim=c(0,40),
-     pch=19,col=rgb(0.2,0.2,0.7,0.3),cex=cex,
-     main='Test: exponential distribution & changing mean',
-     xlab=expression(q[p]),ylab=expression(-log(1-p)*mu))
-lines(c(0,40),c(0,40),col='grey')
-figlab('Figure SM2')
-```
-
-**Figure SM3**
-
-Figure SM3 presents a map of the NCEP reanalysis temperature for the North Atlantic region that is used as predictor for the downscaling (see e.g., Figure 1 and 3). 
-
-```{r}
-## Show the predictor area:
-X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
-map(X,projection='sphere',colbar=list(pal="budrd",breaks=seq(8,28,by=0.5)))
-figlab('Figure SM3',xpos=0.8,ypos=0.999)
-```
-
 
 **Figure SM4**
 
@@ -831,11 +835,13 @@ figlab('Figure SM6')
 
 **Figure SM7**
 
-Figure SM7 shows the historical trends in the wet-day mean preciptation.
+Figure SM7 shows the historical trends in the wet-day mean preciptation. Locations with trends that are statistically significant at the 5\%-level are shown with a ring around the symbol. The significance test was based on a regression analysis and the p-value associated with the fitted slope of a linear fit. 
 
-```{r}
+```{r, fig.height=8}
 ## Map showing trends in mu
 map(MU,FUN='trend',cex=1,colbar=list(pal="budrd",breaks=pretty(c(-0.5,0.5),n=21)))
+pval <- apply(coredata(MU),2,'trend.pval') <= 0.05
+points(lon(subset(MU,is=pval)),lat(subset(MU,is=pval)),cex=1,col=rgb(0,0,0,0.2))
 figlab('Figure SM7',ypos=0.999)
 figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),xpos=0.5,ypos=0.999)
 ```
@@ -856,15 +862,19 @@ figlab('Figure SM8')
 
 **Figure SM9**
 
-Figure SM9 shows the spatial distribution of the historical trends in wet-day frequency on a map.
+Figure SM9 shows the spatial distribution of the historical trends in wet-day frequency on a map, similar to Fig SM7.
 
-```{r}
+```{r, fig.height=8}
 ## Map showing trends in fw
-#dev.new()
 map(FW,FUN='trend',cex=1,colbar=list(pal="budrd",breaks=pretty(c(-0.03,0.03),n=21)))
+pval <- apply(coredata(FW),2,'trend.pval') <= 0.05
+points(lon(subset(FW,is=pval)),lat(subset(FW,is=pval)),cex=1.2,col=rgb(0,0,0,0.75))
+#points(lon(FW),lat(FW),cex=1.2,col=rgb(0,0,0,0.3))
 figlab('Figure SM9',ypos=0.999)
 figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),xpos=0.5,ypos=0.999)
 ```
+
+
 
 **Analysis from other continents and with local temperature**
 

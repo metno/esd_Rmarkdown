@@ -232,10 +232,10 @@ mupcamap <- function(mu,pca,ipca,xlim,ylim,r2) {
   pch[!mo] <- 4
   cex <- 1.2*c(r2) + 0.5
   
-  map(mu, xlim=xlim,ylim=ylim,bg='grey90',col='grey90',cex=0.5,new=FALSE)
+  map(mu, xlim=xlim,ylim=ylim,bg='grey90',col='grey90',cex=0.5,gridlines=FALSE,new=FALSE)
   points(lon(mu),lat(mu),pch=pch,col=col,cex=cex)
   par(xpd=TRUE)
-  text(10,73,paste('Annual cycle in PC',ipca,
+  text(10,72,paste('Annual cycle in PC',ipca,
                    'with variance of',round(100*pca$d[ipca]^2/sum(pca$d^2)),'%'),pos=4)
   
   colbar(pretty(pca$v[,ipca],n=100),colpc,fig = c(0.08, 0.12, 0.05, 0.2))
@@ -499,7 +499,7 @@ map(mux, xlim=xlim,ylim=ylim,cex=Cex,bg='grey70',col='grey70',gridlines=FALSE,
 points(lon(mux),lat(mux),pch=19,col=colx,cex=Cex)
 points(lon(mux),lat(mux),pch=21,col=coly,cex=Cex,lwd=2)
 par(xpd=TRUE)
-text(20,73,'Wet-day mean: 2100')
+text(20,72,'Wet-day mean: 2100')
 legend(20,32,c(expression(bar(x)),expression(q[95])),
        pch=c(21,19),bty='n',col='grey',text.col='grey',horiz=TRUE)
 
@@ -564,8 +564,8 @@ legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
                expression(bar(n)[c*w*d]),expression(bar(n)[c*d*d])),bty='n',
        col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1),
        ncol=2)
-figlab('Figure SM1')
-dev.copy2pdf(file='figureSM1.pdf')
+figlab('Figure SM3')
+dev.copy2pdf(file='figureSM3.pdf')
 
 ## Figure SM2.
 ## test: See if the quantiles are consistent when the mean mu varies.
@@ -580,16 +580,16 @@ plot(qx,qy,xlim=c(0,40),ylim=c(0,40),
      main='Test: exponential distribution & changing mean',
      xlab=expression(q[p]),ylab=expression(-log(1-p)*mu))
 lines(c(0,40),c(0,40),col='grey')
-figlab('Figure SM2')
-dev.copy2pdf(file='figureSM2.pdf')
+figlab('Figure SM1')
+dev.copy2pdf(file='figureSM1.pdf')
 
 ## Figure SM3
 ## Show the predictor area:
 X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
 dev.new()
 map(X,projection='sphere',colbar=list(pal="budrd",breaks=seq(8,28,by=0.5)))
-figlab('Figure SM3',xpos=0.8,ypos=0.999)
-dev.copy2pdf(file='figureSM3.pdf')
+figlab('Figure SM2',xpos=0.8,ypos=0.999)
+dev.copy2pdf(file='figureSM2.pdf')
 
 ## Figure SM4
 ## Example of estimates for 2050:
@@ -692,6 +692,8 @@ dev.copy2pdf(file='figureSM6.pdf')
 dev.new()
 map(MU,FUN='trend',cex=1,
     colbar=list(pal="budrd",breaks=pretty(c(-0.5,0.5),n=21)))
+pval <- apply(coredata(MU),2,'trend.pval') <= 0.05
+plot(lon(subset(MU,is=pval)),lat(subset(MU,is=pval)),cex=1.2,col=rgb(0,0,0,0.5))
 figlab('Figure SM7',xpos=0.8,ypos=0.999)
 figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),ypos=0.999)
 figlab(paste(range(year(MU)),collapse="-"),ypos=0.96)
@@ -713,6 +715,9 @@ dev.copy2pdf(file='figureSM8.pdf')
 dev.new()
 map(FW,FUN='trend',cex=1,
     colbar=list(pal="budrd",breaks=pretty(c(-0.03,0.03),n=12)))
+pval <- apply(coredata(FW),2,'trend.pval') <= 0.05
+plot(lon(subset(FW,is=pval)),lat(subset(FW,is=pval)),cex=1.2,col=rgb(0,0,0,0.5))
+#points(lon(FW),lat(FW),cex=1.2,col=rgb(0,0,0,0.3))
 figlab('Figure SM9',xpos=0.8,ypos=0.999)
 figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),ypos=0.999)
 figlab(paste(range(year(MU)),collapse="-"),ypos=0.96)

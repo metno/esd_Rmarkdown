@@ -9,7 +9,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Bangladesh: tropical cyclones and stormsurges, heavi precipitation. 
+Bangladesh: tropical cyclones and stormsurges, heavy precipitation. 
 
 Bangladesh is highly vulnerable to climate induced hazrds and disasters and its coastal part are mostly threatened for the impacts of climate change in case of cyclone, storm surges, flood, salinity and tsunami disaster. Even last twenty years the coastal peoples have suffered due to super cyclone SIDR and AILA devastations. Last two deacdes a lots of disaster coping interventions have been provided to the community to achieve resiliency in this areas. So really it will be a field laboratory for the research of Disaster Resilience and Climate Change: Science and innovation for adaptation to climate  change: from assessing costs, risks and opportunities to demonstration of options and practices.
 
@@ -30,6 +30,7 @@ library(esd)
 ```{r pressure, echo=FALSE}
 # Daily precipitation from BMD 
 load('bmd.rda')
+map(pr.bmd,new=FALSE)
 ```
 
 Scale the precipitation according to the indididual wet-day mean. Then take the mean of the station series to get an index of large-scale precipitation intensity.
@@ -76,8 +77,10 @@ Correlation between storm tracks and stations.
 
 ## Tidal measurements
 
+Time series and map of the tidal data from 
+
 ```{r}
 load('Bangladesh-tidal-stations.rda')
-plot(Z,zoom=8)
+plot(Z,zoom=8,new=FALSE)
 ```
 

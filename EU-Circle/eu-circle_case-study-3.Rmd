@@ -34,6 +34,77 @@ library(esd)
 ## Information about the system and session
 ```
 
+```{r, eval=FALSE}
+## Get files on the outgoing long-wave radiation (OLR).
+cmip5.urls <- function(experiment='rcp45',varid='rlut',
+                       url="http://climexp.knmi.nl/CMIP5/monthly/", 
+                       path=NULL,off=FALSE,force=FALSE,verbose=FALSE) {
+  urlfiles <- "NA"
+  if(verbose) print("cmip5.urls")
+  if(is.null(path)) path <- getwd()
+  for (iexp in experiment) {
+    if(verbose) print(iexp)
+    for (ivar in varid) {
+      if(verbose) print(ivar)
+      ## Loop on the number of experiments
+      for (irun in 0:110) { ## 
+        if(verbose) print(paste(irun))
+        ## Update experiment number
+        if (irun < 10) run.id = paste("00",as.character(irun),sep="")
+        else if (irun < 100) run.id = paste("0",as.character(irun),sep="")
+        else run.id <- as.character(irun)
+        
+        ## Create output directory for the climate experiment
+        path.exp <- file.path(path,experiment[grep(iexp,experiment)],
+                              fsep = .Platform$file.sep)
+        if (!file.exists(path.exp)) dir.create(path.exp)
+        if (verbose) print(path.exp[grep(iexp,experiment)])
+        ## Define the output file
+        destfile <- paste(path.exp,varid[grep(ivar,varid)],sep="/") 
+        destfile <- paste(destfile,"_Amon_ens_",sep="")
+        destfile <- paste(destfile,iexp,sep="")
+        destfile <- paste(destfile,run.id,sep="_")
+        destfile <- paste(destfile,".nc",sep="")
+        
+        if (!file.exists(destfile) | force) {
+          ## Update output filename with attributes:
+          urlfile  <- paste(url,ivar,sep="")             # add var directory
+          urlfile  <- paste(urlfile,ivar,sep="/")        # add v.name
+          urlfile  <- paste(urlfile,"_Amon_ens_",sep="") # add text
+          urlfile  <- paste(urlfile,iexp,sep="")         # add exp.name
+          urlfile  <- paste(urlfile,run.id,sep="_")      # add exp ID number
+          urlfile  <- paste(urlfile,".nc",sep="")        # add file ext
+        }
+        urlfiles <- c(urlfiles,urlfile)
+        if (verbose) print(urlfile)
+      }
+    } # End for   
+  }
+  return(urlfiles[-1])
+}
+
+## download the CMIP5-files from the KNMI ClimateExplorer
+urls <- cmip5.urls()
+for (i in 1:length(urls)) if (!file.exists(substr(urls[i],43,70))) download.file(urls[i],substr(urls[i],43,70))
+
+```
+
+
+**Wind**
+
+Synoptic storms are associated with winds, storm surges and waves. 
+
+```{r}
+load('cyclones.uk.rda')
+map(cyclones.uk,new=FALSE)
+```
+
+Plot the number of trajectories over time
+
+```{r}
+plot(cyclones.uk,new=FALSE)
+```
+
 ---------------------------------
 
 Function to estimate probabilty for daily amount of exceeding a threshold x0 given that the distribution follows an exponential distribution and the records of the wet-day mean precipitation and frequency.
@@ -261,9 +332,9 @@ The predictor for the wet-day mean precipitation was taken to be the saturation 
 
 ```{r predictor, warning=FALSE, message=FALSE}
 ## The mean sea-level pressure
-slp <- retrieve('slp.mon.mean.nc',lon=c(-80,0),lat=c(20,70))
+slp <- retrieve('~/Downloads/slp.mon.mean.nc',lon=c(-80,0),lat=c(20,70))
 ## The surface temperature
-t2m <- retrieve('air.mon.mean.nc',lon=c(-80,0),lat=c(10,70))
+t2m <- retrieve('~/Downloads/air.mon.mean.nc',lon=c(-80,0),lat=c(10,70))
 ## Saturation water pressure estimated from maritime temperatures
 es <- C.C.eq(mask(t2m,land=TRUE))
 eof.slp<- EOF(annual(slp))
@@ -365,8 +436,11 @@ grid()
 Single station with hourly data from Newlyn:
 
 ```{r newlyn, results="hide", warning=FALSE, message=FALSE}
-newlyn <- station.newlyn()
-newlyn <- aggregate(newlyn,year,FUN='max',na.rm=TRUE)
+if (!file.exists('newlyn.rda')) {
+  newlyn <- station.newlyn()
+  newlyn <- aggregate(newlyn,year,FUN='max',na.rm=TRUE)
+  save(newlyn,file='newlyn.rda')
+} else load('newlyn.rda')
 ```
 
 Plot the Newlyn tidal data:
@@ -394,7 +468,9 @@ index(gloss) <- year(gloss)
 Z <- combine.stations(newlyn,sonel,gloss)
 nv <- apply(coredata(Z),2,FUN='nv')
 Z <- subset(Z,is=(nv > 50))
-Z <- subset(Z,it=c(1950,2015))
+Z <- subset(Z,it=c(1966,2015))
+coredata(Z)[!is.finite(Z)] <- NA
+coredata(Z) <- t(t(coredata(Z)) - colMeans(coredata(Z),na.rm=TRUE))
 plot(Z); grid()
 ```
 
@@ -406,12 +482,39 @@ diagnose(Z)
 
 Make a map of the trend in the local sea-level - mm/decade
 
-```{r sl-trend-map, warning=FALSE, message=FALSE}
+```{r sl-trend-map, warning=FALSE, message=FALSE, fig.height=8}
 zc <- coredata(Z)
 zc[is.infinite(zc)] <- NA
 zc -> coredata(Z)
-map(Z,FUN='trend',cex=-2)
+map(Z,pch=19,FUN='trend',cex=-2,add.text=TRUE)
 ```
+
+Get the annual mean global mean sea-level and analyse the correspondense between that and the local sea level - we can expect a link from heuristic physics. Also include an account of the mean sea-level pressure.
+
+```{r, warning=FALSE, message=FALSE, fig.height=8}
+gsl <- annual(GSL())
+plot(gsl)
+slp <- annual(retrieve('~/Downloads/slp.mon.mean.nc',lon=c(-20,10),lat=c(45,60)))
+eof.slp <- EOF(slp,n=5)
+## Manipulate the data: replace the last SLP EOF with the global sea-level and use DS to explore connections
+i1 <- is.element(year(eof.slp),year(gsl))
+i2 <- is.element(year(gsl),year(eof.slp))
+coredata(eof.slp)[i1,5] <- coredata(gsl)[i2]
+attr(eof.slp,'pattern')[,,5] <- 1
+attr(eof.slp,'eigenvalue') <- 1
+plot(eof.slp,ip=5,new=FALSE)
+```
+
+Prepare the local tidal data: PCA
+
+```{r, warning=FALSE, message=FALSE, fig.height=8}
+nv <- apply(coredata(Z),2,'nv')
+Z <- subset(Z,is=nv > 45)
+Z <- pcafill(Z)
+pca.Z <- PCA(Z)
+plot(pca.Z, new=FALSE)
+```
+
 
 ## Wind
 
@@ -482,7 +585,7 @@ The change in 2006-2010 is also visible in the wind direction. This could be an 
 
 ```{r zonal-wind-check-get-slp, warning=FALSE, message=FALSE}
 ## Trend in upper wind direction
-SLP <- retrieve('slp.mon.mean.nc',lon=c(-50,30),lat=c(40,60))
+SLP <- retrieve('~/Downloads/slp.mon.mean.nc',lon=c(-50,30),lat=c(40,60))
 eof.slp<- EOF(annual(SLP))
 ```
 
@@ -528,12 +631,16 @@ lines(dweibull(seq(0,70,by=1),shape=f$estimate[1],scale=f$estimate[2]),lwd=3,col
 
 ```{r reanalysis-wind-speed, warning=FALSE, message=FALSE}
 ## Estimate grostrophich wind
-UV <- geostrophicwind(SLP,progressbar=FALSE)
+#UV <- geostrophicwind(SLP,progressbar=FALSE)
 ```
 
 
 ```{r wind-rose}
 ## wind rose
-windrose(uv)
+#windrose(UV)
 ```
+
+
+
+
 
