@@ -29,13 +29,12 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 library(esd)
 ```
 
-
 ## CMIP5 simulations
-
-### functions extracting the TLT 
 
 
 ## Vertical weigthing functions
+
+The GCM results are stored in a 4D grid with the dimensions longitude, latitude, vertical levels, and time, whereas the satellite microwave sounding unit (MSU) data measure temperatures over different altitudes. Any comparison between these two aspects requires some data processing before we get comparable measures. THe MSU data are equivalent to a vertical-weighted average temperature. 
 
 Retrieve the weighting loads for the different heights corresponding to the TLT temperature. More on the vertical weighting function from <http://www.remss.com/measurements/upper-air-temperature> and <http://tropic.ssec.wisc.edu/real-time/amsu/explanation.html>. 
 
@@ -58,13 +57,24 @@ if (!file.exists('tlt.W.rda')) {
 } else load('tlt.W.rda')
 ```
 
+A small test to see whether the vertical weights look right and to see the difference in the weights over land and ocean.
+
 ```{r}
 plot(tlt.W$tlt.wo$Weight,tlt.W$tlt.wo$h.m.,type='l',lwd=2,col='grey')
 lines(tlt.W$tlt.wl$Weight,tlt.W$tlt.wl$h.m.,col='red',lty=2)
 grid()
 ```
 
-The air temperature needs to be weighted according to surface area (latitude) and height before it is aggregated to a product that is comparable to that of the satellite TLT.
+The two weights differ most near the surface. 
+
+### Functions extracting the TLT 
+
+The following R-code describe a set of functions used for processing the GCM results to make them more comparable with the MSU data.
+
+
+#### Global and tropical means.
+
+The air temperature also needs to be weighted according to surface area (latitude) and height before it is aggregated to a product that is comparable to that of the satellite TLT.
 
 ```{r}
 ## Estimate area weighted mean temperature 
@@ -122,7 +132,7 @@ ta2tlt <- function(fname,tlt.W,xlat=c(-90,90),varid='ta') {
 }
 ```
 
-
+## Retrieveing and processing the GCM data
 
 Download CMIP5 data from the KNMI Climate Explorer and estimate the TLT temperature. The data is stored as zonal mean temperature with the dimensions latitude and pressure-level.
 
@@ -145,7 +155,7 @@ if (!file.exists('tlt.cmip5.rda')) {
      TLT.glob <- tlt.glob; TLT.trop <- tlt.trop
    } else {
      TLT.glob <- merge(TLT.glob,tlt.glob)
-     TLT.trop <- merge(TLT.glob,tlt.trop)
+     TLT.trop <- merge(TLT.trop,tlt.trop)
    }
   }
   
@@ -156,7 +166,6 @@ if (!file.exists('tlt.cmip5.rda')) {
 } else load('tlt.cmip5.rda')
 plot(annual(anomaly(tlt.cmip5$TLT.glob)),plot.type='single',col=rgb(0,0,0,0.2))
 ```
-
 
 ## Data from satellites 
 
@@ -175,7 +184,7 @@ if (!file.exists('RSS.glob.rda')) {
 } else {load('RSS.glob.rda'); load('RSS.trop.rda')}
 ```
 
-### University of Alabama Huntsville
+### Get the lower tropospheric data from University of Alabama Huntsville
 
 ```{r}
 if (!file.exists('UAH.glob.rda')) {
@@ -189,9 +198,13 @@ if (!file.exists('UAH.glob.rda')) {
 } else {load('UAH.glob.rda'); load('UAH.trop.rda')}
 ```
 
-## Comapre the data
+The data are svaed locally so that they can be accessed even with no Internet.
+
+## Compare the data
 
 ### The global mean TLT temperature
+
+The comparison between time evolution of the GCM results and the MSU data is based on anomalies with respect to the 1979--1990 period. 
 
 ```{r}
 X <- merge(annual(anomaly(RSS.glob,ref=1979:1990)),
@@ -205,6 +218,7 @@ lines(X[,2],lwd=3,col='blue')
 legend(1979,1.5,c('CMIP5','RSS','UAH'),col=c(rgb(0,0,0,0.15),'red','blue'),bty='n',lwd=c(1,3,3))
 ```
 
+A comparison between the MSU data and the GCM results (CMIP5) suggests that the GCMs somewhat over-estimate the recent warming, but the satellite data are nevertheless within the spread of the model ensemble. These results suggests that there is a fair agreement between the two. 
 
 ### The global mean TLT temperature
 
@@ -220,6 +234,7 @@ lines(X[,2],lwd=3,col='blue')
 legend(1979,1.5,c('CMIP5','RSS','UAH'),col=c(rgb(0,0,0,0.15),'red','blue'),bty='n',lwd=c(1,3,3))
 ```
 
+for the tropical region, the GCM results are still consistent with the satellite data, but the latter is further out on the fridge of the model spread.
 
 ### Global trend analysis
 
@@ -234,7 +249,15 @@ points(trend.coef(annual(anomaly(UAH.glob,ref=1979:1990))),0,pch=19,cex=2,col='b
 grid()
 par(new=TRUE,fig=c(0.75,0.98,0.75,0.98),mar=rep(0,4),cex.axis=0.7)
 qqnorm(z,main=''); qqline(z,col='red')
+
+## RSS - how well does it compare with GCM results?
+print(100*pnorm(trend.coef(annual(anomaly(RSS.glob,ref=1979:1990))),mean=mean(z),sd=sd(z)))
+ 
+## UAH - how well does it compare with GCM results?
+print(100*pnorm(trend.coef(annual(anomaly(UAH.glob,ref=1979:1990))),mean=mean(z),sd=sd(z)))
 ```
+
+A comparison of the global linear trend estiamtes (based on a least-squares fit to a linear function in time) suggests that the satellite data are well within the model results and the fitted normal distribution. The sample of model results are roughly normally distributed except for the lower part of the spread (the "lower tail"" of the distribution).
 
 
 ### Tropics trend analysis
@@ -250,6 +273,18 @@ points(trend.coef(annual(anomaly(UAH.trop,ref=1979:1990))),0,pch=19,cex=2,col='b
 grid()
 par(new=TRUE,fig=c(0.75,0.98,0.75,0.98),mar=rep(0,4),cex.axis=0.7)
 qqnorm(z,main=''); qqline(z,col='red')
+
+## RSS - how well does it compare with GCM results?
+print(100*pnorm(trend.coef(annual(anomaly(RSS.trop,ref=1979:1990))),mean=mean(z),sd=sd(z)))
+ 
+## UAH - how well does it compare with GCM results?
+print(100*pnorm(trend.coef(annual(anomaly(UAH.trop,ref=1979:1990))),mean=mean(z),sd=sd(z)))
 ```
+
+A comparison of the tropical trends also suggests that the satellite data are within the model results and the fitted normal distribution, but further out on the fringe compared to the global trends. The comparison between the trends in the MSU data and CMIP5 suggests a p-value of 0.9\% and 0.3\%, which indicates that the trends in the GCM results and the satellites are statistically different  at the 1\% level for the tropical region. This region is also characterised by deep moist convection (the upward branch of the Hadley cell), and one of the hot spots for the hydrological cycle. Moreover, this limited region is not expected to have a simple association with the global warming (Benestad, 2016 <http://link.springer.com/article/10.1007%2Fs00704-016-1732-y>). The distribution of trend estimates is close to being normally distributefd for the tropics.
+
+## Summary
+
+GCMs are designed to represent the main features of earth's climate, and the most important feature that they are expected to reproduce is the increased global mean temperatures. These models are not perfect, and there will be some details - limited regions or variables - which are not as well reproduced. Here, the results suggests that the global TLT produced by the GCMs are consistent with those estimated from the datallites (MSU). The two are more different for more regional selections, but this is not unexpected. The estimate of the temperature trends may be tricky for both models and satellites  the tropical regions dominated by deep moist convection and clouds.
 
 
