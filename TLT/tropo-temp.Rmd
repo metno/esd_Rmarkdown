@@ -11,7 +11,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Evaluation of tropospheric temperatures 
 
-This script compares tropospheric temperatures (TLT) simulated from gloal climate models (CMIP5) and data from satellites (MSU). 
+This script compares tropospheric temperatures (TLT) simulated from gloal climate models (CMIP5) and data from satellites (MSU). When comparing model results to data derived from satellites, there are a number of issues to keep in mind. The satellite data provide a measure of the air teperature over a range of altitudes, and are also affected by the surface temperatures. Different vertical weights are used for data over ocean and land, respectively. To process the model results to mimic what really was observed by the sattelites, we need to apply these weights correctly.
+
+The model results used here were only the zonal means, which makes it impossible to derive the exact results. However, it is possible to estiamte the fraction with land and fraction with ocean, and use a combined vertical weighting function with approporaite weight on land and ocean. 
+
+The global climate models (GCMs) provide results in the form of grid boxes, with latitude along one axis and pressure-level (vertical) along the other. The area of a latitude band near tthe equator is larger than a latitude band of the same width at higher latitude, due to earth's curvature (spherical shape). Hence, the global and tropical mean TLT must take into account the latitude-variable area and weight the model results accordingly.
+
+Another issue is that different GCMs operate with different calendars, e.g. the Gregorian (which is used in the real world), 365-day calendar (no leap-year), and 360-day calendar. If this is not taken into account, the months in the future will end up in the wrong season.   
+
 
 ### R Markdown
 
@@ -195,6 +202,7 @@ plot(X[,-c(1,2)],plot.type='single',col=rep(rgb(0,0,0,0.15),N),main='Global lowe
 grid()
 lines(X[,1],lwd=3,col='red')
 lines(X[,2],lwd=3,col='blue')
+legend(1979,1.5,c('CMIP5','RSS','UAH'),col=c(rgb(0,0,0,0.15),'red','blue'),bty='n',lwd=c(1,3,3))
 ```
 
 
@@ -209,6 +217,39 @@ plot(X[,-c(1,2)],plot.type='single',col=rep(rgb(0,0,0,0.15),N),main='Tropical lo
 grid()
 lines(X[,1],lwd=3,col='red')
 lines(X[,2],lwd=3,col='blue')
+legend(1979,1.5,c('CMIP5','RSS','UAH'),col=c(rgb(0,0,0,0.15),'red','blue'),bty='n',lwd=c(1,3,3))
+```
+
+
+### Global trend analysis
+
+```{r}
+z <- apply(coredata(annual(anomaly(window(tlt.cmip5$TLT.glob,start=start(RSS.glob),end=end(RSS.glob)),ref=1979:1990))),2,trend.coef)
+h <- hist(z,col='grey',freq=FALSE,main='',ylab='',
+          xlab='Trend (K/decade)')
+x <- seq(-max(abs(z)),max(abs(z)),length=100)
+lines(x,dnorm(x,mean=mean(z),sd=sd(z)),lwd=3,col=rgb(1,0,0,0.4))
+points(trend.coef(annual(anomaly(RSS.glob,ref=1979:1990))),0,pch=19,cex=2,col='red')
+points(trend.coef(annual(anomaly(UAH.glob,ref=1979:1990))),0,pch=19,cex=2,col='blue')
+grid()
+par(new=TRUE,fig=c(0.75,0.98,0.75,0.98),mar=rep(0,4),cex.axis=0.7)
+qqnorm(z,main=''); qqline(z,col='red')
+```
+
+
+### Tropics trend analysis
+
+```{r}
+z <- apply(coredata(annual(anomaly(window(tlt.cmip5$TLT.trop,start=start(RSS.trop),end=end(RSS.trop)),ref=1979:1990))),2,trend.coef)
+h <- hist(z,col='grey',freq=FALSE,main='',ylab='',
+          xlab='Trend (K/decade)')
+x <- seq(-max(abs(z)),max(abs(z)),length=100)
+lines(x,dnorm(x,mean=mean(z),sd=sd(z)),lwd=3,col=rgb(1,0,0,0.4))
+points(trend.coef(annual(anomaly(RSS.trop,ref=1979:1990))),0,pch=19,cex=2,col='red')
+points(trend.coef(annual(anomaly(UAH.trop,ref=1979:1990))),0,pch=19,cex=2,col='blue')
+grid()
+par(new=TRUE,fig=c(0.75,0.98,0.75,0.98),mar=rep(0,4),cex.axis=0.7)
+qqnorm(z,main=''); qqline(z,col='red')
 ```
 
 
