@@ -1,0 +1,214 @@
+---
+title: "tropospheric-temperature"
+author: "Rasmus E Benestad"
+date: "April 14, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Evaluation of tropospheric temperatures 
+
+This script compares tropospheric temperatures (TLT) simulated from gloal climate models (CMIP5) and data from satellites (MSU). 
+
+### R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+
+```{r}
+library(esd)
+```
+
+
+## CMIP5 simulations
+
+### functions extracting the TLT 
+
+
+## Vertical weigthing functions
+
+Retrieve the weighting loads for the different heights corresponding to the TLT temperature. More on the vertical weighting function from <http://www.remss.com/measurements/upper-air-temperature> and <http://tropic.ssec.wisc.edu/real-time/amsu/explanation.html>. 
+
+
+```{r}
+if (!file.exists('tlt.W.rda')) {
+  colnames <- c('level','h(m)','T(K)','P(pa)','PV(pa)','Weight')
+  ## Weighting over land:
+  ## Surface Weight                                  0.15104
+  tlt.wl <- read.table('http://data.remss.com/msu/weighting_functions/std_atmosphere_wt_function_chan_tlt_land.txt',skip=7,
+                 col.names = colnames)
+  attr(tlt.wl,'Surface Weight') <- 0.15104
+  ## Weighting over ocean
+  ## Surface Weight                                  0.11863
+  tlt.wo <- read.table('http://data.remss.com/msu/weighting_functions/std_atmosphere_wt_function_chan_tlt_ocean.txt',skip=7,
+                 col.names=colnames)
+  attr(tlt.wo,'Surface Weight') <- 0.11863
+  tlt.W <- list(tlt.wl=tlt.wl,tlt.wo=tlt.wo)
+  save(tlt.W,file='tlt.W.rda')
+} else load('tlt.W.rda')
+```
+
+```{r}
+plot(tlt.W$tlt.wo$Weight,tlt.W$tlt.wo$h.m.,type='l',lwd=2,col='grey')
+lines(tlt.W$tlt.wl$Weight,tlt.W$tlt.wl$h.m.,col='red',lty=2)
+grid()
+```
+
+The air temperature needs to be weighted according to surface area (latitude) and height before it is aggregated to a product that is comparable to that of the satellite TLT.
+
+```{r}
+## Estimate area weighted mean temperature 
+areamean <- function(x,W.lat,d) {
+  y <- x*c(W.lat)
+  dim(y) <- c(d[1],d[2])
+  z <- colSums(y,na.rm=TRUE)/sum(W.lat[,1],na.rm=TRUE)
+  return(z)
+}
+
+ta2tlt <- function(fname,tlt.W,xlat=c(-90,90),varid='ta') {
+  require(ncdf4)
+  ncid <- nc_open(fname)
+  X <- ncvar_get(ncid,varid)
+  lat <- ncvar_get(ncid,'lat')
+  plev <- ncvar_get(ncid,'plev')
+  tim <- ncvar_get(ncid,'time')
+  tunit <- ncatt_get(ncid,'time','units')
+  model.id <- ncatt_get(ncid,0,'model_id')
+  rcp <- ncatt_get(ncid,0,'experiment')
+  ## Different GCMs use different calendars: 365-day, Gregorian, ets.
+  calendar <- ncatt_get(ncid,'time','calendar')
+  nc_close(ncid)
+  ## Extract selected latitude band
+  iy <- (lat >= min(xlat)) & (lat <= max(xlat))
+  lat <- lat[iy]
+  X <- X[iy,,]
+  d <- dim(X)
+  
+  ## Area weights - latitude
+  W.lat <- matrix(rep(cos(pi*lat/180),d[2]),d[1],d[2])
+  ## Prepare for fast matrix operations
+  dim(X) <- c(d[1]*d[2],d[3])
+  ## Z contains the global mean temperature at different vertical levels
+  Z <- apply(X,2,'areamean',W.lat,d)
+  
+  ## Estimate the TLT-temperature based on the TLT weights
+  data(etopo5)
+  etopo5 <- subset(etopo5,is=list(lat=xlat))
+  ## Weighted average of land and ocean
+  nl <- sum(etopo5 >=0)/length(etopo5); no <- sum(etopo5 <0)/length(etopo5)
+  W0 <- no*tlt.W$tlt.wo$Weight + nl*tlt.W$tlt.wl$Weight
+  W <- approx(tlt.W$tlt.wo$P.pa.,W0,plev,rule=2)$y
+  
+  tlt <- apply(Z,2,function(x,W) sum(x*W,na.rm=TRUE)/sum(W,na.rm=TRUE),W)
+  
+  ## Use the first time stamp and the time orgigin to set the first date, and then
+  ## Assume every month since that (there are monthly mean data after all)
+  t1 <- as.Date(tim[1],origin = sub('days since ','',tunit$value))
+  TLT <- zoo(tlt, order.by=seq(t1,by='month',length.out=length(tim)))
+  attr(TLT,'model_id') <- model.id
+  attr(TLT,'rcp') <- rcp
+  if (sum(is.finite(tlt))==0) browser()
+  return(TLT)
+}
+```
+
+
+
+Download CMIP5 data from the KNMI Climate Explorer and estimate the TLT temperature. The data is stored as zonal mean temperature with the dimensions latitude and pressure-level.
+
+```{r pressure, echo=FALSE}
+N <- 102  ## Number of model runs with taz available at ClimateExplorer
+if (!file.exists('tlt.cmip5.rda')) {
+  model.id <- rep('',N); rcp <- model.id
+  for (i in 1:N) {
+   if (i <= 10)  fname <- paste('taz_Amon_one_rcp45to85_00',i-1,'.nc',sep='') else
+   if (i <= 100) fname <- paste('taz_Amon_one_rcp45to85_0',i-1,'.nc',sep='') else
+                 fname <- paste('taz_Amon_one_rcp45to85_',i-1,'.nc',sep='')
+   print(fname)
+   if (!file.exists(fname)) 
+     download.file(paste('https://climexp.knmi.nl/CMIP5/monthly/taz/',fname,sep=''),destfile = fname)
+   tlt.glob <- ta2tlt(fname,tlt.W,xlat=c(-70,82.5),varid='ta')  ## These match RSS
+   tlt.trop <- ta2tlt(fname,tlt.W,xlat=c(-25,25),varid='ta')    ## These match RSS
+   model.id[i] <- attr(tlt.glob,'model_id')
+   rcp[i] <- attr(tlt.glob,'rcp')
+   if (i==1) {
+     TLT.glob <- tlt.glob; TLT.trop <- tlt.trop
+   } else {
+     TLT.glob <- merge(TLT.glob,tlt.glob)
+     TLT.trop <- merge(TLT.glob,tlt.trop)
+   }
+  }
+  
+  tlt.cmip5 <- list(TLT.glob=TLT.glob,TLT.trop=TLT.trop)
+  attr(tlt.cmip5,'model_id') <- model.id
+  attr(tlt.cmip5,'rcp') <- rcp
+  save(tlt.cmip5,file='tlt.cmip5.rda')
+} else load('tlt.cmip5.rda')
+plot(annual(anomaly(tlt.cmip5$TLT.glob)),plot.type='single',col=rgb(0,0,0,0.2))
+```
+
+
+## Data from satellites 
+
+### Get the lower tropospheric data from the RSS:
+
+```{r}
+if (!file.exists('RSS.glob.rda')) {
+  rss.glob <- read.table('http://data.remss.com/msu/graphics/TLT/time_series/RSS_TS_channel_TLT_Global_Land_And_Sea_v03_3.txt',skip=5)
+  rss.trop <- read.table('http://data.remss.com/msu/graphics/TLT/time_series/RSS_TS_channel_TLT_Tropics_Land_And_Sea_v03_3.txt',skip=5)
+  rss.glob$V3[rss.glob$V3 <= -99] <- NA
+  RSS.glob <- zoo(rss.glob$V3,order.by=as.Date(paste(rss.glob$V1,rss.glob$V2,'01',sep='-')))
+  rss.trop$V3[rss.trop$V3 <= -99] <- NA
+  RSS.trop <- zoo(rss.trop$V3,order.by=as.Date(paste(rss.trop$V1,rss.trop$V2,'01',sep='-')))
+  save(RSS.glob,file='RSS.glob.rda')
+  save(RSS.trop,file='RSS.trop.rda')
+} else {load('RSS.glob.rda'); load('RSS.trop.rda')}
+```
+
+### University of Alabama Huntsville
+
+```{r}
+if (!file.exists('UAH.glob.rda')) {
+  UAH <- readLines('http://www.nsstc.uah.edu/data/msu/t2lt/tltglhmam_5.6.txt')
+  writeLines(UAH[-length(UAH)],con='UAHTLT.dat')
+  uah <- read.table('UAHTLT.dat',skip=4,header=TRUE)
+  UAH.glob <- zoo(uah$GLOBAL,order.by=as.Date(paste(uah$YEAR,uah$MON,'01',sep='-')))
+  UAH.trop <- zoo(uah$TRPC,order.by=as.Date(paste(uah$YEAR,uah$MON,'01',sep='-')))
+  save(UAH.glob,file='UAH.glob.rda')
+  save(UAH.trop,file='UAH.trop.rda')
+} else {load('UAH.glob.rda'); load('UAH.trop.rda')}
+```
+
+## Comapre the data
+
+### The global mean TLT temperature
+
+```{r}
+X <- merge(annual(anomaly(RSS.glob,ref=1979:1990)),
+           annual(anomaly(UAH.glob,ref=1979:1990)),
+           annual(anomaly(window(tlt.cmip5$TLT.glob,start=start(RSS.glob),end=end(RSS.glob)),ref=1979:1990)))
+par(bty='n')
+plot(X[,-c(1,2)],plot.type='single',col=rep(rgb(0,0,0,0.15),N),main='Global lower Tropospheric Temperature (TLT)',ylab='Temperature')
+grid()
+lines(X[,1],lwd=3,col='red')
+lines(X[,2],lwd=3,col='blue')
+```
+
+
+### The global mean TLT temperature
+
+```{r}
+X <- merge(annual(anomaly(RSS.trop,ref=1979:1990)),
+           annual(anomaly(UAH.trop,ref=1979:1990)),
+           annual(anomaly(window(tlt.cmip5$TLT.trop,start=start(RSS.trop),end=end(RSS.trop)),ref=1979:1990)))
+par(bty='n')
+plot(X[,-c(1,2)],plot.type='single',col=rep(rgb(0,0,0,0.15),N),main='Tropical lower Tropospheric Temperature (TLT)',ylab='Temperature')
+grid()
+lines(X[,1],lwd=3,col='red')
+lines(X[,2],lwd=3,col='blue')
+```
+
+
