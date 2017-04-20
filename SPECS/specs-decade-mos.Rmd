@@ -23,6 +23,8 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 ## Script that applies MOS to SPECS decadal forecasts
 
 library(esd)
+#library(knitr)
+#purl('git/esd_Rmarkdown/SPECS/specs-decade-mos.Rmd', output='git/esd_Rmarkdown/SPECS/specs-decade-mos.R')
 #library(ncdf)
 setwd("~/R")
 
@@ -176,21 +178,21 @@ Estimating the wet-day mean from the EOBS data using CDO (because the data size 
 
 
 ```{r wetdaymean}
-wetdaymean <- function(ifile,cline='cdo yearmean',fname='data/wetdaymean.nc') {
+wetdaymean <- function(ifile,cline='cdo yearmean',fname='wetdaymean.nc') {
   print('calculate mask')
-  system(paste('cdo gtc,1',ifile,'~/data/mask.nc'))
+  system(paste('cdo gtc,1',ifile,'mask.nc'))
   ## her blir ofile en mask med 1 i alle tidsskritt med data over konstanten (satt til 0),
   ## og verdi 0 i alle andre
   print('apply mask')
-  system(paste('cdo ifthen data/mask.nc',ifile, fname))
+  system(paste('cdo ifthen mask.nc',ifile, fname))
   ## her appliseres masken på ifile og lagres i ofile. (Øvrige punkter får verdien NA.)
   
   ##Disse går å kombinere til en rad:
   ##  print(paste('cdo ifthen -gtc,0',ifile,ifile,fname))
   ##  system(paste('cdo ifthen -gtc,0',ifile,ifile,fname))
   X <- aggregatedailyfield(fname=fname,cline=cline)
-  Y <- aggregatedailyfield(fname=,'~/data/mask.nc',cline=cline,output='fw_0.25deg_reg.nc')
-  file.remove(fname); file.remove('~/data/mask.nc')
+  Y <- aggregatedailyfield(fname=,'mask.nc',cline=cline,output='fw_0.25deg_reg.nc')
+  file.remove(fname); file.remove('mask.nc')
 }
 
 ```
@@ -310,7 +312,7 @@ mannualfcst <- function(x,l=1,it=NULL,is=NULL,mask=FALSE,verbose=FALSE) {
 Compare the {\em m}-year annual mean MOS-based forecast with corresponding EOBS statistics
 
 ```{r compare}
-comparemannual <- function(tas_DECA,reanalysis='air.mon.mean.nc',mask=TRUE,l= 3,eofs=NULL) {
+comparemannual <- function(tas_DECA,reanalysis='~/Downloads/air.mon.mean.nc',mask=TRUE,l= 3,eofs=NULL) {
 
   X <- mannualfcst(tas_DECA,l=l,mask=mask,verbose=TRUE)
   Y <- pentad(retrieve(reanalysis,lon=range(lon(X)),lat=range(lat(X))),l=l)
@@ -484,7 +486,7 @@ if (downscaledreanalysis) {
 ## Test to examine the link between large-scale temperature and wet-day mean precip
 ## Derive the saturation vapour pressure from temperature
 ## retrieve did not get the right time stamp:
-  es <- annual(C.C.eq(retrieve('air.mon.mean.nc',lon=c(-60,40),lat=c(20,70))))
+  es <- annual(C.C.eq(retrieve('~/Downloads/air.mon.mean.nc',lon=c(-60,40),lat=c(20,70))))
   es.eof <- EOF(mask(es,land=TRUE))
 
 ## Also get the mean sea-level pressure for the wet-day frequency 
@@ -532,8 +534,8 @@ if (downscaledreanalysis) {
 ##> dim(psl_DECA$Data)
 ## [1]   9  10 480  41  45
 
-print('Get the decadal predictors saved locally in "data/gfdl_DECA.rda"')
-load('data/gfdl_DECA.rda')
+print('Get the decadal predictors saved locally in "~/data/gfdl_DECA.rda"')
+load('~/data/gfdl_DECA.rda')
 
 ```
 
@@ -675,7 +677,7 @@ if (diagnoseFCST) {
 
 ```{r t2m scales}
 ## Scaling dependency: time - space
-t2m <- retrieve('~/data/ncep/air.mon.mean.nc',lon=c(-90,60),lat=c(-20,80))
+t2m <- retrieve('~/Downloads/air.mon.mean.nc',lon=c(-90,60),lat=c(-20,80))
 t2m <- anomaly(t2m)
 zst <- scaledependency(t2m)
 #zst[,1] <- NA
