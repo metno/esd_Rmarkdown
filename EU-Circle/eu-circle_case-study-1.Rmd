@@ -18,6 +18,15 @@ Simultaneous forest fires ignite in the Bouche du Rhone department near Aix en P
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
+
+
+```{r, eval=FALSE}
+library(knitr)
+purl('~/git/esd_Rmarkdown/EU-Circle/eu-circle_case-study-1.Rmd', output='~/git/esd_Rmarkdown/EU-Circle/eu-circle_case-study-1.R')
+```
+
+
+
 **Precipitation**
 
 ***Station data***
@@ -175,7 +184,7 @@ Linear trend analysis applied to both the duration of dry spells (solid line for
 The geographical pattern of trend in dry spell duration can be analysed using gridded data from EOBs (based on the ECA&D station records) Here gridded precipitation is represented with upper-case $X$. Gridded data are not ideal when it comes to extremes, as the gridding process makes the data spatially inhomogeneous. There are geographical variations in the climatological precipitation, with more precipitation over the higher elevations and the southern Alps.
 
 ```{r,warning=FALSE}
-X <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=c(4,8),lat=c(43,46))
+X <- retrieve('~/data.ECAD/rr_0.25deg_reg.nc',lon=c(4,8),lat=c(43,46))
 map(X,new=FALSE)
 ```
 
@@ -192,6 +201,41 @@ It is also along the coast where there has been a strongest trend in the mean du
 ```{r}
 trend.dry <- function(x,na.rm=TRUE) trend.coef(subset(spell(x,threshold=1),is=2))
 map(X,FUN='trend.dry',new=FALSE,colbar=list(pal='warm'))
+```
+
+Calculate EOFs which can serve as predictors for the downscaling.
+
+```{r, fig.height=8}
+dryseason <- function(x,na.rm=TRUE) if (sum(is.finite(x))>1) mean(subset(spell(x,threshold=1),is=2),na.rm=na.rm) else NA
+if (!file.exists('case1-dryseason.rda')) {
+  z <- aggregate(subset(X,it='mjjas'),year,FUN='dryseason')
+  save(z,file='case1-dryseason.rda')
+} else load('case1-dryseason.rda')
+eof.dry <- EOF(z)
+plot(eof.dry)
+```
+
+Predictors for calibration: check for any dependency
+
+```{r}
+T2M <- aggregate(subset(retrieve('~/Downloads/air.mon.mean.nc',lon=c(-12,35),lat=c(27,50)),it='mjjas'),year,'mean')
+SLP <- aggregate(subset(retrieve('~/Downloads/slp.mon.mean.nc',lon=c(-12,35),lat=c(27,50)),it='mjjas'),year,'mean')
+eof.t2m <- EOF(T2M)
+eof.slp <- EOF(SLP)
+```
+
+Any connection between temperature and dry spells? 
+
+```{r, fig.height=8}
+ds.t2m <- DS(eof.dry,eof.t2m)
+plot(ds.t2m)
+```
+
+Any connection between sea-level pressure anomalies and dry spells? 
+
+```{r, fig.height=8}
+ds.slp <- DS(eof.dry,eof.slp)
+plot(ds.slp)
 ```
 
 
