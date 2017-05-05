@@ -30,13 +30,13 @@ Synoptic storms are associated with winds, storm surges and waves.
 
 ```{r}
 load('cyclones.baltic.rda')
-map(cyclones.baltic)
+map(cyclones.baltic,new=FALSE)
 ```
 
 Plot the number of trajectories over time
 
 ```{r}
-plot(cyclones.baltic)
+plot(cyclones.baltic,new=FALSE)
 ```
 
 ***Import E-OBS data***
@@ -52,19 +52,24 @@ if (!file.exists('eu-circle_case-study-2_slp.rda')) {
   save(file='eu-circle_case-study-2_slp.rda',x)
 } else load('eu-circle_case-study-2_slp.rda')
 ## Only keep the ECAD data
-map(x,FUN='q95',new=TRUE)
-diagnose(x)
+map(x,FUN='q95',new=FALSE)
 ```
+
 
 ***Geostrophic wind***
 
-Calculate the geostrophic wind based on the slp data. 
+Calculate the geostrophic wind based on the slp data from EOBS. 
 
 **Ship accidents in the Baltic Sea**
 
-```{r}
+NOT FINISHED
+
+```{r, eval=FALSE,echo=FALSE}
 baltic.events <- c(19931010,20000328,20010328,20040313,20060330,20081017,20081202,20091002,20100128)
-uv <- geostrophicwind(x)
+if (!file.exists('uv.rda')) {
+  uv <- geostrophicwind(x)
+  save(uv,file='uv.rda')
+} else load('uv.rda')
 ```
 
 

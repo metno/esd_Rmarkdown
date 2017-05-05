@@ -302,7 +302,7 @@ plot(dse.mld.slp)
 
 Follow up with the residuals and the large-scale temperture 
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, eval=FALSE,echo=FALSE}
 if (!file.exists('dse.mld.t2m.rda')) {
   dse.mld.t2m <- DSensemble.eof(eof.res,predictor=T2M,it='mjjas',path="~/data/CMIP5.monthly",pattern = "tas_Amon_ens_")
   save(dse.mld.t2m,file = 'dse.mld.t2m.rda')
@@ -312,7 +312,7 @@ plot(dse.mld.t2m)
 
 Add the the two components to get an estimate of the total change. The `dse`objects are lists which contain `zoo` time series:
 
-```{r}
+```{r, eval=FALSE,echo=FALSE}
 dse.mld <- dse.mld.slp
 gcmnm <- names(dse.mld)
 gcmnm <- gcmnm[-grep('info',gcmnm)]; gcmnm <- gcmnm[-grep('eof',gcmnm)]
