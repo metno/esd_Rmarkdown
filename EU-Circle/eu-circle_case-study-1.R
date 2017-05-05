@@ -2,6 +2,7 @@
 knitr::opts_chunk$set(echo = TRUE)
 
 ## ---- eval=FALSE---------------------------------------------------------
+## ## Extract just the R-code
 ## library(knitr)
 ## purl('~/git/esd_Rmarkdown/EU-Circle/eu-circle_case-study-1.Rmd', output='~/git/esd_Rmarkdown/EU-Circle/eu-circle_case-study-1.R')
 
@@ -104,7 +105,7 @@ for (i in 1:dim(Pr)[2]) lines(trend(subset(Pr,is=i)),lty=2)
 grid()
 
 ## ----warning=FALSE-------------------------------------------------------
-X <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=c(4,8),lat=c(43,46))
+X <- retrieve('~/data/data.ECAD/rr_0.25deg_reg.nc',lon=c(4,8),lat=c(43,46))
 map(X,new=FALSE)
 
 ## ------------------------------------------------------------------------
@@ -116,7 +117,72 @@ trend.dry <- function(x,na.rm=TRUE) trend.coef(subset(spell(x,threshold=1),is=2)
 map(X,FUN='trend.dry',new=FALSE,colbar=list(pal='warm'))
 
 ## ---- fig.height=8-------------------------------------------------------
-dryseason <- function(x,na.rm=TRUE) mean(subset(spell(x,threshold=1),is=2),na.rm=na.rm)
-eof.dry <- EOF(annual(X,FUN='dryseason'))
+dryseason <- function(x,na.rm=TRUE) if (sum(is.finite(x))>1) mean(subset(spell(x,threshold=1),is=2),na.rm=na.rm) else NA
+if (!file.exists('case1-dryseason.rda')) {
+  z <- aggregate(subset(X,it='mjjas'),year,FUN='dryseason')
+  save(z,file='case1-dryseason.rda')
+} else load('case1-dryseason.rda')
+eof.dry <- EOF(z)
 plot(eof.dry)
+
+## ------------------------------------------------------------------------
+eof.dry <- subset(eof.dry,ip=1:4)
+
+## ------------------------------------------------------------------------
+T2M <- aggregate(subset(retrieve('~/Downloads/air.mon.mean.nc',lon=c(-12,35),lat=c(27,50)),it='mjjas'),year,'mean')
+SLP <- aggregate(subset(retrieve('~/Downloads/slp.mon.mean.nc',lon=c(-12,35),lat=c(27,50)),it='mjjas'),year,'mean')
+eof.t2m <- EOF(T2M)
+eof.slp <- EOF(SLP)
+
+## ---- fig.height=8, warning=FALSE----------------------------------------
+ds.t2m <- DS(eof.dry,eof.t2m)
+plot(ds.t2m)
+
+## ---- fig.height=8, warning=FALSE----------------------------------------
+ds.slp <- DS(eof.dry,eof.slp)
+plot(ds.slp)
+
+## ---- fig.height=8, warning=FALSE----------------------------------------
+cca.slp.t2m <- CCA(eof.slp,eof.t2m)
+plot(cca.slp.t2m)
+
+## ---- fig.width=8, fig.height=8------------------------------------------
+## Estimate the residuals
+eof.res <- subset(eof.dry,it=ds.slp)
+coredata(eof.res) <- coredata(eof.res) - coredata(ds.slp)
+
+## ---- fig.height=8, warning=FALSE----------------------------------------
+ds.res <- DS(eof.res,eof.t2m)
+plot(ds.res)
+
+## ------------------------------------------------------------------------
+# z <- DS(wfire,eof.dry)
+
+## ------------------------------------------------------------------------
+T2M <- retrieve('~/Downloads/air.mon.mean.nc',lon=c(-12,35),lat=c(27,50))
+SLP <- retrieve('~/Downloads/slp.mon.mean.nc',lon=c(-12,35),lat=c(27,50))
+## Also - fix the index of eof - set to year.
+index(eof.dry) <- year(eof.dry)
+
+## ---- warning=FALSE------------------------------------------------------
+if (!file.exists('dse.mld.slp.rda')) {
+  dse.mld.slp <- DSensemble.eof(eof.dry,predictor=SLP,it='mjjas',path="~/data/CMIP5.monthly",pattern = "psl_Amon_ens_")
+  save(dse.mld.slp,file = 'dse.mld.slp.rda')
+} else load('dse.mld.slp.rda')
+plot(dse.mld.slp)
+
+## ---- warning=FALSE------------------------------------------------------
+if (!file.exists('dse.mld.t2m.rda')) {
+  dse.mld.t2m <- DSensemble.eof(eof.res,predictor=T2M,it='mjjas',path="~/data/CMIP5.monthly",pattern = "tas_Amon_ens_")
+  save(dse.mld.t2m,file = 'dse.mld.t2m.rda')
+} else load('dse.mld.t2m.rda')
+plot(dse.mld.t2m)
+
+## ------------------------------------------------------------------------
+dse.mlt <- dse.mld.slp
+gcmnm <- names(dse.mlt)
+gcmnm <- gcmnm[-grep('info',gcmnm)]; gcmnm <- gcmnm[-grep('eof',gcmnm)]
+for (nm in gcmnm) {
+  coredata(dse.mlt[[nm]]) <- coredata(dse.mlt.slp[[nm]]) + coredata(dse.mlt.t2m[[nm]])
+}
 

@@ -16,15 +16,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Simultaneous forest fires ignite in the Bouche du Rhone department near Aix en Porvence, and in the Alpes Maritimes Department, at the French/Italian frontier, near a highway (A8) used by thousands of tourists. Due to the important smoke production, visibility is strongly reduced so that highway has to be closed, leading to an important traffic on the secondary road networks. The crossing of the frontier by car being completely impossible, traffic between France and Italy has to be diverted. Tourists are confined on highway rest areas. People, blocked on the roads, have difficulties to breathe because of the smoke and leave their cars, scattering into the nature. Additional accidents are caused because of the panic of people. Due to aerial firefighting, electricity lines have to be cut. Due to the fire smoke, aerial traffic in Nice airport has to be stopped. Numerous dwellings are without electricity and of course without telephones. Other emergency operations are disturbed because of the large delay of alert, major dispersion of means, decrease of available means.
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. To strip off all the text and make a pure R-script, then use `purl`as shown below:
 
 
 ```{r, eval=FALSE}
+## Extract just the R-code
 library(knitr)
 purl('~/git/esd_Rmarkdown/EU-Circle/eu-circle_case-study-1.Rmd', output='~/git/esd_Rmarkdown/EU-Circle/eu-circle_case-study-1.R')
 ```
-
 
 
 **Precipitation**
@@ -179,12 +178,12 @@ grid()
 
 Linear trend analysis applied to both the duration of dry spells (solid line for one site in figure above) and the probability of more than 100 mm rain per day (dashed line showing several sites) both exhibit long-term increases over the last ~100 years. This tendency can be interpreted as the risk of long dry periods increases while the amount that falls as rain gets more extreme for the wet days. In other words, there has been a growing risk for both droughts and flash floods.
 
-***Gridded precipitation***
+### Gridded precipitation ###
 
 The geographical pattern of trend in dry spell duration can be analysed using gridded data from EOBs (based on the ECA&D station records) Here gridded precipitation is represented with upper-case $X$. Gridded data are not ideal when it comes to extremes, as the gridding process makes the data spatially inhomogeneous. There are geographical variations in the climatological precipitation, with more precipitation over the higher elevations and the southern Alps.
 
 ```{r,warning=FALSE}
-X <- retrieve('~/data.ECAD/rr_0.25deg_reg.nc',lon=c(4,8),lat=c(43,46))
+X <- retrieve('~/data/data.ECAD/rr_0.25deg_reg.nc',lon=c(4,8),lat=c(43,46))
 map(X,new=FALSE)
 ```
 
@@ -215,7 +214,13 @@ eof.dry <- EOF(z)
 plot(eof.dry)
 ```
 
-Predictors for calibration: check for any dependency
+Only the 4 leading EOFs for the seasonal mean dry spell length are relevant. The higher orders are noise. This is according to expectations, i.e. that droughts and heat waves are large-scale phenomena. 
+
+```{r}
+eof.dry <- subset(eof.dry,ip=1:4)
+```
+
+### Predictors for calibration: check for any dependency
 
 ```{r}
 T2M <- aggregate(subset(retrieve('~/Downloads/air.mon.mean.nc',lon=c(-12,35),lat=c(27,50)),it='mjjas'),year,'mean')
@@ -224,19 +229,98 @@ eof.t2m <- EOF(T2M)
 eof.slp <- EOF(SLP)
 ```
 
-Any connection between temperature and dry spells? 
+Examine the connection between temperature and dry spells: 
 
-```{r, fig.height=8}
+```{r, fig.height=8, warning=FALSE}
 ds.t2m <- DS(eof.dry,eof.t2m)
 plot(ds.t2m)
 ```
 
-Any connection between sea-level pressure anomalies and dry spells? 
+Cross-validation scores of 0.33 for the leading EOF of the mean duration of dry spells and a temperature anomaly over Iberia and souther France suggest a real link.
 
-```{r, fig.height=8}
+There is also a connection between sea-level pressure anomalies and dry spells. 
+
+```{r, fig.height=8, warning=FALSE}
 ds.slp <- DS(eof.dry,eof.slp)
 plot(ds.slp)
 ```
+
+Cross-validation score of 0.43 and high SLP anomalies over France. The summertime temperature and SLP are expected to be related:
+
+```{r, fig.height=8, warning=FALSE}
+cca.slp.t2m <- CCA(eof.slp,eof.t2m)
+plot(cca.slp.t2m)
+```
+
+The CCA suggests that there is covariance between SLP and temperature, and we need to avoid double counting of these effects. 
+
+
+### Residual:
+
+```{r, fig.width=8, fig.height=8}
+## Estimate the residuals
+eof.res <- subset(eof.dry,it=ds.slp)
+coredata(eof.res) <- coredata(eof.res) - coredata(ds.slp)
+```
+
+Check to see if the residual contains covariance with the temperature
+
+```{r, fig.height=8, warning=FALSE}
+ds.res <- DS(eof.res,eof.t2m)
+plot(ds.res)
+```
+
+### Dry conditions and wild fire statistics
+
+Use the EOFs describing the dry conditions as predictors and wild fire statistics as predictand to assess the connection
+
+```{r}
+# z <- DS(wfire,eof.dry)
+```
+
+
+### Projections for the future
+
+Need to read the predictors again to get all months
+
+```{r}
+T2M <- retrieve('~/Downloads/air.mon.mean.nc',lon=c(-12,35),lat=c(27,50))
+SLP <- retrieve('~/Downloads/slp.mon.mean.nc',lon=c(-12,35),lat=c(27,50))
+## Also - fix the index of eof - set to year.
+index(eof.dry) <- year(eof.dry)
+```
+
+Two seperate analyses based on SLP and temperature respectively, assuming the RCP 4.5 emission scenario. Start with the SLP and the original data
+
+```{r, warning=FALSE}
+if (!file.exists('dse.mld.slp.rda')) {
+  dse.mld.slp <- DSensemble.eof(eof.dry,predictor=SLP,it='mjjas',path="~/data/CMIP5.monthly",pattern = "psl_Amon_ens_")
+  save(dse.mld.slp,file = 'dse.mld.slp.rda')
+} else load('dse.mld.slp.rda')
+plot(dse.mld.slp)
+```
+
+Follow up with the residuals and the large-scale temperture 
+
+```{r, warning=FALSE}
+if (!file.exists('dse.mld.t2m.rda')) {
+  dse.mld.t2m <- DSensemble.eof(eof.res,predictor=T2M,it='mjjas',path="~/data/CMIP5.monthly",pattern = "tas_Amon_ens_")
+  save(dse.mld.t2m,file = 'dse.mld.t2m.rda')
+} else load('dse.mld.t2m.rda')
+plot(dse.mld.t2m)
+```
+
+Add the the two components to get an estimate of the total change. The `dse`objects are lists which contain `zoo` time series:
+
+```{r}
+dse.mld <- dse.mld.slp
+gcmnm <- names(dse.mld)
+gcmnm <- gcmnm[-grep('info',gcmnm)]; gcmnm <- gcmnm[-grep('eof',gcmnm)]
+for (nm in gcmnm) {
+  coredata(dse.mld[[nm]]) <- coredata(dse.mld.slp[[nm]]) + coredata(dse.mld.t2m[[nm]])
+}
+```
+
 
 
 ## Temperature

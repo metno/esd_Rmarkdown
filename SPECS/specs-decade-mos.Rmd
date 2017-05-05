@@ -536,7 +536,20 @@ if (downscaledreanalysis) {
 
 print('Get the decadal predictors saved locally in "~/data/gfdl_DECA.rda"')
 load('~/data/gfdl_DECA.rda')
-
+psl_DECA.gfdl <- psl_DECA; rm('psl_DECA'); tas_DECA.gfdl <- tas_DECA; rm('tas_DECA'); gc(reset=TRUE)
+#> dim(psl_DECA.gfdl$Data)
+#[1]   9  10 480  41  45
+print('Get the decadal predictors saved locally in "~/data/gfdl_DECA.rda"')
+load('~/data/hadcm3_DECA.rda')
+psl_DECA.hadcm3 <- psl_DECA; rm('psl_DECA'); tas_DECA.hadcm3 <- tas_DECA; rm('tas_DECA'); gc(reset=TRUE)
+#> dim(psl_DECA.hadcm3$Data)
+#[1]   6  10 480  33  30
+load('~/data/miroc5_DECA.rda')
+psl_DECA.miroc5 <- psl_DECA; rm('psl_DECA'); tas_DECA.miroc5 <- tas_DECA; rm('tas_DECA'); gc(reset=TRUE)
+#> dim(psl_DECA.miroc5$Data)
+#[1]   6   6 480  59  79
+rm("psl_DECA_annual","tas_DECA_annual"); gc(reset=TRUE)
+## Need to regrid (regrid.matrix) and combine the different forecasts into one object:
 ```
 
 Leave-one-out cross-validation experiments
