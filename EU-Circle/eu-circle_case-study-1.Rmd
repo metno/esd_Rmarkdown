@@ -326,3 +326,24 @@ for (nm in gcmnm) {
 ## Temperature
 
 For heat waves, use a similar approach as described in the supporting material of where a GLM was used to estimate the number of events with a basis of the 'Poisson' distribution.
+
+## Wildfire risk
+
+The fire season: May-October (allowing for longer season in the future).
+
+Hazards: Smoke (Area/density) and burned area. Use historic data or model results (RCM)? Damage functions - has not been used and need to come up with some sensible choices (e.g. mean/minimum density of assets?). The assets are distributed unevenly (roads and power lines). Model risk in a conditioned Monte-Carlo type of fashion?
+
+Data: number of events $n_f$, burned area $A_f$, area of smoke $A_s$, location of event $(x,y)$, the day of the event, number of multiple events $n_i\ i =[2,3,..]$. 
+
+### Fire indices
+
+Gridded data which can be downscaled. 
+
+### Events
+
+Model number of evens $n_f$ and their area $A_f$ seperately, a little like precipitation ($\mu$ and $f_w$). The area has an impact on the risk of affecting the number of assets. Base this on historic data and relate to large-scale conditions (predictors). Model as a partly stochastic process where the likelihood depends on an external variable. Poisson model (`GLM`) of $n_f$ and the nature of the $A_f$ distribution dictates the model strategy for the area.
+
+Also model number of simultaneous events, which strain the fire fighters, as they need to split/divert resources. Based on historic data and the assumption of a Poisson process dependent on external condition. 
+
+
+

@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Bangladesh: tropical cyclones and stormsurges, heavy precipitation. 
 
-Bangladesh is highly vulnerable to climate induced hazrds and disasters and its coastal part are mostly threatened for the impacts of climate change in case of cyclone, storm surges, flood, salinity and tsunami disaster. Even last twenty years the coastal peoples have suffered due to super cyclone SIDR and AILA devastations. Last two deacdes a lots of disaster coping interventions have been provided to the community to achieve resiliency in this areas. So really it will be a field laboratory for the research of Disaster Resilience and Climate Change: Science and innovation for adaptation to climate  change: from assessing costs, risks and opportunities to demonstration of options and practices.
+Bangladesh is highly vulnerable to climate induced hazrds and disasters and its coastal part are mostly threatened for the impacts of climate change in case of cyclone, storm surges, flood, salinity and tsunami disaster. Even last twenty years the coastal peoples have suffered due to super cyclone SIDR (2007-11-15) and AILA (YYYY-MM-DD) devastations. Last two deacdes a lots of disaster coping interventions have been provided to the community to achieve resiliency in this areas. So really it will be a field laboratory for the research of Disaster Resilience and Climate Change: Science and innovation for adaptation to climate  change: from assessing costs, risks and opportunities to demonstration of options and practices.
 
 ## R Markdown
 
@@ -74,6 +74,14 @@ lines(trend(annual(X,'wetfreq')),lty=2)
 
 Get data on storm tracks... IMILAST
 Correlation between storm tracks and stations.
+
+## HURDAT2
+
+```{r}
+url <- 'http://www.aoml.noaa.gov/hrd/hurdat/hurdat2-1851-2016-apr2017.txt'
+
+```
+
 
 ## Tidal measurements
 

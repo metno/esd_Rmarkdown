@@ -76,7 +76,7 @@ for (i in 1:length(urls)) if (!file.exists(substr(urls[i],43,70))) download.file
 
 Data from ECA&D: precipitation. Snow depth?
 
-```{r}
+```{r rain-gauges}
 library(esd)
 ss <- select.station(param='precip',cntr='Germany',alt=250,nmin=75)
 map(ss,new=FALSE)
@@ -104,7 +104,7 @@ grid()
 Area total precipitation from gridded EOBS.
 
 ```{r}
-rr <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=range(lon(Y)),lat=range(lat(Y)))
+rr <- retrieve('~/storeB/data/data.ECAD/rr_0.25deg_reg.nc',lon=range(lon(Y)),lat=range(lat(Y)))
 map(rr,new=FALSE)
 Arr <- aggregate.area(rr)
 plot(rr,new=FALSE)

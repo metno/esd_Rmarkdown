@@ -45,7 +45,7 @@ Observations of the wind are sparse in the Baltic region, but approximate values
 
 Import the E-OBS slp data using the retrieve function of the esd package. The data is represented with lower-case $x$.
 
-```{r,warning=FALSE}
+```{r,warning=FALSE,eval=FALSE}
 if (!file.exists('eu-circle_case-study-2_slp.rda')) {
   x <- retrieve('pp_0.25deg_reg.nc',path='~/storeB/data/data.ECAD',
                 lon=c(10,30),lat=c(53,66))
