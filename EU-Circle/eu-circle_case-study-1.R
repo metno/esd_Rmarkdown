@@ -25,6 +25,8 @@ diagnose(x)
 plot(x,new=FALSE)
 grid()
 
+print('wet-day mean')
+
 ## ----warning=FALSE-------------------------------------------------------
 mu <- annual(x,'wetmean',nmin=250)
 wq95 <- function(x) {x <- x[is.finite(x)]; x <- x[x >= 1]; wq95 <- quantile(x,probs=0.95); wq95}
@@ -46,6 +48,8 @@ for (i in 2:dim(mu)[2]) {
 }
 grid()
 
+print('quantiles')
+
 ## ----warning=FALSE-------------------------------------------------------
 ## check the relationship between wet-day 95-percentile and wet-day mean
 plot(-log(0.05)*zoo(mu[,2]),zoo(q95[,1]),pch=19,xlim=c(0,120),ylim=c(0,120),
@@ -55,16 +59,20 @@ points(-log(0.05)*zoo(mu[,1]),zoo(q95[,2]),pch=19,col=rgb(1,0,0,0.2))
 points(-log(0.05)*zoo(mu[,3]),zoo(q95[,3]),pch=19,col=rgb(0,0,1,0.2))
 points(-log(0.05)*zoo(mu[,4]),zoo(q95[,4]),pch=19,col=rgb(0,1,0,0.2))
 points(-log(0.05)*zoo(mu[,5]),zoo(q95[,5]),pch=19,col=rgb(0,0.7,0.7,0.2))
-points(-log(0.05)*zoo(mu[,6]),zoo(q95[,6]),pch=19,col=rgb(0.7,0,0.7,0.2))
-points(-log(0.05)*zoo(mu[,7]),zoo(q95[,7]),pch=19,col=rgb(0.5,0.5,0.5,0.2))
+#points(-log(0.05)*zoo(mu[,6]),zoo(q95[,6]),pch=19,col=rgb(0.7,0,0.7,0.2))
+#points(-log(0.05)*zoo(mu[,7]),zoo(q95[,7]),pch=19,col=rgb(0.5,0.5,0.5,0.2))
 grid()
 legend(0,120,loc(mu),pch=19,col=c('black',rgb(1,0,0,0.2),rgb(0,0,1,0.2),rgb(0,1,0,0.2),rgb(0,0.7,0.7,0.2),rgb(0.7,0,0.7,0.2),rgb(0.5,0.5,0.5,0.2)),bty='n',cex=0.5)
+
+print('Wet-day frequency')
 
 ## ----warning=FALSE-------------------------------------------------------
 fw <- annual(x,'wetfreq',nmin=250)
 plot(fw,new=FALSE)
 for (i in 1:dim(fw)[2]) lines(trend(subset(fw,is=i)),lty=2)
 grid()
+
+print('probability')
 
 ## ----warning=FALSE-------------------------------------------------------
 x0 <- 100 #mm
@@ -78,6 +86,9 @@ plot(Pr,ylab=expression(Pr(n>0)),xlab='',new=FALSE,errorbar=FALSE,
           main=paste('Probability of at least one day with more than',x0,'mm'))
 for (i in 1:dim(Pr)[2]) lines(trend(subset(Pr,is=i)),lty=2)
 grid()
+
+
+print('Number of consecutive dry days')
 
 ## ----warning=FALSE-------------------------------------------------------
 z <- subset(x,it=c(1900,2016),is=1)
@@ -96,6 +107,8 @@ lines(trend(subset(amncd,is=1)),lty=2)
 mcdd <- trend(subset(amncd,is=2))
 lines(mcdd,lty=1)
 print(attr(mcdd,'coefficients'))
+
+print('geometric distribution')
 
 ## ----warning=FALSE-------------------------------------------------------
 plot(1-pgeom(1:100,1/mean(mcdd)),type='l',xlab='consecutive dry days',ylab=expression(Pr(X > x)))
@@ -171,18 +184,30 @@ if (!file.exists('dse.mld.slp.rda')) {
 } else load('dse.mld.slp.rda')
 plot(dse.mld.slp)
 
-## ---- warning=FALSE------------------------------------------------------
-if (!file.exists('dse.mld.t2m.rda')) {
-  dse.mld.t2m <- DSensemble.eof(eof.res,predictor=T2M,it='mjjas',path="~/data/CMIP5.monthly",pattern = "tas_Amon_ens_")
-  save(dse.mld.t2m,file = 'dse.mld.t2m.rda')
-} else load('dse.mld.t2m.rda')
-plot(dse.mld.t2m)
+## ---- warning=FALSE, eval=FALSE,echo=FALSE-------------------------------
+## if (!file.exists('dse.mld.t2m.rda')) {
+##   dse.mld.t2m <- DSensemble.eof(eof.res,predictor=T2M,it='mjjas',path="~/data/CMIP5.monthly",pattern = "tas_Amon_ens_")
+##   save(dse.mld.t2m,file = 'dse.mld.t2m.rda')
+## } else load('dse.mld.t2m.rda')
+## plot(dse.mld.t2m)
+
+## ---- eval=FALSE,echo=FALSE----------------------------------------------
+## dse.mld <- dse.mld.slp
+## gcmnm <- names(dse.mld)
+## gcmnm <- gcmnm[-grep('info',gcmnm)]; gcmnm <- gcmnm[-grep('eof',gcmnm)]
+## for (nm in gcmnm) {
+##   coredata(dse.mld[[nm]]) <- coredata(dse.mld.slp[[nm]]) + coredata(dse.mld.t2m[[nm]])
+## }
 
 ## ------------------------------------------------------------------------
-dse.mlt <- dse.mld.slp
-gcmnm <- names(dse.mlt)
-gcmnm <- gcmnm[-grep('info',gcmnm)]; gcmnm <- gcmnm[-grep('eof',gcmnm)]
-for (nm in gcmnm) {
-  coredata(dse.mlt[[nm]]) <- coredata(dse.mlt.slp[[nm]]) + coredata(dse.mlt.t2m[[nm]])
-}
+## Read wild fire data
+colnames <- c('year','number','type','department','code-INSEE','municipality','something','DFCI.code','Alert','origin','area')
+fires <- read.table('~/Downloads/liste_incendies_ du_09_05_2017.csv',sep=';',col.names=colnames,header=FALSE)
+h <- hist(fires$year,col='grey')
+
+## ------------------------------------------------------------------------
+breaks <- seq(0,3000,by=250)
+lambda <- mean(h$counts)
+hist(h$counts,breaks=breaks,freq = TRUE)
+lines(breaks,dpois(breaks,lambda=lambda))
 

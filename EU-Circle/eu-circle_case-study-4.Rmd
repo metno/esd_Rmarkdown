@@ -72,16 +72,16 @@ grid()
 lines(trend(annual(X,'wetfreq')),lty=2)
 ```
 
-Get data on storm tracks... IMILAST
-Correlation between storm tracks and stations.
+Get data on storm tracks. IMILAST data do not cover the region as the analysis is only for storms north of 20N and south of 20S. Tropical cyclones are reported in the HURDAT2 dataset \url{http://www.aoml.noaa.gov/hrd/hurdat/hurdat2-1851-2016-apr2017.txt}, but only for the North-Atlantic. There are some data in the best-track data base \url{http://www.usno.navy.mil/NOOC/nmfc-ph/RSS/jtwc/best_tracks/}. 
 
-## HURDAT2
+
+## Best Track
 
 ```{r}
-url <- 'http://www.aoml.noaa.gov/hrd/hurdat/hurdat2-1851-2016-apr2017.txt'
-
+url <- 'http://www.usno.navy.mil/NOOC/nmfc-ph/RSS/jtwc/best_tracks/'
 ```
 
+Correlation between storm tracks and stations.
 
 ## Tidal measurements
 
