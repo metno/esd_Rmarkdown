@@ -1,5 +1,5 @@
 ## ----setup, include=FALSE------------------------------------------------
-knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_chunk$set(echo = TRUE)
 
 ## ----initialise----------------------------------------------------------
 ## Script that applies MOS to SPECS decadal forecasts
@@ -287,7 +287,7 @@ comparemannual <- function(tas_DECA,reanalysis='~/Downloads/air.mon.mean.nc',mas
   ## Apply an EOF-filter to emphasise only the large scale anomalies:
   if (!is.null(eofs)) {
     print(paste('Only keep the large-scale structures; EOFs:',paste(eofs,collapse=' ,')))
-    Xm.eofs <- subset(EOF(Xm),pattern=eofs)
+    Xm.eofs <- subset(EOF(Xm),ip=eofs)
     Xm <- eof2field(Xm.eofs)
     land <- paste(land,'eof_',paste(eofs,collapse='+'))
   }
