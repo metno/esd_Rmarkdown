@@ -564,7 +564,7 @@ legend(1,8.5,c(expression(bar(x)),expression(mu),expression(f[w]),
                expression(bar(n)[c*w*d]),expression(bar(n)[c*d*d])),bty='n',
        col=c('steelblue','darkblue','grey','darkgreen','red'),lwd=c(3,3,1,1,1),
        ncol=2)
-figlab('Figure SM3')
+figlab('Figure S3')
 dev.copy2pdf(file='figureSM3.pdf')
 
 ## Figure SM2.
@@ -580,7 +580,7 @@ plot(qx,qy,xlim=c(0,40),ylim=c(0,40),
      main='Test: exponential distribution & changing mean',
      xlab=expression(q[p]),ylab=expression(-log(1-p)*mu))
 lines(c(0,40),c(0,40),col='grey')
-figlab('Figure SM1')
+figlab('Figure S1')
 dev.copy2pdf(file='figureSM1.pdf')
 
 ## Figure SM3
@@ -588,7 +588,7 @@ dev.copy2pdf(file='figureSM1.pdf')
 X <- retrieve('air.mon.mean.nc',lon=c(-100,-30),lat=c(0,40))
 dev.new()
 map(X,projection='sphere',colbar=list(pal="budrd",breaks=seq(8,28,by=0.5)))
-figlab('Figure SM2',xpos=0.8,ypos=0.999)
+figlab('Figure S2',xpos=0.8,ypos=0.999)
 dev.copy2pdf(file='figureSM2.pdf')
 
 ## Figure SM4
@@ -608,7 +608,7 @@ grid()
 legend("topleft",legend=c("RCP4.5","RCP8.5","RCP2.6"),lty=1,lwd=2,
        bty="o",box.lwd=0.2,
        col=c(rgb(0.5,0.5,0.5,0.5),rgb(1,0.5,0.5,0.5),rgb(0.5,1,0.5,0.5)))
-figlab('Figure SM4')
+figlab('Figure S4')
 dev.copy2pdf(file='figureSM4.pdf')
 
 ## Figure SM5
@@ -618,7 +618,7 @@ hist(100*as.numeric(r2),breaks=seq(0,100,by=5),lwd=2,col=rgb(0,0.3,0.5),
      xlab=expression(paste(R^2,' (%)')),freq=TRUE,
      main="Summary of regression scores")
 grid()
-figlab('Figure SM5')
+figlab('Figure S5')
 dev.copy2pdf(file='figureSM5.pdf')
 
 ## Figure SM6
@@ -684,7 +684,7 @@ apply(rbind(trend.mux,trend.pre,trenderr.mux,trenderr.pre),2,
         lines(x[1]+c(-2,-2)*x[3],x[2]+c(-1,1)*0.01,col=rgb(0.6,0.2,0,0.05))
         lines(x[1]+c(2,2)*x[3],x[2]+c(-1,1)*0.01,col=rgb(0.6,0.2,0,0.05))
       })
-figlab('Figure SM6')
+figlab('Figure S6')
 dev.copy2pdf(file='figureSM6.pdf')
 
 ## Figure SM7
@@ -693,8 +693,8 @@ dev.new()
 map(MU,FUN='trend',cex=1,
     colbar=list(pal="budrd",breaks=pretty(c(-0.5,0.5),n=21)))
 pval <- apply(coredata(MU),2,'trend.pval') <= 0.05
-plot(lon(subset(MU,is=pval)),lat(subset(MU,is=pval)),cex=1.2,col=rgb(0,0,0,0.5))
-figlab('Figure SM7',xpos=0.8,ypos=0.999)
+points(lon(subset(MU,is=pval)),lat(subset(MU,is=pval)),cex=1.2,col=rgb(0,0,0,0.5))
+figlab('Figure S7',xpos=0.8,ypos=0.999)
 figlab(expression(paste('Trend in ',mu,' (mm/day per decade)')),ypos=0.999)
 figlab(paste(range(year(MU)),collapse="-"),ypos=0.96)
 dev.copy2pdf(file='figureSM7.pdf')
@@ -707,7 +707,7 @@ hist(fw.trend,breaks=seq(-50,50,by=1),col='grey',lwd=2,
      main=paste('Trend in wet-day frequency (',paste(range(year(FW)),collapse="-"),")",sep=""),
      xlab=expression(paste(f[w],' (%/decade)')))
 grid()
-figlab('Figure SM8')
+figlab('Figure S8')
 dev.copy2pdf(file='figureSM8.pdf')
 
 ## Figure SM9
@@ -716,9 +716,9 @@ dev.new()
 map(FW,FUN='trend',cex=1,
     colbar=list(pal="budrd",breaks=pretty(c(-0.03,0.03),n=12)))
 pval <- apply(coredata(FW),2,'trend.pval') <= 0.05
-plot(lon(subset(FW,is=pval)),lat(subset(FW,is=pval)),cex=1.2,col=rgb(0,0,0,0.5))
+points(lon(subset(FW,is=pval)),lat(subset(FW,is=pval)),cex=1.2,col=rgb(0,0,0,0.5))
 #points(lon(FW),lat(FW),cex=1.2,col=rgb(0,0,0,0.3))
-figlab('Figure SM9',xpos=0.8,ypos=0.999)
+figlab('Figure S9',xpos=0.8,ypos=0.999)
 figlab(expression(paste('Trend in ',f[w],' (fraction per decade)')),ypos=0.999)
 figlab(paste(range(year(MU)),collapse="-"),ypos=0.96)
 dev.copy2pdf(file='figureSM9.pdf')
@@ -832,7 +832,7 @@ par(new=TRUE,fig=c(0.15,0.45,0.7,0.9),mar=rep(0,4),xaxt="n",yaxt="n")
 plot(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
 lines(geoborders,col='grey')
 points(calmu$lon,calmu$lat,pch=19,col=col,cex=0.3*cex)
-figlab('Figure SM10')
+figlab('Figure S10')
 dev.copy2pdf(file='figureSM10.pdf')
 
 mu.eq.f.tx <- model.mutx
@@ -877,5 +877,5 @@ legend(200,-4e-3,legend=c("seasonal regression","spatial regression"),
        col=c(col,rgb(0.5,0.5,0.5,0.4)),cex=0.8,lwd=2,box.lwd=0.5,
        lty=c(1,1),pch=c(19,NA),fill=c(NA,rgb(0.5,0.5,0.5,0.3)),
        border=c(NA,rgb(0.5,0.5,0.5,0.4)))
-figlab('Figure SM11')
+figlab('Figure S11')
 dev.copy2pdf(file='figureSM11.pdf')

@@ -217,6 +217,7 @@ Only the 4 leading EOFs for the seasonal mean dry spell length are relevant. The
 
 ```{r}
 eof.dry <- subset(eof.dry,ip=1:4)
+index(eof.dry) <- year(eof.dry)
 ```
 
 ### Predictors for calibration: check for any dependency
@@ -412,7 +413,7 @@ ds.ataf.slp <- DS(ataf,eof.slp)
 
 Examine the connection between the mean dry spell duration and the area of burned forest
 
-```{r, height=8}
+```{r, fig.height=8}
 plot(ds.ataf.dry,new=FALSE)
 ```
 
@@ -421,7 +422,7 @@ The regression results suggest a connection between the mean duration of the dry
 Also examine the connection between high summer temperature and the burned area:
 
 
-```{r, height=8}
+```{r, fig.height=8}
 plot(ds.ataf.t2m,new=FALSE)
 ```
 
@@ -430,7 +431,7 @@ There is also a connection between ln(Af) and the summer temperature, and the cr
 The same analysis repeated for the SLP fails to find a connection for ln(Af), but the linear relationship between SLP and Af captures a dependency
 
 
-```{r, height=8}
+```{r, fig.height=8}
 plot(ds.ataf.slp,new=FALSE)
 ```
 
@@ -442,7 +443,7 @@ The time series suggest an increasing bias over time, which possibly can be expl
 
 We can combine the projections of the mean dry interval duration with the downscaling result using the same quantity as predictor. The dry duration statistics was downscaled using the SLP as predictor, so the SLP is in the equation.
 
-```{r}
+```{r, fig.height=8}
 ## Convert the projected data into an EOF for the multi-model ensemble
 eof.dry.z <- as.eof(dse.mld.slp)
 ## Use this EOF as input with the downscaling model calibrated with mean dry interval duration to make projections of ln(fire area)
