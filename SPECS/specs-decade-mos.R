@@ -548,7 +548,6 @@ if (looexperiments) {
   score.fw.y1.9 <- diagnoseMOS('specsdecadal.z.fw.y1.9.rda',fw.eobs,l=9)
   while (dev.cur()>1) dev.off()
 ## Repeat and make a table of the results...
-  
 }
   
 
