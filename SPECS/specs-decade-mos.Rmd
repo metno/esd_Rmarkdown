@@ -24,7 +24,7 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 library(esd)
 #library(knitr)
-#purl('git/esd_Rmarkdown/SPECS/specs-decade-mos.Rmd', output='git/esd_Rmarkdown/SPECS/specs-decade-mos.R')
+#purl('~/git/esd_Rmarkdown/SPECS/specs-decade-mos.Rmd', output='~/git/esd_Rmarkdown/SPECS/specs-decade-mos.R')
 #library(ncdf)
 setwd("~/R")
 experiments <- c('~/data/gfdl_DECA.rda','~/data/hadcm3_DECA.rda','~/data/miroc5_DECA.rda','~/data/mpi_DECA.rda')
@@ -489,10 +489,12 @@ if (downscaledreanalysis) {
 ## Derive the saturation vapour pressure from temperature
 ## retrieve did not get the right time stamp:
   es <- annual(C.C.eq(retrieve('~/Downloads/air.mon.mean.nc',lon=c(-60,40),lat=c(20,70))))
+  index(es) <- year(es)
   es.eof <- EOF(mask(es,land=TRUE))
 
 ## Also get the mean sea-level pressure for the wet-day frequency 
   slp <- annual(retrieve('~/Downloads/slp.mon.mean.nc',lon=c(-60,40),lat=c(20,70)))
+  index(slp) <- year(slp)
   slp.eof <- EOF(slp)
 
 ## Additional diagnostics: canonical correlation analysis:
@@ -539,17 +541,19 @@ if (downscaledreanalysis) {
 for (iexp in 1:1) {
   print(paste('Get the decadal predictors saved locally in',experiments[iexp]))
   load(experiments[iexp])
+  dir <- substr(experiments[iexp],1,nchar(experiments[iexp])-4)
+  if (!file.exists(dir)) dir.create(dir)
 
 ## Leave-one-out cross-validation experiments
 ## Names of file names with results stored  
-fw1name <- paste('specsdecadal.z.fw.y1.gcm',iexp,'rda',sep='.')
-mu1name <- paste('specsdecadal.z.mu.y1.gcm',iexp,'rda',sep='.')
-fw3name <- paste('specsdecadal.z.fw.y1.3.gcm',iexp,'rda',sep='.')
-mu3name <- paste('specsdecadal.z.mu.y1.3.gcm',iexp,'rda',sep='.')
-fw5name <- paste('specsdecadal.z.fw.y1.5.gcm',iexp,'rda',sep='.')
-mu5name <- paste('specsdecadal.z.mu.y1.5.gcm',iexp,'rda',sep='.')
-fw9name <- paste('specsdecadal.z.fw.y1.9.gcm',iexp,'rda',sep='.')
-mu9name <- paste('specsdecadal.z.mu.y1.9.gcm',iexp,'rda',sep='.')
+fw1name <- paste(dir,'/specsdecadal.z.fw.y1.gcm.',iexp,'rda',sep='')
+mu1name <- paste(dir,'/specsdecadal.z.mu.y1.gcm.',iexp,'rda',sep='')
+fw3name <- paste(dir,'/specsdecadal.z.fw.y1.3.gcm.',iexp,'rda',sep='')
+mu3name <- paste(dir,'/specsdecadal.z.mu.y1.3.gcm.',iexp,'rda',sep='')
+fw5name <- paste(dir,'/specsdecadal.z.fw.y1.5.gcm.',iexp,'rda',sep='')
+mu5name <- paste(dir,'/specsdecadal.z.mu.y1.5.gcm.',iexp,'rda',sep='')
+fw9name <- paste(dir,'/specsdecadal.z.fw.y1.9.gcm.',iexp,'rda',sep='')
+mu9name <- paste(dir,'/specsdecadal.z.mu.y1.9.gcm.',iexp,'rda',sep='')
 
 if (looexperiments) {
 ## Carry out a LOO cross-validation experiment
