@@ -476,12 +476,14 @@ attr(fw.eobs,'unit') <- 'fraction'
 ## Display the downscaled reanalysis data for assessing link between large and small scales  - in the shape of EOFs
 if (downscaledreanalysis) {
   mu.eof <- EOF(mu.eobs)
+  index(mu.eof) <- year(mu.eof)
   plot(mu.eof,colbar=list(pal='t2m',breaks=seq(-0.02,0.02,by=0.001),type='fill',rev=TRUE),new=FALSE)
   figlab('EOBS',ypos=0.999)
 
 ## The wet-day frequency:
   
   fw.eof <- EOF(fw.eobs)
+  index(fw.eof) <- year(fw.eof)
   plot(fw.eof,colbar=list(pal='t2m',breaks=seq(-0.01,0.015,by=0.001),type='fill',rev=TRUE),new=FALSE)
   figlab('EOBS',ypos=0.999)
 
@@ -538,7 +540,7 @@ if (downscaledreanalysis) {
 ##> dim(psl_DECA$Data)
 ## [1]   9  10 480  41  45
 
-for (iexp in 1:1) {
+for (iexp in 1:4) {
   print(paste('Get the decadal predictors saved locally in',experiments[iexp]))
   load(experiments[iexp])
   dir <- substr(experiments[iexp],1,nchar(experiments[iexp])-4)

@@ -1,5 +1,5 @@
 ## ----setup, include=FALSE------------------------------------------------
-knitr::opts_chunk$set(echo = TRUE)
+##knitr::opts_chunk$set(echo = TRUE)
 
 ## ----initialise----------------------------------------------------------
 ## Script that applies MOS to SPECS decadal forecasts
@@ -421,12 +421,14 @@ attr(fw.eobs,'unit') <- 'fraction'
 ## Display the downscaled reanalysis data for assessing link between large and small scales  - in the shape of EOFs
 if (downscaledreanalysis) {
   mu.eof <- EOF(mu.eobs)
+  index(mu.eof) <- year(mu.eof)
   plot(mu.eof,colbar=list(pal='t2m',breaks=seq(-0.02,0.02,by=0.001),type='fill',rev=TRUE),new=FALSE)
   figlab('EOBS',ypos=0.999)
 
 ## The wet-day frequency:
   
   fw.eof <- EOF(fw.eobs)
+  index(fw.eof) <- year(fw.eof)
   plot(fw.eof,colbar=list(pal='t2m',breaks=seq(-0.01,0.015,by=0.001),type='fill',rev=TRUE),new=FALSE)
   figlab('EOBS',ypos=0.999)
 
@@ -489,16 +491,16 @@ for (iexp in 1:4) {
 
 ## Leave-one-out cross-validation experiments
 ## Names of file names with results stored  
-  fw1name <- paste(dir,'/specsdecadal.z.fw.y1.gcm.',iexp,'rda',sep='')
-  mu1name <- paste(dir,'/specsdecadal.z.mu.y1.gcm.',iexp,'rda',sep='')
-  fw3name <- paste(dir,'/specsdecadal.z.fw.y1.3.gcm.',iexp,'rda',sep='')
-  mu3name <- paste(dir,'/specsdecadal.z.mu.y1.3.gcm.',iexp,'rda',sep='')
-  fw5name <- paste(dir,'/specsdecadal.z.fw.y1.5.gcm.',iexp,'rda',sep='')
-  mu5name <- paste(dir,'/specsdecadal.z.mu.y1.5.gcm.',iexp,'rda',sep='')
-  fw9name <- paste(dir,'/specsdecadal.z.fw.y1.9.gcm.',iexp,'rda',sep='')
-  mu9name <- paste(dir,'/specsdecadal.z.mu.y1.9.gcm.',iexp,'rda',sep='')
+fw1name <- paste(dir,'/specsdecadal.z.fw.y1.gcm.',iexp,'rda',sep='')
+mu1name <- paste(dir,'/specsdecadal.z.mu.y1.gcm.',iexp,'rda',sep='')
+fw3name <- paste(dir,'/specsdecadal.z.fw.y1.3.gcm.',iexp,'rda',sep='')
+mu3name <- paste(dir,'/specsdecadal.z.mu.y1.3.gcm.',iexp,'rda',sep='')
+fw5name <- paste(dir,'/specsdecadal.z.fw.y1.5.gcm.',iexp,'rda',sep='')
+mu5name <- paste(dir,'/specsdecadal.z.mu.y1.5.gcm.',iexp,'rda',sep='')
+fw9name <- paste(dir,'/specsdecadal.z.fw.y1.9.gcm.',iexp,'rda',sep='')
+mu9name <- paste(dir,'/specsdecadal.z.mu.y1.9.gcm.',iexp,'rda',sep='')
 
-  if (looexperiments) {
+if (looexperiments) {
 ## Carry out a LOO cross-validation experiment
   print('Check results for LOO experiment - if absent do it')
   if (!file.exists(fw1name)) {
