@@ -486,7 +486,7 @@ if (downscaledreanalysis) {
 for (iexp in 1:4) {
   print(paste('Get the decadal predictors saved locally in',experiments[iexp]))
   load(experiments[iexp])
-  dir <- substr(experiments[iexp],1,nchar(experiments[iexp])-4)
+  dir <- substr(experiments[iexp],3,nchar(experiments[iexp])-4)
   if (!file.exists(dir)) dir.create(dir)
 
 ## Leave-one-out cross-validation experiments
