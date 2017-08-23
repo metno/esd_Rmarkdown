@@ -67,7 +67,7 @@ Xpredictor <- function(x,m=1:3,it=NULL,is=NULL,mask=FALSE,
   ## specifies e.g. months
   ## Get the dimensions of the data structure
   d <- dim(x$Data)
-  nmembers <- length(x$members)
+  nmembers <- d[2]
   if (verbose) {print(summary(x)); print(d)}
   ## initialisations members times nx ny
 
