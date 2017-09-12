@@ -123,3 +123,5 @@ plot(ds.asl)
 ```
 
 The seasonal variations are indeed caused by seasonally shifting winth patterns. This gives an idea of the sensitivity of the local sea level to changing winds in general, as the physical forces will be similar. We cal downscale the SLP from GCMs in multi-model ensembles to try to get a robust picture. There may be some problems in the SLP simulation over the Indian sub-continent, which means that we may need to mask out the land.
+
+We can use similar approach as in Benestad et al. (2017) <http://www.nat-hazards-earth-syst-sci.net/17/993/2017/> to downscale the local sea level. This, however, does not account for the global increase, which needs to be analysed seperately and added to this. 
