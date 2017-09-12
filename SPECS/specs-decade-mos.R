@@ -413,6 +413,8 @@ fw.eobs <- retrieve('~/fw_0.25deg_reg.nc')
 attr(mu.eobs,'variable') <- 'mu'
 attr(fw.eobs,'variable') <- 'fw'
 attr(fw.eobs,'unit') <- 'fraction'
+attr(mu.eobs,'source') <- 'EOBS'
+attr(fw.eobs,'source') <- 'EOBS'
 #index(fw.eobs) <- year(as.Date(time,origin = as.Date("1950-01-01")))
 #index(mu.eobs) <- year(as.Date(time,origin = as.Date("1950-01-01")))
 
