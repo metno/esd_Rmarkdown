@@ -87,7 +87,7 @@ Get data on storm tracks. IMILAST data do not cover the region as the analysis i
 url <- 'http://www.usno.navy.mil/NOOC/nmfc-ph/RSS/jtwc/best_tracks/'
 ```
 
-Correlation between storm tracks and stations.
+Look at correlation between storm tracks and stations. Also see if there is a connection between wind speed, cycvlone size, etc and the temperature (Indian Ocean, global mean). Possible to estimate a scaling function that can be applied to historical storms? Based on a large sample of data, such as the North Atlantic? 
 
 ## Tidal measurements
 

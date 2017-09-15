@@ -1,0 +1,66 @@
+---
+title: "MIMOZA"
+author: "Rasmus Benestad"
+date: "September 14, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r esd}
+library(esd)
+```
+
+## Tidal data and sea level
+
+You can also embed plots, for example: <http://www.psmsl.org/data/obtaining/>, 
+
+```{r sealevel, echo=FALSE}
+sl.maputo <- read.table('http://www.psmsl.org/data/obtaining/met.monthly.data/986.metdata',sep=';')
+sl.island <- read.table('http://www.psmsl.org/data/obtaining/met.monthly.data/1054.metdata',sep=';')
+```
+
+## IMILAST storm tracks
+
+```{r}
+if (!file.exists('mimoza.imilast.rda')) {
+  imilast.storms <- read.imilast('~/data/IMILAST/ERAinterim_0.75_SH_M07_19790101_20091231.txt',lon=c(30,90),lat=c(-50,-5))
+  cyclones <- events2trajectory(imilast.storms)
+  save(cyclones,file='mimoza.imilast.rda')
+} load('mimoza.imilast.rda')
+```
+
+
+## GHCND temperature and precipitation
+
+```{r}
+## get the GHCND data
+if (!file.exists('mimoza.ghcnd.rda')) {
+  ## Daily maximum temperature
+  ss <- select.station(lon=c(27,37),lat=c(-40,-10),src='ghcnd',nmin=30,param='tmax')
+  tmax <- station(ss,verbose=TRUE)
+  ## Daily minimum temperature
+  ss <- select.station(lon=c(27,37),lat=c(-40,-10),src='ghcnd',nmin=30,param='tmin')
+  tmin <- station(ss,verbose=TRUE)
+  ## Daily precipitation
+  ss <- select.station(lon=c(27,37),lat=c(-40,-10),src='ghcnd',nmin=30,param='precip')
+  precip <- station(ss,verbose=TRUE)
+  ## Set bad (missing) data to NA
+  z <- coredata(tmax); z[z < -20] <- NA; z[z > 70] <- NA; z -> coredata(tmax)
+  z <- coredata(tmin); z[z < -20] <- NA; z[z > 70] <- NA; z -> coredata(tmin)
+  z <- coredata(precip); z[z < 0] <- NA; z[z > 700] <- NA; z -> coredata(precip)
+  ## Save in R-binary for convenience.
+  save(tmax,tmin,precip,file='mimoza.ghcnd.rda')
+} else load ('mimoza.ghcnd.rda')
+```
+
+
+
