@@ -1,0 +1,385 @@
+Worshop on ESD 4 NVE 
+-----------------------------------
+title: "esd4nve_examples"
+author: "Abdelkader Mezghani"
+date: "March 11, 2016"
+output: html_document
+---
+
+This is a generated R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+---------------------------------
+
+## **Data & Structure**
+
+```{r "setup", include=FALSE}
+require("knitr")
+opts_knit$set(root.dir = "~/DATA/data_esd_2016/fwddataforr3workshopenom2uker")
+```
+
+## Require the following libraries
+```{r required R packages,echo=FALSE}
+require(esd)
+require(leaflet)
+require(sp)
+require(rgdal)
+```
+
+
+## R3 ESD & NVE
+### Function for reading discharge data into the esd format
+
+```{r readNVE,warning=FALSE}
+## Create a function that converts NVE format to esd format
+readNVE <- function(file='/data_esd_2016/atnsjo.csv',loc='Atnsjo',lat='61',lon='10',
+                    alt=1204,stid = '2.32',plot=TRUE,...) {
+  
+  data <- read.csv(file=file,header=FALSE, comment.char="#", 
+                   dec=".", sep=" ", stringsAsFactors=FALSE)
+  
+  dates <- as.Date(data$V1,format="%Y%m%d")
+  xz <- zoo(data$V2,order.by=dates)
+  
+  y <- as.station(x=xz,loc=loc,lon=lon,lat=lat,alt=alt,stid=stid,
+                  param="Q",
+                  unit="m/s^{-2}",
+                  longname="Discharge data",...)
+  y[y==-9999] <- NA ## Replace missing values with NA	
+  invisible(y)
+}
+```
+
+#### Read meta data from the shape file
+
+```{r}
+library(rgdal)
+library(leaflet)
+
+rsf <- readOGR(dsn = 'Shape_filer_R3_WP4/R3_ESD_nbf_gruppe1.shp',layer = 'R3_ESD_nbf_gruppe1', GDAL1_integer64_policy = TRUE)
+rsf.lonlat <- spTransform(rsf,CRSobj = CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+
+str(rsf)
+
+df <- data.frame(rsf@data, stringsAsFactors = FALSE)
+
+xy.coords <- as.data.frame(t(apply(as.matrix(1:18), 1, function(i) unlist(rsf@polygons[[i]]@labpt))))
+colnames(xy.coords) <- c('x','y')
+coordinates(xy.coords) <- ~ x + y
+#CRS(xy.coords) <- rsf@proj4string
+proj4string(xy.coords) <- rsf@proj4string
+
+lonlat.coords <- spTransform(xy.coords,CRSobj = CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+
+lonlat <- attr(unclass(lonlat.coords),'coords')
+
+meta <- data.frame(station_id = as.character(df$STASJON_NR), location = as.character(df$ST_NAVN), longitude = lonlat[1,] ,latitude = lonlat[,2])
+
+icons <- awesomeIcons(
+  icon = 'ios-close',
+  iconColor = 'black',
+  library = 'ion',
+  markerColor = 'orange')
+
+leaflet(rsf.lonlat) %>% 
+  addProviderTiles(providers$Esri.WorldStreetMap) %>%
+  addPolygons(data = rsf.lonlat,stroke = TRUE, weight = 1) %>%
+  addAwesomeMarkers(lng = lonlat[,1] , lat = lonlat[,2],icon = icons)
+
+```
+
+#### Reading data into esd format
+```{r,warning=FALSE} 
+library(esd) 
+
+if (!file.exists('R3_WP4_Qdata_sep2017/q.nve.rda')) {
+  lf <- list.files('R3_WP4_Qdata_sep2017',pattern = '.csv',full.names = TRUE) ## remember to update the file path name
+  readName <- function(lf) {
+    namefromfile <- function(i) unlist(strsplit(basename(lf),split = '_')[[i]][2])
+    fname <- apply(as.matrix(1:length(lf)),1,namefromfile)
+    invisible(substr(fname,1,nchar(fname) - 4))
+  }
+  
+  locs <- tolower(rsf$ST_NAVN)
+  staID <- substr(rsf$STASJON_NR,1,nchar(as.character(rsf$STASJON_NR))-2)
+  ## Display list of discharge stations 
+  listStationName <- readName(lf)
+  for (i in 1 : length(lf)) {
+    id <- grep(as.character(staID[i]), tolower(basename(lf)))
+    ifile <- lf[id]
+    cat(i, tolower(locs[i]),ifile,sep = '\n')
+    #stopifnot(length(id) == 1)
+    x <- readNVE(file= ifile,loc=locs[i],lon=lonlat[i,1],lat=lonlat[i,2], stid = staID[i], alt=NA , cntr='norway')
+    if (i ==1) X <- x  else X <- combine.stations(X,x)
+  }
+  
+  # Visual ckeck of the results
+  plot(X,plot.type = 'mult',ylab = toupper(substr(locs,1,5)),cex.lab = 0.8,new = FALSE)
+  
+  # save to file 
+  q.nve <- X 
+  save(q.nve,file = 'R3_WP4_Qdata_sep2017/q.nve.rda')
+} else 
+  load('R3_WP4_Qdata_sep2017/q.nve.rda')
+```
+
+#### Q Data Analysis
+```{r data Analysis, warning=FALSE,eval=TRUE, eval=TRUE, warning=FALSE}
+setwd('~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017/')
+load('q.nve.rda')
+library(leaflet)
+
+content <- paste(sep = "<br/>", paste("<b><a>",loc(q.nve),"</a></b>"))
+
+# plot(climatology(as.monthly(q.nve)),new=FALSE) ## Plot the climatology/hydrograph
+
+# compute annual max
+Qall.ann.max <- annual(q.nve,FUN="max")
+plot(Qall.ann.max,plot.type = 'mult')
+grid()
+
+# compute annual sum
+Qall.ann.sum <- annual(q.nve,FUN="sum")
+plot(Qall.ann.sum,plot.type = 'mult')
+plot(Qall.ann.sum,plot.type = 'mult')
+
+# perform a quick trend analysis
+Qall.tr.ann.max <- apply(Qall.ann.max,2,FUN='trend.coef',na.rm=TRUE)
+Qall.mean.ann.max <- apply(Qall.ann.max,2,FUN='mean',na.rm=TRUE)
+tr.rel <- round(Qall.tr.ann.max / Qall.mean.ann.max *100,digits = 1) ## in % per decade
+
+# test significancy
+Qall.pval.ann.max <- round(apply(Qall.ann.max,2,FUN='trend.pval',na.rm=TRUE),digits = 2)
+q.nve.sig <- subset(q.nve, is = which(Qall.pval.ann.max <= 0.05))
+
+# Construct the map
+content <- paste(sep = "<br/>", paste("<b><a>",toupper(loc(q.nve)),"</a></b>"), paste(as.character(tr.rel)," % "))
+pal <- colorBin(rev(colscal(20,'t2m')),c(-10,10),bins = 8, pretty = TRUE)
+df <- data.frame(lon = lon(q.nve),lat = lat(q.nve), trend = as.numeric(tr.rel))
+
+leaflet() %>% 
+  addProviderTiles(providers$Esri.WorldStreetMap,
+                   options = providerTileOptions(noWrap = TRUE)) %>%  
+  addCircleMarkers(lng  = df$lon, lat = df$lat, radius = 8, fillOpacity = 0.8,
+                   stroke = TRUE, color = 'black', weight = 1, fill = TRUE, fillColor = pal(df$trend), popup = content) %>%
+  addCircleMarkers(lng  = lon(q.nve.sig), lat = lat(q.nve.sig), radius = 2, fillOpacity = 0.8, stroke = TRUE, color = 'black', weight = 1, fill = TRUE, fillColor = 'black') %>%
+  addLegend(position = 'bottomleft',pal = pal, values = pal(df$trend), 
+            title = 'Trends in Q [%]')
+
+```
+
+
+## Downscaling monthly totals single discharge data @ Atnasjø
+
+```{r,warning=FALSE,eval= FALSE}
+library(esd)
+load('~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017/q.nve.rda')
+selQ <- subset(q.nve,is = 1)
+```
+
+## Search the nearest meteorological station 
+```{r}
+# select nearest preciptiation stations
+path.data <- '~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017'
+
+ssP <- select.station(src='metnod',param=c('precip'))
+
+if (!file.exists(file.path(path.data,'selNearPre.rda'))) {
+  mdis <- distAB(lon(selQ),lat(selQ),ssP$longitude,ssP$latitude)
+  # 20 closest stations
+  selP <- subset(as.data.frame(ssP), subset = is.element(order(mdis),c(1:20)))
+  PRE <- station.metnod(stid = selP$station_id,param='precip',user = 'metno')
+  save(PRE,file = file.path(path.data,'selNearPre.rda'))
+} else {
+  load(file.path(path.data,'selNearPre.rda'))
+}
+
+# Pgood <- clean.station(P,miss = 0.1,verbose = FALSE)
+# plot(Pgood)
+# title(paste(loc(Pgood)))
+```
+
+### Select nearest temperature station
+```{r selNearT}
+path.data <- '~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017'
+
+ssT <- select.station(src='metnod',param=c('t2m'))
+
+if (!file.exists(file.path(path.data,'selNearT2m.rda'))) {
+  # select nearest temperature station
+  mdis <- distAB(lon(selQ),lat(selQ),ssT$longitude,ssT$latitude)
+  selT <- subset(as.data.frame(ssT), subset = is.element(order(mdis),c(1:20))) # top 20 stations
+  T2m <- station.metnod(stid = selT$station_id, param = 't2m',user = 'metno')
+  plot(T2m,plot.type = 'mult')
+  Tgood <- subset(T2m, is = 16)
+  #Tgood <- clean.station(T2m,miss = 0.1,verbose = FALSE)
+  plot(Tgood)
+  # title(paste(loc(Tgood)))
+  save(T2m, file = file.path(path,'selNearT2m.rda'))
+} else {
+  load(file.path(path.data,'selNearT2m.rda'))
+}
+```
+
+### Produce map with all layers
+```{r selNearP}
+labq <- paste(sep = "<br/>", paste("<b><a>",loc(q.nve),"</a></b>"))
+labP <- paste(sep = "<br/>", paste("<b><a>", ssP$location,"</a></b>"))
+labT <- paste(sep = "<br/>", paste("<b><a>", ssT$location,"</a></b>"))
+
+leaflet() %>% 
+  addProviderTiles(providers$Esri.WorldStreetMap,group = 'streetmap') %>%
+  addPolygons(data = rsf.lonlat,stroke = TRUE, weight = 1 , group = 'NVE catchments') %>%
+  setView(lng = 15, lat = 65, zoom = 4) %>%
+  addMarkers(lng = lon(q.nve),lat = lat(q.nve), icon = icons, group = 'Discharge (red)',
+             popup = labq) %>%
+  #addAwesomeMarkers(lng = lon(q.nve),lat = lat(q.nve), icon = icons, group = 'Nearest') %>%
+  addCircleMarkers(lng = ssT$longitude,lat = ssT$latitude, stroke = TRUE, weight = 1, 
+                   radius= 3, color = 'orange', popup = labT, group = 'Thermometers (orange circles)') %>%
+  addCircleMarkers(lng = ssP$longitude,lat = ssP$latitude, stroke = TRUE, weight = 1, 
+                   radius= 3, color = 'blue', popup = labP, group = 'Raingauges (blue circles)') %>%
+  addLayersControl(overlayGroups = c("Discharge (red)","Raingauges (blue circles)","Thermometers (orange circles)","NVE catchments"), options = layersControlOptions(collapsed = FALSE))
+```
+
+```{r}
+load('~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017/q.nve.rda')
+q1 <- subset(q.nve,is = 1)
+Pmm <- subset(as.4seasons(precip.ERAINT(lon = c(0,30), lat = c(50,85))),it = 'djf') 
+# use already defined predictors or download from https://climexp.knmi.nl/selectfield_rea.cgi?id=someone@somewhere
+uam <- subset(as.4seasons(q1),it = 'djf') # predictand
+ds.uam <- DS(uam,EOF(Pmm))
+plot(ds.uam)
+```
+
+
+```{r}
+load('~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017/q.nve.rda')
+q1 <- subset(q.nve,is = 1)
+Pmm <- subset(as.annual(subset(precip.ERAINT(lon = c(0,30), lat = c(50,85)),it = 'djf'),nmin=0),it = c(1979,2013)) 
+# use already defined predictors or download from https://climexp.knmi.nl/selectfield_rea.cgi?id=someone@somewhere
+uam <- subset(as.annual(subset(q1,it = 'djf'),nmin=0),it=c(1979,2013)) # predictand
+ds.uam <- DS(uam,EOF(Pmm))
+plot(ds.uam)
+```
+
+
+```{r}
+load('~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017/q.nve.rda')
+q1 <- subset(q.nve,is = 1)
+Pmm <- subset(as.annual(subset(t2m.ERAINT(lon = c(0,30), lat = c(50,85)),it = 'djf'),nmin=0),it = c(1979,2013)) 
+# use already defined predictors or download from https://climexp.knmi.nl/selectfield_rea.cgi?id=someone@somewhere
+uam <- subset(as.annual(subset(q1,it = 'djf'),nmin=0),it=c(1979,2013)) # predictand
+ds.uam <- DS(uam,EOF(Pmm))
+plot(ds.uam)
+```
+
+```{r monthly flow prediction, eval = TRUE}
+# find and extract common dates 
+
+# set the common time Period
+commonPeriod <- c("1979-01-01","2002-03-31")
+t2m <- subset(Tgood, it = commonPeriod)
+precip <- subset(Pgood, it = commonPeriod)
+q <- subset(selQ, it = commonPeriod)
+
+# Perform a correlation map with large scale features.
+T2M <- t2m.ERAINT(lon = c(0,30), lat = c(50,85))
+map(T2M)
+T2M <- subset(T2M,it = commonPeriod)
+corT <- corfield(as.monthly(q),T2M)
+
+PRE <- precip.ERAINT(lon = c(0,30), lat = c(50,85))
+PRe <- subset(PRE, it = commonPeriod)
+PRe.jan <- subset(PRe, it = 'jan')
+q.jan <- subset(as.monthly(q), it = 'jan')
+corP <- corfield(q.jan, PRe.jan,verbose = TRUE)
+
+# plot the time series
+Y <- combine.stations(precip,t2m,q)
+plot(Y, plot.type = 'mult')
+
+P <- as.zoo(precip)
+t2m <- as.zoo(t2m)
+u <- as.zoo(q)
+
+par(bty="n")
+plot(merge(P,u,as.anomaly(t2m)),plot.type='single',col=c("steelblue","black","red"),lwd=c(3,1,2))
+dev2bitmap('hydroex-daily.png',res=150)
+
+Pmm <- aggregate(P,as.yearmon,FUN='mean')
+Tmm <- aggregate(t2m,as.yearmon,FUN='mean')
+umm <- aggregate(subset(u, it = commonPeriod),as.yearmon,FUN='mean')
+
+Pmm <- nearest.field(PRe, is = umm)
+plot(Pmm)
+Tmm <- nearest.field(T2m, is = umm)
+plot(Tmm)
+
+#plot(coredata(P),coredata(u))
+
+cal <- data.frame(u=coredata(umm),t2m=coredata(Tmm),Pmm=coredata(Pmm))
+fit <- lm(u ~ t2m + Pmm,data=cal)
+print(summary(fit))
+plot(coredata(umm),predict(fit,newdata = cal))
+cor(coredata(umm),predict(fit,newdata = cal), use = 'complete.obs')
+par(bty="n")
+plot(coredata(umm),predict(fit,newdata = cal),
+     main='Monthly river flow predicted from monthly T and P',
+     ylim=range(coredata(Pmm)),
+     xlab=expression(u[hydro]),ylab=expression(u==f(T[2*m],P)))
+lines(range(coredata(Pmm)),range(coredata(Pmm)),col="red",lty=2)
+grid()
+dev2bitmap(file='hydroex.png',res=150)
+
+temp <- as.station(t2m,lon=lon,lat=lat,alt=alt,unit='deg C',param='t2m',loc=loc,stid=stid)
+
+if (FALSE) {
+  trace(z.u <- try(DSensemble.t2m(umm, path = '~', predictor='data/ERA40/ERA40_precip_mon.nc', biascorrect=TRUE,plot=TRUE)))
+  dev2bitmap('hydroex-dse-z.t2m.png',res=150)
+  save(file='hydroex-dse-z.t2m.rda',z.t2m)
+}
+
+temp <- Tmm
+if (FALSE) {
+  trace(z.t2m <- try(DSensemble.t2m(temp, path = '~', predictor='~/ERA40_t2m_mon.nc', biascorrect=TRUE,plot=TRUE)))
+  dev2bitmap('hydroex-dse-z.t2m.png',res=150)
+  save(file='hydroex-dse-z.t2m.rda',z.t2m)
+}
+
+precip <- as.station(P,lon=lon,lat=lat,alt=alt,unit='mm/day',param='precip',loc=loc,stid=stid)
+if (FALSE) {
+  z.pre <- try(DSensemble.precip(precip,biascorrect=TRUE,plot=TRUE))
+  dev2bitmap('hydroex-dse-z.pre.png',res=150)
+  save(file='hydroex-dse-z.pre.rda',z.pre)
+}
+
+flow <- as.station(u,lon=lon,lat=lat,alt=alt,unit='m^3/s',param='u',loc=loc,stid=stid)
+
+muam <- annual(precip,FUN='exceedance',threshold=1)
+fwam <- annual(precip,FUN='wetfreq',threshold=1)
+uamx <- annual(flow,FUN='count',threshold=30)
+attr(uamx,'variable') <- 'n(X > m^3/s)'
+attr(uamx,'unit') <- ' '
+
+am <- data.frame(u=coredata(uamx),mu=coredata(muam),fw=coredata(fwam))
+emu <- glm(u ~ mu + fw, data=am, family='poisson')
+
+plot(uamx,lwd=3,ylim=c(0,70))
+lines(zoo(exp(predict(emu)),order.by=index(uamx)))
+
+text(1980,70,pos=4,'Number of annual events: u > 30 m³/s')
+legend(1980,65,c("hydrologic model",expression(f(mu,f[w]))),
+       lty=1,col=c("red","black"),lwd=c(3,1),bty="n")
+dev2bitmap('hydroex-u.gt.30.png',res=150)
+
+```
+
+```{r}
+PRE <- precip.ERAINT(lon = c(0,30),lat =c(50,80))
+Q <- subset(q.nve,is = 1)
+
+ds.Q <- DS(subset(annual(Q),it = c(1950,2015)), EOF(subset(annual(PRE),it=c(1950,2015))))
+plot(ds.Q)
+```
+```{r}
+cor(subset(annual(Q),it=c(1960,2010)), subset(annual(subset(PRE,is=1)),it = c(1960,2010)),use = 'complete.obs')
+```
