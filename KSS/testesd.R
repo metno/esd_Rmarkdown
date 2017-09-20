@@ -1,9 +1,14 @@
-param <- 't2m'
-it <- 'djf'
+## Script to asssess and evaluate the calibration of the ESD models
+## Rasmus Benestad
+
+param <- 'fw'
+it <- 'son'
 period <- c(1950,2015)
 n <- 3
 ip <- 1:2
 landmask <- FALSE
+
+library(esd)
 
 if (param=='t2m') {
   #reanalysis <- 'air.mon.mean.nc'
@@ -33,7 +38,8 @@ if (param=='fw') {
   pattern='psl_Amon_ens'
   predictand <- '/lustre/storeB/users/rasmusb/data/rr.nordic.rda'
   varid <- 'precip'
-  lon=c(-30,30); lat=c(50,75)
+  #lon=c(-30,30); lat=c(50,75)
+  lon=c(0,30); lat=c(50,70)
 }
 
 outdir <- '/lustre/storeB/users/rasmusb/dse4KSS/'

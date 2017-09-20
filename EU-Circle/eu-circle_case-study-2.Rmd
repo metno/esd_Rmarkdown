@@ -30,13 +30,13 @@ Synoptic storms are associated with winds, storm surges and waves.
 
 ```{r}
 load('cyclones.baltic.rda')
-map(cyclones.baltic)
+map(cyclones.baltic,new=FALSE)
 ```
 
 Plot the number of trajectories over time
 
 ```{r}
-plot(cyclones.baltic)
+plot(cyclones.baltic,new=FALSE)
 ```
 
 ***Import E-OBS data***
@@ -45,180 +45,33 @@ Observations of the wind are sparse in the Baltic region, but approximate values
 
 Import the E-OBS slp data using the retrieve function of the esd package. The data is represented with lower-case $x$.
 
-```{r,warning=FALSE}
+```{r,warning=FALSE,eval=FALSE}
 if (!file.exists('eu-circle_case-study-2_slp.rda')) {
   x <- retrieve('pp_0.25deg_reg.nc',path='~/storeB/data/data.ECAD',
                 lon=c(10,30),lat=c(53,66))
   save(file='eu-circle_case-study-2_slp.rda',x)
 } else load('eu-circle_case-study-2_slp.rda')
 ## Only keep the ECAD data
-map(x,FUN='q95',new=TRUE)
-diagnose(x)
+map(x,FUN='q95',new=FALSE)
 ```
+
 
 ***Geostrophic wind***
 
-Calculate the geostrophic wind based on the slp data. 
+Calculate the geostrophic wind based on the slp data from EOBS. 
 
 **Ship accidents in the Baltic Sea**
 
-```{r}
+NOT FINISHED
+
+```{r, eval=FALSE,echo=FALSE}
 baltic.events <- c(19931010,20000328,20010328,20040313,20060330,20081017,20081202,20091002,20100128)
-uv <- geostrophicwind(x)
+if (!file.exists('uv.rda')) {
+  uv <- geostrophicwind(x)
+  save(uv,file='uv.rda')
+} else load('uv.rda')
 ```
 
 
 
-**Precipitation**
 
-
-Examine the trend in the wet-day mean precipitation $\mu$
-
-```{r,warning=FALSE}
-mu <- annual(x,'wetmean',nmin=250)
-wq95 <- function(x) {x <- x[is.finite(x)]; x <- x[x >= 1]; wq95 <- quantile(x,probs=0.95); wq95}
-q95 <- annual(x,'wq95')
-plot(mu,new=FALSE)
-for (i in 1:dim(mu)[2]) lines(trend(subset(mu,is=i)),lty=2)
-grid()
-
-```
-
-There appears to be a slight increasing trend in $\mu$ for most stations, according to a linear regression analysis against time. There are also pronounced year-to-year variations in $\mu$ with high "spikes" in some years. 
-
-Need to check to see if $\mu$ is correlated with number of rainy days, e.g. can be high due to smaller samples and higher sampling fluctuations:
-
-```{r}
-x1 <- zoo(subset(annual(x,'count',threshold=1),is=1))
-y1 <- zoo(subset(mu,is=1))
-plot(x1,y1,xlab=expression(n[X>1*mm]),ylab=expression(mu),xlim=c(30,150),ylim=c(5,30),
-     main='Test: wet-day mean precipitation dependency on sample size')
-for (i in 2:dim(mu)[2]) {
-  x1 <- zoo(subset(annual(x,'count',threshold=1),is=i))
-  y1 <- zoo(subset(mu,is=i))
-  points(x1,y1)
-}
-grid()
-```
-
-There is no indication suggesting that high value of annual $\mu$ is connected with a low number of rain events.
-
-For many purposes, it may be useful to assume that the daily precipitation amount is approximately exponentially distributed for the days when it rains and that the probability of the precipitation exceedin a threshold value $x_0$ can be estimated according to $Pr(X>x_0) = f_w e^{-x_0/\mu}$ where $f_w$ is the wet-day frequency. Below is a test for whether the amount is close to exponential for a wet day. 
-
-```{r,warning=FALSE}
-## check the relationship between wet-day 95-percentile and wet-day mean
-plot(-log(0.05)*zoo(mu[,2]),zoo(q95[,1]),pch=19,xlim=c(0,120),ylim=c(0,120),
-     main='Wet-day mean v.s. 95th wet percentile',
-     xlab=expression(paste(-ln(1-0.95)*mu,' (mm/day)')), ylab=expression(paste(q[95],' (mm/day)')))
-points(-log(0.05)*zoo(mu[,1]),zoo(q95[,2]),pch=19,col=rgb(1,0,0,0.2))
-points(-log(0.05)*zoo(mu[,3]),zoo(q95[,3]),pch=19,col=rgb(0,0,1,0.2))
-points(-log(0.05)*zoo(mu[,4]),zoo(q95[,4]),pch=19,col=rgb(0,1,0,0.2))
-points(-log(0.05)*zoo(mu[,5]),zoo(q95[,5]),pch=19,col=rgb(0,0.7,0.7,0.2))
-points(-log(0.05)*zoo(mu[,6]),zoo(q95[,6]),pch=19,col=rgb(0.7,0,0.7,0.2))
-points(-log(0.05)*zoo(mu[,7]),zoo(q95[,7]),pch=19,col=rgb(0.5,0.5,0.5,0.2))
-grid()
-legend(0,120,loc(mu),pch=19,col=c('black',rgb(1,0,0,0.2),rgb(0,0,1,0.2),rgb(0,1,0,0.2),rgb(0,0.7,0.7,0.2),rgb(0.7,0,0.7,0.2),rgb(0.5,0.5,0.5,0.2)),bty='n',cex=0.5)
-```
-
-The scatter plot suggests that the points are mainly clustered around the diagonal and hence the 24-hr precipitation amoun is approximately exponentially distributed. The Marseille data seem to be less similar to the exponential distribution than the other sites.
-
-We also need to examine the trend in the wet-day frequency:
-
-```{r,warning=FALSE}
-fw <- annual(x,'wetfreq',nmin=250)
-plot(fw,new=FALSE)
-for (i in 1:dim(fw)[2]) lines(trend(subset(fw,is=i)),lty=2)
-grid()
-```
-
-The rain gauge data suggests decreasing trends in $f_w$ for most locations, except for the highest station (360 m a.s.l.) further inland (Faverges-de-la-Tour) and with a short record.
-
-Estimate the evolution in the probability for heavy precipitation: $Pr(X > x) = f_w e^{-x_0/\mu}$. 
-
-```{r,warning=FALSE}
-x0 <- 100 #mm
-Pr <- zoo(1-pbinom(0,size=365,prob=coredata(fw)*exp(-x0/coredata(mu))),order.by=year(fw))
-class(Pr) <- class(mu)
-Pr <- attrcp(mu,Pr)
-attr(Pr,'variable') <- 'Pr'
-attr(Pr,'unit') <- 'probability'
-attr(Pr,'longname') <- paste('probability of at least one day with more than',x0,'mm') 
-plot(Pr,ylab=expression(Pr(n>0)),xlab='',new=FALSE,errorbar=FALSE,
-          main=paste('Probability of at least one day with more than',x0,'mm'))
-for (i in 1:dim(Pr)[2]) lines(trend(subset(Pr,is=i)),lty=2)
-grid()
-```
-
-The results indicate large annual variations in the probability of extreme precipitation ($X > 100mm$), suggesting a high sensitivity to both $\mu$ and $f_w$. This sensitivity is also seen in the different estimates for different locations, even if the difference between the mean $\mu$ is not as dramatic. 
-
-One relevant parameter is the duration of dry and wet spells (number of dry/wet consecutive days). The grapghic below shows the length of dry (red) and wet (blue) intervals (dry are plotted with negative sign for clarity). 
-
-```{r,warning=FALSE}
-z <- subset(x,it=c(1900,2016),is=1)
-ncd <- spell(z,threshold=1)
-plot(ncd)
-grid()
-```
-
-The dry runs usually last longer than the wet runs. some of the longest dry spells have lasted for ~100 days, but it has rarely rained more than 5 days in a row. One question is whether the dry/wet spell statistics can be considered to be a result of random/stochastic processes, or if they contain more structure.  
-
-If there is only a fixed probability for wet/dry day that detemines the outcome, then we can use the geometric distribution to represent the statistics of the wet/dry spells:  <https://en.wikipedia.org/wiki/Geometric_distribution>. The question then is how closely the duration of wet/dry spells follow the geometric distribution. The histogram below compares the data to the pdfs for the geometric distribution and suggest a good match.
-
-```{r,warning=FALSE}
-hist(ncd)
-```
-
-The mean value if the parameter that describes the shape of the geometric distribution. The comparison suggests that it does not give a bad representation of the observed charactereistics. 
-
-The second question is then: Are there any trends in the annual mean durations?
-
-```{r,warning=FALSE}
-amncd <- annual(ncd)
-plot(amncd,col=c(rgb(0,0,1),rgb(1,0.3,0)),new=FALSE)
-grid()
-lines(trend(subset(amncd,is=1)),lty=2)
-mcdd <- trend(subset(amncd,is=2))
-lines(mcdd,lty=1)
-print(attr(mcdd,'coefficients'))
-```
-
-There is a slight increasing trend in the annual mean duration of dry spells, which also has a consequence for the probability of long-lasting meteorological droughts. 
-
-```{r,warning=FALSE}
-plot(1-pgeom(1:100,1/mean(mcdd)),type='l',xlab='consecutive dry days',ylab=expression(Pr(X > x)))
-plot(index(mcdd),1-pgeom(30, 1/mcdd),type='l',xlab='',ylab=expression(Pr(X > 30*days)),
-     main='Estimated probability for 30-day dry spell',ylim=c(0,0.05))
-for (i in 1:dim(Pr)[2]) lines(trend(subset(Pr,is=i)),lty=2)
-grid()
-```
-
-Linear trend analysis applied to both the duration of dry spells (solid line for one site in figure above) and the probability of more than 100 mm rain per day (dashed line showing several sites) both exhibit long-term increases over the last ~100 years. This tendency can be interpreted as the risk of long dry periods increases while the amount that falls as rain gets more extreme for the wet days. In other words, there has been a growing risk for both droughts and flash floods.
-
-***Gridded precipitation***
-
-The geographical pattern of trend in dry spell duration can be analysed using gridded data from EOBs (based on the ECA&D station records) Here gridded precipitation is represented with upper-case $X$. Gridded data are not ideal when it comes to extremes, as the gridding process makes the data spatially inhomogeneous. There are geographical variations in the climatological precipitation, with more precipitation over the higher elevations and the southern Alps.
-
-```{r,warning=FALSE}
-X <- retrieve('data.ECAD/rr_0.25deg_reg_v12.0.nc',lon=c(4,8),lat=c(43,46))
-map(X,new=FALSE)
-```
-
-A similar analysis of the mean dry spell duration indictes that the dry periods typically last longer near the coast.
-
-```{r}
-mean.dry <- function(x,na.rm=TRUE) mean(subset(spell(x,threshold=1),is=2),na.rm=na.rm)
-map(X,FUN='mean.dry',new=FALSE,colbar=list(pal='warm'))
-```
-
-It is also along the coast where there has been a strongest trend in the mean duration of the dry spells, which has an implication for the probability of long dry periods according to the geometric distribution.
-
-
-```{r}
-trend.dry <- function(x,na.rm=TRUE) trend.coef(subset(spell(x,threshold=1),is=2))
-map(X,FUN='trend.dry',new=FALSE,colbar=list(pal='warm'))
-```
-
-
-## Temperature
-
-For heat waves, use a similar approach as described in the supporting material of where a GLM was used to estimate the number of events with a basis of the 'Poisson' distribution.

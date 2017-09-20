@@ -37,7 +37,7 @@ nv <- apply(coredata(Y),2,FUN='nv')
 Y <- subset(Y,is=nv > 10290)
 ```
 
-## Spell sttatistics
+## Spell statistics
 
 Wheat: sowing: Upper temperature limit: 15.7C; T>31C for 5 days induces pollen sterility before the flowering phase; 
 ```{r, warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
@@ -50,6 +50,7 @@ for (i in 1:d[2]) {
 }
 ```
 
+The mean summer daily maximum temperature and the length of summer-time warm spells.
 
 ```{r}
 tmax.jja <- subset(as.4seasons(Y),it='jja')
@@ -71,15 +72,18 @@ grid()
 
 ## Downscaling
 
-### Prepare rthe preictand
+### Prepare the predictand
 
 ```{r, fig.width=8, fig.height=8}
 pca.lws <- PCA(pcafill(lws.jja),n=5)
-pca.tmax <- PCA(pcafill(tmax.jja),n=5)
 plot(pca.lws,new=FALSE)
-plot(pca.tmax,new=FALSE)
 ```
 
+
+```{r, fig.width=8, fig.height=8}
+pca.tmax <- PCA(pcafill(tmax.jja),n=5)
+plot(pca.tmax,new=FALSE)
+```
 
 ```{r}
 if (!file.exists("dse.tmax.india.rda")) {
@@ -87,7 +91,6 @@ if (!file.exists("dse.tmax.india.rda")) {
   dse.tmax.india <- DSensemble.pca(pca.tmax,predictor=T2m,biascorrect = TRUE,ip=1:4)
   save(dse.tmax.india,file="dse.tmax.india.rda")
 } else load("dse.tmax.india.rda")
-
 ```
 
 
@@ -120,6 +123,9 @@ if (it =='djf') {
   threshold <- 20
   is <- 1
 }
+```
+
+```{r}
 
 ss <- select.station(src='ecad',param='tg',nmin=75)
 d <- dim(ss)
@@ -146,7 +152,9 @@ if (!file.exists(paste('ecad.tg.',it,'.rda',sep=''))) {
   save(x,y,s,std,q.spell,q.geom,file=paste('ecad.tg.',it,'.rda',sep=''))
 } else load(paste('ecad.tg.',it,'.rda',sep=''))
 ## Plot results
+```
 
+```{r}
 plot(x,y,main=paste('Mean',it,'temperature & mean length of intervals',
                     c('below','above')[c(cold,!cold)],threshold,'C'),
      sub='source: ECA&D',pch=19,col=rgb(0.5,0,0,0.3),
@@ -197,6 +205,9 @@ plot(c(q.spell),c(q.geom),main='Spell length statistics & the geometric distribu
      xlab=expression(q[p]),ylab='qgeom(p,1/mean)')
 grid()
 lines(range(q.spell,q.geom,na.rm=TRUE),range(q.spell,q.geom,na.rm=TRUE),col='red')
-
 ```
+
+
+
+
 

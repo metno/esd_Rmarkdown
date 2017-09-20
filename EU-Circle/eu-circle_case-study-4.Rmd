@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Bangladesh: tropical cyclones and stormsurges, heavy precipitation. 
 
-Bangladesh is highly vulnerable to climate induced hazrds and disasters and its coastal part are mostly threatened for the impacts of climate change in case of cyclone, storm surges, flood, salinity and tsunami disaster. Even last twenty years the coastal peoples have suffered due to super cyclone SIDR and AILA devastations. Last two deacdes a lots of disaster coping interventions have been provided to the community to achieve resiliency in this areas. So really it will be a field laboratory for the research of Disaster Resilience and Climate Change: Science and innovation for adaptation to climate  change: from assessing costs, risks and opportunities to demonstration of options and practices.
+Bangladesh is highly vulnerable to climate induced hazards and disasters and its coastal part are mostly threatened for the impacts of climate change in case of cyclone, storm surges, flood, salinity and tsunami disaster. Even last twenty years the coastal peoples have suffered due to super cyclone SIDR (2007-11-15) and AILA (YYYY-MM-DD) devastations. Last two deacdes a lots of disaster coping interventions have been provided to the community to achieve resiliency in this areas. So really it will be a field laboratory for the research of Disaster Resilience and Climate Change: Science and innovation for adaptation to climate  change: from assessing costs, risks and opportunities to demonstration of options and practices.
 
 ## R Markdown
 
@@ -32,6 +32,12 @@ library(esd)
 load('bmd.rda')
 map(pr.bmd,new=FALSE)
 ```
+
+```{r}
+plot(pr.bmd,new=FALSE)
+```
+
+
 
 Scale the precipitation according to the indididual wet-day mean. Then take the mean of the station series to get an index of large-scale precipitation intensity.
 
@@ -72,8 +78,16 @@ grid()
 lines(trend(annual(X,'wetfreq')),lty=2)
 ```
 
-Get data on storm tracks... IMILAST
-Correlation between storm tracks and stations.
+Get data on storm tracks. IMILAST data do not cover the region as the analysis is only for storms north of 20N and south of 20S. Tropical cyclones are reported in the HURDAT2 dataset \url{http://www.aoml.noaa.gov/hrd/hurdat/hurdat2-1851-2016-apr2017.txt}, but only for the North-Atlantic. There are some data in the best-track data base \url{http://www.usno.navy.mil/NOOC/nmfc-ph/RSS/jtwc/best_tracks/}. 
+
+
+## Best Track
+
+```{r}
+url <- 'http://www.usno.navy.mil/NOOC/nmfc-ph/RSS/jtwc/best_tracks/'
+```
+
+Look at correlation between storm tracks and stations. Also see if there is a connection between wind speed, cycvlone size, etc and the temperature (Indian Ocean, global mean). Possible to estimate a scaling function that can be applied to historical storms? Based on a large sample of data, such as the North Atlantic? 
 
 ## Tidal measurements
 
@@ -84,3 +98,30 @@ load('Bangladesh-tidal-stations.rda')
 plot(Z,zoom=8,new=FALSE)
 ```
 
+Check the annual cycle in the tidal time series. Is it caused by seasonally changing wind patterns? That would be reflected in the SLP.
+
+```{r}
+SLP <- retrieve('~/Downloads/slp.mon.mean.nc',lon=c(75,105),lat=c(5,30))
+amslp <- mask(aggregate(SLP,month,FUN='mean'),land=TRUE)
+eof.amslp <- EOF(amslp,n=3)
+plot(eof.amslp)
+```
+
+Examine the seasonal cycle in the tidal data: extract the mean seasonal cycle using `aggregate`
+
+```{r}
+amsl <- aggregate(Z,month,'mean')
+pca.amsl <- PCA(amsl,n=3)
+plot(pca.amsl)
+```
+
+Use `DS` to apply a multiple regression analysis to the PCAs and EOFs describing the seasonal cycle. This is ok for short series when we know the connection is due to known physics - shifting wind patterns:
+
+```{r, fig.height=8}
+ds.asl <- DS(pca.amsl,eof.amslp,n=3)
+plot(ds.asl)
+```
+
+The seasonal variations are indeed caused by seasonally shifting winth patterns. This gives an idea of the sensitivity of the local sea level to changing winds in general, as the physical forces will be similar. We cal downscale the SLP from GCMs in multi-model ensembles to try to get a robust picture. There may be some problems in the SLP simulation over the Indian sub-continent, which means that we may need to mask out the land.
+
+We can use similar approach as in Benestad et al. (2017) <http://www.nat-hazards-earth-syst-sci.net/17/993/2017/> to downscale the local sea level. This, however, does not account for the global increase, which needs to be analysed seperately and added to this. 

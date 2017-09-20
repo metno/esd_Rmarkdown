@@ -76,7 +76,7 @@ for (i in 1:length(urls)) if (!file.exists(substr(urls[i],43,70))) download.file
 
 Data from ECA&D: precipitation. Snow depth?
 
-```{r}
+```{r rain-gauges}
 library(esd)
 ss <- select.station(param='precip',cntr='Germany',alt=250,nmin=75)
 map(ss,new=FALSE)
@@ -104,7 +104,7 @@ grid()
 Area total precipitation from gridded EOBS.
 
 ```{r}
-rr <- retrieve('data.ECAD/rr_0.25deg_reg.nc',lon=range(lon(Y)),lat=range(lat(Y)))
+rr <- retrieve('~/storeB/data/data.ECAD/rr_0.25deg_reg.nc',lon=range(lon(Y)),lat=range(lat(Y)))
 map(rr,new=FALSE)
 Arr <- aggregate.area(rr)
 plot(rr,new=FALSE)
@@ -147,7 +147,7 @@ ds.mu.orl <- DS(pca.mu,eof.olr)
 plot(ds.mu.orl,new=FALSE)
 ```
 
-The calibration is fairly successful in identifying a connection between OLR and precipitation intencity. To see if other factors such as moisture has an effect, we estimate the residual from this regression analysis and repeat the analysis using saturation water vapour as predictor.
+The calibration is fairly successful in identifying a connection between OLR and precipitation intencity. To see if other factors such as moisture has an effect, we estimate the residual from this regression analysis and repeat the analysis using saturation water vapour as predictor. This way, we avoid correlation/overlap between the two factors.
 
 ```{r, fig.width=8, fig.height=8}
 ## Estimate the residuals
@@ -169,6 +169,38 @@ plot(ds.mu.es,new=FALSE)
 
 A projection of future wet-day mean precipitation based on DSensemble will be carried out in two steps. First use the PCA from the original data as predictands in a set of runs with OLR as predictors. Then use the residual as estimated above as predictand for a set of DSensembles runs with the water vapour pressure as predictors. The final result is the sum of these two steps.The wet-day mean precipitation is projected through s single stemp where DSensemble uses SLP as predictor. The seasonal means are then estimated as the product between the wet-day frequency and the wet-day mean precipitation.
 
+
+## Projections
+
+Need to read the predictors again to get all months
+
+```{r}
+T2M <- retrieve('~/Downloads/ERAINT-t2m-mon.nc', lon=c(-90,40),lat=c(30,70))
+OLR <- retrieve('~/Downloads/ERAINT-OLR-mon.nc', lon=c(-50,40),lat=c(40,70))
+## Also - fix the index of eof - set to year.
+index(eof.dry) <- year(eof.dry)
+```
+
+
+Two seperate analyses based on OLR and saturation vapour pressure respectively, assuming the RCP 4.5 emission scenario. The first iteration uses the original predictand whereas the latter uses the residuals.
+
+```{r, warning=FALSE}
+if (!file.exists('dse.mu.olr.rda')) {
+  dse.mu.olr <- DSensemble.eof(pca.mu,predictor=OLR,it='djf',path="~/data/CMIP5.monthly",pattern = "rlut_Amon_ens_")
+  save(dse.mu.olr,file = 'dse.mu.olr.rda')
+} else load('dse.mu.olr.rda')
+plot(dse.mu.olr)
+```
+
+```{r, warning=FALSE}
+if (!file.exists('dse.mu.es.rda')) {
+  dse.mu.es <- DSensemble.eof(pca.res,predictor=SLP,it='djf',path="~/data/CMIP5.monthly",pattern = "tas_Amon_ens_")
+  save(dse.mu.es,file = 'dse.mu.es.rda')
+} else load('dse.mu.es.rda')
+plot(dse.mld.slp)
+```
+
+Need to add the two together.
 
 ## Analysis: temperature
 

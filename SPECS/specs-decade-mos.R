@@ -1,17 +1,20 @@
 ## ----setup, include=FALSE------------------------------------------------
-knitr::opts_chunk$set(echo = TRUE)
+##knitr::opts_chunk$set(echo = TRUE)
 
 ## ----initialise----------------------------------------------------------
 ## Script that applies MOS to SPECS decadal forecasts
 
 library(esd)
+#library(knitr)
+#purl('~/git/esd_Rmarkdown/SPECS/specs-decade-mos.Rmd', output='~/git/esd_Rmarkdown/SPECS/specs-decade-mos.R')
 #library(ncdf)
 setwd("~/R")
+experiments <- c('~/data/gfdl_DECA.rda','~/data/hadcm3_DECA.rda','~/data/miroc5_DECA.rda','~/data/mpi_DECA.rda')
 
 downloadfromunican <- FALSE    # Preparations - get the data
-downscaledreanalysis <- FALSE  # SM: Assessment of large-small scale link
-looexperiments <- FALSE        # Cross-validation MOS on forecasts
-diagnoseFCST <- FALSE          # Show correlation & common EOFs of reanalysis+fcsts
+downscaledreanalysis <- TRUE  # SM: Assessment of large-small scale link
+looexperiments <- TRUE        # Cross-validation MOS on forecasts
+diagnoseFCST <- TRUE          # Show correlation & common EOFs of reanalysis+fcsts
 
 source("/home/rasmusb/disk1/SPECS/R/udg2esd_met.R") ## Upload udg2esd function
 
@@ -64,6 +67,7 @@ Xpredictor <- function(x,m=1:3,it=NULL,is=NULL,mask=FALSE,
   ## specifies e.g. months
   ## Get the dimensions of the data structure
   d <- dim(x$Data)
+  nmembers <- d[2]
   if (verbose) {print(summary(x)); print(d)}
   ## initialisations members times nx ny
 
@@ -73,7 +77,7 @@ Xpredictor <- function(x,m=1:3,it=NULL,is=NULL,mask=FALSE,
     for (ii in m) {
       if (verbose) print(paste('member',im,'initialisation',ii))
       ## Read the entire field
-      y1 <- fcst2field(x,it0=10-ii,im=im,verbose=verbose)
+      y1 <- fcst2field(x,it0=nmembers-ii,im=im,verbose=verbose)
       ## Extract a sub-region
       y1 <- subset(y1,is=is)
       ## If it!=NULL select subset of the year 
@@ -156,7 +160,7 @@ wetdaymean <- function(ifile,cline='cdo yearmean',fname='wetdaymean.nc') {
   ##  print(paste('cdo ifthen -gtc,0',ifile,ifile,fname))
   ##  system(paste('cdo ifthen -gtc,0',ifile,ifile,fname))
   X <- aggregatedailyfield(fname=fname,cline=cline)
-  Y <- aggregatedailyfield(fname=,'mask.nc',cline=cline,output='fw_0.25deg_reg.nc')
+  Y <- aggregatedailyfield(fname='mask.nc',cline=cline,output='fw_0.25deg_reg.nc')
   file.remove(fname); file.remove('mask.nc')
 }
 
@@ -287,7 +291,7 @@ comparemannual <- function(tas_DECA,reanalysis='~/Downloads/air.mon.mean.nc',mas
   ## Apply an EOF-filter to emphasise only the large scale anomalies:
   if (!is.null(eofs)) {
     print(paste('Only keep the large-scale structures; EOFs:',paste(eofs,collapse=' ,')))
-    Xm.eofs <- subset(EOF(Xm),pattern=eofs)
+    Xm.eofs <- subset(EOF(Xm),ip=eofs)
     Xm <- eof2field(Xm.eofs)
     land <- paste(land,'eof_',paste(eofs,collapse='+'))
   }
@@ -299,7 +303,8 @@ comparemannual <- function(tas_DECA,reanalysis='~/Downloads/air.mon.mean.nc',mas
 
   if (mask) Z <- mask(Y,land=TRUE) else Z <- Y
   Z <- subset(Z,it=range(year(X)))
-  for (i in 1:10) {
+  nmembers <- length(table(month(X)))
+  for (i in 1:nmembers) {
     z <- subset(X,it=month.abb[i])
     index(z) <- year(z)
     Z <- combine(Z,z)
@@ -317,7 +322,8 @@ comparemannual <- function(tas_DECA,reanalysis='~/Downloads/air.mon.mean.nc',mas
 diagnoseMOS <- function(results,y,l=1) {
   print(paste('diagnoseMOS',results))
   load(results)  
-  eval(parse(text=paste('zmos <-',substr(results,14,nchar(results)-4))))
+  zl <- regexpr('.z.',results)
+  eval(parse(text=paste('zmos <-',substr(results,zl+1,nchar(results)-4))))
   attr(zmos,'variable') <- varid(y)
   print(range(year(zmos)))
   y <- pentad(y,it0=min(year(zmos)),l=l)
@@ -400,29 +406,31 @@ if (downloadfromunican) {
 }
 
 print('Get the predictands: mu & fw from EOBS')
-if (!file.exists('~/data/mu_0.25deg_reg.nc'))
+if (!file.exists('~/mu_0.25deg_reg.nc'))
   mu.eobs <-  wetdaymean('~/data/data.ECAD/rr_0.25deg_reg.nc') else
-  mu.eobs <- retrieve('~/data/mu_0.25deg_reg.nc')
-fw.eobs <- retrieve('~/data/fw_0.25deg_reg.nc')
+  mu.eobs <- retrieve('~/mu_0.25deg_reg.nc')
+fw.eobs <- retrieve('~/fw_0.25deg_reg.nc')
 attr(mu.eobs,'variable') <- 'mu'
 attr(fw.eobs,'variable') <- 'fw'
 attr(fw.eobs,'unit') <- 'fraction'
-index(fw.eobs) <- year(as.Date(time,origin = as.Date("1950-01-01")))
-index(mu.eobs) <- year(as.Date(time,origin = as.Date("1950-01-01")))
+attr(mu.eobs,'source') <- 'EOBS'
+attr(fw.eobs,'source') <- 'EOBS'
+#index(fw.eobs) <- year(as.Date(time,origin = as.Date("1950-01-01")))
+#index(mu.eobs) <- year(as.Date(time,origin = as.Date("1950-01-01")))
 
-
-
-## ----ds------------------------------------------------------------------
+## ----ds,fig.height=8-----------------------------------------------------
 
 ## Display the downscaled reanalysis data for assessing link between large and small scales  - in the shape of EOFs
 if (downscaledreanalysis) {
   mu.eof <- EOF(mu.eobs)
+  index(mu.eof) <- year(mu.eof)
   plot(mu.eof,colbar=list(pal='t2m',breaks=seq(-0.02,0.02,by=0.001),type='fill',rev=TRUE),new=FALSE)
   figlab('EOBS',ypos=0.999)
 
 ## The wet-day frequency:
   
   fw.eof <- EOF(fw.eobs)
+  index(fw.eof) <- year(fw.eof)
   plot(fw.eof,colbar=list(pal='t2m',breaks=seq(-0.01,0.015,by=0.001),type='fill',rev=TRUE),new=FALSE)
   figlab('EOBS',ypos=0.999)
 
@@ -430,10 +438,12 @@ if (downscaledreanalysis) {
 ## Derive the saturation vapour pressure from temperature
 ## retrieve did not get the right time stamp:
   es <- annual(C.C.eq(retrieve('~/Downloads/air.mon.mean.nc',lon=c(-60,40),lat=c(20,70))))
+  index(es) <- year(es)
   es.eof <- EOF(mask(es,land=TRUE))
 
 ## Also get the mean sea-level pressure for the wet-day frequency 
-  slp <- annual(retrieve('slp.mon.mean.nc',lon=c(-60,40),lat=c(20,70)))
+  slp <- annual(retrieve('~/Downloads/slp.mon.mean.nc',lon=c(-60,40),lat=c(20,70)))
+  index(slp) <- year(slp)
   slp.eof <- EOF(slp)
 
 ## Additional diagnostics: canonical correlation analysis:
@@ -475,61 +485,73 @@ if (downscaledreanalysis) {
 ##> dim(psl_DECA$Data)
 ## [1]   9  10 480  41  45
 
-print('Get the decadal predictors saved locally in "~/data/gfdl_DECA.rda"')
-load('~/data/gfdl_DECA.rda')
+for (iexp in 1:4) {
+  print(paste('Get the decadal predictors saved locally in',experiments[iexp]))
+  load(experiments[iexp])
+  dir <- substr(experiments[iexp],3,nchar(experiments[iexp])-4)
+  if (!file.exists(dir)) dir.create(dir)
 
-
-## ----loo-----------------------------------------------------------------
+## Leave-one-out cross-validation experiments
+## Names of file names with results stored  
+fw1name <- paste(dir,'/specsdecadal.z.fw.y1.gcm.',iexp,'rda',sep='')
+mu1name <- paste(dir,'/specsdecadal.z.mu.y1.gcm.',iexp,'rda',sep='')
+fw3name <- paste(dir,'/specsdecadal.z.fw.y1.3.gcm.',iexp,'rda',sep='')
+mu3name <- paste(dir,'/specsdecadal.z.mu.y1.3.gcm.',iexp,'rda',sep='')
+fw5name <- paste(dir,'/specsdecadal.z.fw.y1.5.gcm.',iexp,'rda',sep='')
+mu5name <- paste(dir,'/specsdecadal.z.mu.y1.5.gcm.',iexp,'rda',sep='')
+fw9name <- paste(dir,'/specsdecadal.z.fw.y1.9.gcm.',iexp,'rda',sep='')
+mu9name <- paste(dir,'/specsdecadal.z.mu.y1.9.gcm.',iexp,'rda',sep='')
 
 if (looexperiments) {
 ## Carry out a LOO cross-validation experiment
   print('Check results for LOO experiment - if absent do it')
-  if (!file.exists('specsdecadal.z.fw.y1.rda')) {
-    print('do specsdecadal.z.fw.y1.rda')
+  if (!file.exists(fw1name)) {
+    print(fw1name)
     z.fw.y1 <- D53Exp(X=psl_DECA,Y=fw.eobs,m=1,it=NULL,is=NULL,mask=FALSE)
-    save(file='specsdecadal.z.fw.y1.rda',z.fw.y1)
+    save(file=fw1name,z.fw.y1)
     rm("z.fw.y1"); gc(reset=TRUE)
   }
-  if (!file.exists('specsdecadal.z.mu.y1.rda')) {
-    print('do specsdecadal.z.mu.y1.rda')
+  
+  if (!file.exists(mu1name)) {
+    print(mu1name)
     z.mu.y1 <- D53Exp(X=tas_DECA,Y=mu.eobs,m=1,it=NULL,is=NULL,mask=TRUE)
-    save(file='specsdecadal.z.mu.y1.rda',z.mu.y1)
+    save(file=mu1name,z.mu.y1)
     rm("z.mu.y1"); gc(reset=TRUE)
   }
-  if (!file.exists('specsdecadal.z.fw.y1.3.rda')) {
-    print('do specsdecadal.z.fw.y1.3.rda')
+  if (!file.exists(fw3name)) {
+    print(fw3name)
     z.fw.y1.3 <- D53Exp(X=psl_DECA,Y=fw.eobs,m=1:3,it=NULL,is=NULL,mask=FALSE)
-    save(file='specsdecadal.z.fw.y1.3.rda',z.fw.y1.3)
+    save(file=fw3name,z.fw.y1.3)
     rm("z.fw.y1.3"); gc(reset=TRUE)
   }
-  if (!file.exists('specsdecadal.z.mu.y1.3.rda')) {
-    print('do specsdecadal.z.mu.y1.3.rda')
+  if (!file.exists(mu3name)) {
+    print(mu3name)
     z.mu.y1.3 <- D53Exp(X=tas_DECA,Y=mu.eobs,m=1:3,it=NULL,is=NULL,mask=TRUE)
-    save(file='specsdecadal.z.mu.y1.3.rda',z.mu.y1.3)
+    save(file=mu3name,z.mu.y1.3)
     rm("z.mu.y1.3"); gc(reset=TRUE)
   }
-  if (!file.exists('specsdecadal.z.fw.y1.5.rda')) {
-    print('do specsdecadal.z.fw.y1.5.rda')
+  if (!file.exists(fw5name)) {
+    print(fw5name)
     z.fw.y1.5 <- D53Exp(X=psl_DECA,Y=fw.eobs,m=1:5,it=NULL,is=NULL,mask=FALSE)
-    save(file='specsdecadal.z.fw.y1.5.rda',z.fw.y1.5)
+    save(file=fw5name,z.fw.y1.5)
     rm("z.fw.y1.5"); gc(reset=TRUE)
   }
-  if (!file.exists('specsdecadal.z.mu.y1.5.rda')) {
-    print('do specsdecadal.z.mu.y1.5.rda')
+  if (!file.exists(mu5name)) {
+    print(mu5name)
     z.mu.y1.5 <- D53Exp(X=tas_DECA,Y=mu.eobs,m=1:5,it=NULL,is=NULL,mask=TRUE)
-    save(file='specsdecadal.z.mu.y1.5.rda',z.mu.y1.5)
+    save(file=mu5name,z.mu.y1.5)
     rm("z.mu.y1.5"); gc(reset=TRUE)
   }
-  if (!file.exists('specsdecadal.z.fw.y1.9.rda')) {
-    print('do specsdecadal.z.fw.y1.9.rda')
+  if (!file.exists(fw9name)) {
+    print(fw9name)
      z.fw.y1.9 <- D53Exp(X=psl_DECA,Y=fw.eobs,m=1:9,it=NULL,is=NULL,mask=FALSE)
-     save(file='specsdecadal.z.fw.y1.9.rda',z.fw.y1.9)
+     save(file=fw9name,z.fw.y1.9)
      rm("z.fw.y1.9"); gc(reset=TRUE)
    }
-  if (!file.exists('specsdecadal.z.mu.y1.9.rda')) {
-    print('do specsdecadal.z.mu.y1.9.rda')
+  if (!file.exists(mu9name)) {
+    print(mu9name)
     z.mu.y1.9 <- D53Exp(X=tas_DECA,Y=mu.eobs,m=1:9,it=NULL,is=NULL,mask=TRUE)
-    save(file='specsdecadal.z.mu.y1.9.rda',z.mu.y1.9)
+    save(file=mu9name,z.mu.y1.9)
     rm("z.mu.y1.9"); gc(reset=TRUE)
   }
 
@@ -546,13 +568,12 @@ if (looexperiments) {
   score.fw.y1.5 <- diagnoseMOS('specsdecadal.z.fw.y1.5.rda',fw.eobs,l=5)
   score.mu.y1.9 <- diagnoseMOS('specsdecadal.z.mu.y1.9.rda',mu.eobs,l=9)
   score.fw.y1.9 <- diagnoseMOS('specsdecadal.z.fw.y1.9.rda',fw.eobs,l=9)
-  while (dev.cur()>1) dev.off()
-## Repeat and make a table of the results...
-  
-}
-  
 
-## ----diagnosefcst--------------------------------------------------------
+## Repeat and make a table of the results...
+}
+
+## Diagnose the forecasts
+  
 ## Common EOFs to diagnose the results?
 
 if (diagnoseFCST) {
@@ -575,7 +596,6 @@ if (diagnoseFCST) {
   rmap.1.10.nomask.3 <- comparemannual(tas_DECA,mask=FALSE,l= 3, eofs=1:10)
 }
 
-## ----rmaps---------------------------------------------------------------
   ## Test the forecasts of the larg-scale anomalies/gravest EOFs
   rmap.mask.3 <- comparemannual(tas_DECA,mask=TRUE,l= 3)
   rmap.nomask.3 <- comparemannual(tas_DECA,mask=FALSE,l= 3)
@@ -585,7 +605,6 @@ if (diagnoseFCST) {
   rmap.1.2.nomask.3 <- comparemannual(tas_DECA,mask=FALSE,l= 3, eofs=1:2)
   rmap.1.9.nomask.3 <- comparemannual(tas_DECA,mask=FALSE,l= 3, eofs=1:9)
 
-## ----rdiff---------------------------------------------------------------
   rdiff <- rmap.1.3.nomask.3 - rmap.nomask.3
   map(rdiff,new=FALSE)
   figlab('TAS forecast (3 years): correlations EOFs 1-3 vs full field',ypos=0.99)
@@ -605,6 +624,7 @@ if (diagnoseFCST) {
   rdiff <- rmap.1.9.nomask.3 - rmap.nomask.3
   map(rdiff,new=FALSE)
   figlab('TAS forecast (3 years): correlations EOFs 1-9 vs full field',ypos=0.99)
+}
 
 ## ----t2m scales----------------------------------------------------------
 ## Scaling dependency: time - space
@@ -623,9 +643,8 @@ plot(attr(zst,'timeseries'),plot.type='single',col=colscal(20),main='T(2m)')
 
 
 ## ----slp-----------------------------------------------------------------
-
 ## Repeat for SLP
-slp <- retrieve('~/data/ncep/slp.mon.mean.nc',lon=c(-90,60),lat=c(-20,80))
+slp <- retrieve('~/data/slp.mon.mean.nc',lon=c(-90,60),lat=c(-20,80))
 slp <- anomaly(slp)
 yst <- scaledependency(slp)
 image(attr(yst,'timescales'),attr(yst,'gridboxes'),t(t(yst)/colMeans(yst)),

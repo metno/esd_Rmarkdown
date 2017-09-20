@@ -16,15 +16,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Simultaneous forest fires ignite in the Bouche du Rhone department near Aix en Porvence, and in the Alpes Maritimes Department, at the French/Italian frontier, near a highway (A8) used by thousands of tourists. Due to the important smoke production, visibility is strongly reduced so that highway has to be closed, leading to an important traffic on the secondary road networks. The crossing of the frontier by car being completely impossible, traffic between France and Italy has to be diverted. Tourists are confined on highway rest areas. People, blocked on the roads, have difficulties to breathe because of the smoke and leave their cars, scattering into the nature. Additional accidents are caused because of the panic of people. Due to aerial firefighting, electricity lines have to be cut. Due to the fire smoke, aerial traffic in Nice airport has to be stopped. Numerous dwellings are without electricity and of course without telephones. Other emergency operations are disturbed because of the large delay of alert, major dispersion of means, decrease of available means.
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. To strip off all the text and make a pure R-script, then use `purl`as shown below:
 
 
 ```{r, eval=FALSE}
+## Extract just the R-code
 library(knitr)
 purl('~/git/esd_Rmarkdown/EU-Circle/eu-circle_case-study-1.Rmd', output='~/git/esd_Rmarkdown/EU-Circle/eu-circle_case-study-1.R')
 ```
-
 
 
 **Precipitation**
@@ -91,18 +90,15 @@ There is no indication suggesting that high value of annual $\mu$ is connected w
 For many purposes, it may be useful to assume that the daily precipitation amount is approximately exponentially distributed for the days when it rains and that the probability of the precipitation exceedin a threshold value $x_0$ can be estimated according to $Pr(X>x_0) = f_w e^{-x_0/\mu}$ where $f_w$ is the wet-day frequency. Below is a test for whether the amount is close to exponential for a wet day. 
 
 ```{r,warning=FALSE}
+
+cols <- c(rgb(1,0,0,0.2),rgb(0,0,1,0.2),rgb(0,1,0,0.2),rgb(0,0.7,0.7,0.2),rgb(0.7,0,0.7,0.2),rgb(0.5,0.5,0.5,0.2))
 ## check the relationship between wet-day 95-percentile and wet-day mean
-plot(-log(0.05)*zoo(mu[,2]),zoo(q95[,1]),pch=19,xlim=c(0,120),ylim=c(0,120),
+plot(-log(0.05)*zoo(mu[,1]),zoo(q95[,1]),pch=19,xlim=c(0,120),ylim=c(0,120),
      main='Wet-day mean v.s. 95th wet percentile',
      xlab=expression(paste(-ln(1-0.95)*mu,' (mm/day)')), ylab=expression(paste(q[95],' (mm/day)')))
-points(-log(0.05)*zoo(mu[,1]),zoo(q95[,2]),pch=19,col=rgb(1,0,0,0.2))
-points(-log(0.05)*zoo(mu[,3]),zoo(q95[,3]),pch=19,col=rgb(0,0,1,0.2))
-points(-log(0.05)*zoo(mu[,4]),zoo(q95[,4]),pch=19,col=rgb(0,1,0,0.2))
-points(-log(0.05)*zoo(mu[,5]),zoo(q95[,5]),pch=19,col=rgb(0,0.7,0.7,0.2))
-points(-log(0.05)*zoo(mu[,6]),zoo(q95[,6]),pch=19,col=rgb(0.7,0,0.7,0.2))
-points(-log(0.05)*zoo(mu[,7]),zoo(q95[,7]),pch=19,col=rgb(0.5,0.5,0.5,0.2))
+for (i in 1:dim(mu[2])) points(-log(0.05)*zoo(mu[,i]),zoo(q95[,i]),pch=19,col=cols[i])
 grid()
-legend(0,120,loc(mu),pch=19,col=c('black',rgb(1,0,0,0.2),rgb(0,0,1,0.2),rgb(0,1,0,0.2),rgb(0,0.7,0.7,0.2),rgb(0.7,0,0.7,0.2),rgb(0.5,0.5,0.5,0.2)),bty='n',cex=0.5)
+legend(0,120,loc(mu),pch=19,col=c('black',cols[1:dim(mu)[2]]),bty='n',cex=0.5)
 ```
 
 The scatter plot suggests that the points are mainly clustered around the diagonal and hence the 24-hr precipitation amoun is approximately exponentially distributed. The Marseille data seem to be less similar to the exponential distribution than the other sites.
@@ -179,12 +175,12 @@ grid()
 
 Linear trend analysis applied to both the duration of dry spells (solid line for one site in figure above) and the probability of more than 100 mm rain per day (dashed line showing several sites) both exhibit long-term increases over the last ~100 years. This tendency can be interpreted as the risk of long dry periods increases while the amount that falls as rain gets more extreme for the wet days. In other words, there has been a growing risk for both droughts and flash floods.
 
-***Gridded precipitation***
+### Gridded precipitation ###
 
 The geographical pattern of trend in dry spell duration can be analysed using gridded data from EOBs (based on the ECA&D station records) Here gridded precipitation is represented with upper-case $X$. Gridded data are not ideal when it comes to extremes, as the gridding process makes the data spatially inhomogeneous. There are geographical variations in the climatological precipitation, with more precipitation over the higher elevations and the southern Alps.
 
 ```{r,warning=FALSE}
-X <- retrieve('~/data.ECAD/rr_0.25deg_reg.nc',lon=c(4,8),lat=c(43,46))
+X <- retrieve('~/data/data.ECAD/rr_0.25deg_reg.nc',lon=c(4,8),lat=c(43,46))
 map(X,new=FALSE)
 ```
 
@@ -211,11 +207,20 @@ if (!file.exists('case1-dryseason.rda')) {
   z <- aggregate(subset(X,it='mjjas'),year,FUN='dryseason')
   save(z,file='case1-dryseason.rda')
 } else load('case1-dryseason.rda')
+attr(z,'variable') <- 'duration'
+attr(z,'longname') <- 'mean dry spell duration'
 eof.dry <- EOF(z)
-plot(eof.dry)
+plot(eof.dry,new=FALSE)
 ```
 
-Predictors for calibration: check for any dependency
+Only the 4 leading EOFs for the seasonal mean dry spell length are relevant. The higher orders are noise. This is according to expectations, i.e. that droughts and heat waves are large-scale phenomena. 
+
+```{r}
+eof.dry <- subset(eof.dry,ip=1:4)
+index(eof.dry) <- year(eof.dry)
+```
+
+### Predictors for calibration: check for any dependency
 
 ```{r}
 T2M <- aggregate(subset(retrieve('~/Downloads/air.mon.mean.nc',lon=c(-12,35),lat=c(27,50)),it='mjjas'),year,'mean')
@@ -224,21 +229,243 @@ eof.t2m <- EOF(T2M)
 eof.slp <- EOF(SLP)
 ```
 
-Any connection between temperature and dry spells? 
+Examine the connection between temperature and dry spells: 
 
-```{r, fig.height=8}
+```{r, fig.height=8, warning=FALSE}
 ds.t2m <- DS(eof.dry,eof.t2m)
-plot(ds.t2m)
+plot(ds.t2m,new=FALSE)
 ```
 
-Any connection between sea-level pressure anomalies and dry spells? 
+Cross-validation scores of 0.33 for the leading EOF of the mean duration of dry spells and a temperature anomaly over Iberia and souther France suggest a real link.
 
-```{r, fig.height=8}
+There is also a connection between sea-level pressure anomalies and dry spells. 
+
+```{r, fig.height=8, warning=FALSE}
 ds.slp <- DS(eof.dry,eof.slp)
-plot(ds.slp)
+plot(ds.slp,new=FALSE)
+```
+
+Cross-validation score of 0.43 and high SLP anomalies over France. The summertime temperature and SLP are expected to be related:
+
+```{r, fig.height=8, warning=FALSE}
+cca.slp.t2m <- CCA(eof.slp,eof.t2m)
+plot(cca.slp.t2m,new=FALSE)
+```
+
+The CCA suggests that there is covariance between SLP and temperature, and we need to avoid double counting of these effects. 
+
+
+### Residual:
+
+```{r, fig.width=8, fig.height=8}
+## Estimate the residuals
+eof.res <- subset(eof.dry,it=ds.slp)
+coredata(eof.res) <- coredata(eof.res) - coredata(ds.slp)
+```
+
+Check to see if the residual contains covariance with the temperature
+
+```{r, fig.height=8, warning=FALSE}
+ds.res <- DS(eof.res,eof.t2m)
+plot(ds.res,new=FALSE)
+```
+
+The downscaling exercise applied to the residual suggests that there is little to gain from using both SLP and temperature for downscaling the statistics of duration of dry days. Hence, a projection using SLP from GCMs as predictor may capture most of the future change. The temperature will nevertheless still be important for fires, as hotter temperatures are more favouralbe for fires. 
+
+
+### Projections for the future
+
+Need to read the predictors again to get all months
+
+```{r}
+T2M <- retrieve('~/Downloads/air.mon.mean.nc',lon=c(-12,35),lat=c(27,50))
+SLP <- retrieve('~/Downloads/slp.mon.mean.nc',lon=c(-12,35),lat=c(27,50))
+## Also - fix the index of eof - set to year.
+index(eof.dry) <- year(eof.dry)
+```
+
+Two seperate analyses based on SLP and temperature respectively, assuming the RCP 4.5 emission scenario. Start with the SLP and the original data
+
+```{r, warning=FALSE}
+if (!file.exists('dse.mld.slp.rda')) {
+  dse.mld.slp <- DSensemble.eof(eof.dry,predictor=SLP,it='mjjas',ip=1:10,path="~/data/CMIP5.monthly",pattern = "psl_Amon_ens_")
+  save(dse.mld.slp,file = 'dse.mld.slp.rda')
+} else load('dse.mld.slp.rda')
+plot(dse.mld.slp,new=FALSE)
+grid()
+```
+
+Plot maps of changes in the mean dry spell duration 
+
+```{r}
+ zmap1 <- map(dse.mld.slp,FUN="mean",FUNX='mean',it=c(2000,2009),plot=FALSE)
+ zmap2 <- map(dse.mld.slp,FUN="mean",FUNX='mean',it=c(2090,2099),plot=FALSE)
+ zmap <- zoo(coredata(zmap2) - coredata(zmap1),order.by=index(zmap2))
+ zmap <- attrcp(zmap1,zmap)
+ class(zmap) <- class(zmap1)
+ attr(zmap,'variable') <- 'mean dry duration'
+ attr(zmap,'unit') <- 'days'
+ rm('zmap1','zmap2')
+ map(zmap,colbar=list(pal='warm'),main='Change in mean duration of dry spells from 2000-2009',new=FALSE)
 ```
 
 
 ## Temperature
 
 For heat waves, use a similar approach as described in the supporting material of where a GLM was used to estimate the number of events with a basis of the 'Poisson' distribution.
+
+## Wildfire risk
+
+The fire season: May-October (allowing for longer season in the future).
+
+Hazards: Smoke (Area/density) and burned area. Use historic data or model results (RCM)? Damage functions - has not been used and need to come up with some sensible choices (e.g. mean/minimum density of assets?). The assets are distributed unevenly (roads and power lines). Model risk in a conditioned Monte-Carlo type of fashion?
+
+Data: number of events $n_f$, burned area $A_f$, area of smoke $A_s$, location of event $(x,y)$, the day of the event, number of multiple events $n_i\ i =[2,3,..]$. 
+
+
+### Fire indices
+
+Gridded data which can be downscaled. 
+
+#### Events
+
+Model number of evens $n_f$ and their area $A_f$ seperately, a little like precipitation ($\mu$ and $f_w$). When it comes to number of events, we can look at the total number or the number of events associated with a threshold area - the number of sevre fires. 
+
+The area has an impact on the risk of affecting the number of assets. Base this on historic data and relate to large-scale conditions (predictors). Model as a partly stochastic process where the likelihood depends on an external variable. Poisson model (`GLM`) of $n_f$ and the nature of the $A_f$ distribution dictates the model strategy for the area.
+
+Also model number of simultaneous events, which strain the fire fighters, as they need to split/divert resources. Based on historic data and the assumption of a Poisson process dependent on external condition. 
+
+```{r}
+## Read wild fire data
+colnames <- c('year','number','type','department','code-INSEE','municipality','something','DFCI.code','Alert','origin','area')
+fires <- read.table('~/Downloads/liste_incendies_ du_09_05_2017.csv',sep=';',col.names=colnames,header=FALSE)
+h <- hist(fires$year,col='grey',breaks=1973:2016)
+```
+
+Examine the fire event statistics: is it Poisson distributed?
+
+```{r}
+breaks <- seq(0,3000,by=250)
+lambda <- mean(h$counts)
+hist(h$counts,breaks=breaks,freq = FALSE,ylim=c(0,0.02))
+lines(seq(0,3000,by=10),dpois(seq(0,3000,by=10),lambda=lambda),lwd=3,col='red')
+```
+
+The annual number is not Poisson distributed. Examine the statistics of the area.
+
+```{r}
+summary(fires$area)
+plot(fires$area,log='y')
+```
+
+
+Compare the fire statistics with the mean duration of dry intervals from ECAD (eof.dry), the temperature and SLP.
+
+```{r}
+## Number of annual fires
+naf <- zoo(h$counts,order.by=trunc(h$mids))
+naf[naf==0] <- NA
+index(naf) <- year(naf)
+xy <- merge(naf,zoo(eof.dry),all=FALSE)
+cal.naf <- data.frame(y = coredata(xy$naf), x1=coredata(xy$x.1), x2=coredata(xy$x.2),
+                      x3= coredata(xy$x.3), x4=coredata(xy$x.4))
+naf.model <- lm(y ~ x1 + x2 + x3 + x4, data=cal.naf)
+z.naf <- zoo(predict(naf.model),order.by=trunc(h$mids))
+plot(naf,z.naf)
+```
+
+
+#### Burned area
+
+```{r}
+firearea <- data.frame(i=rep(1,length(fires$year)),area=as.numeric(as.character(fires$area)),year=fires$year)
+## Only include fires where more than 1 km^2 has burned down
+Af <- aggregate(firearea,by=list(firearea$year,firearea$area > 100000),FUN=sum)
+
+## Number of events with Af > 1km^2 per year
+plot(Af$Group.1[Af$Group.2],Af$i[Af$Group.2])
+
+## Number of events with Af > 1km^2 per year
+plot(Af$Group.1[Af$Group.2],Af$area[Af$Group.2])
+
+## Relationship between the number of events and total area.
+col <- rgb((2015 - Af$Group.1[Af$Group.2])/42,0,1- (2015 - Af$Group.1[Af$Group.2])/42,0.4)
+plot(Af$i[Af$Group.2],Af$area[Af$Group.2],col=col,pch=19)
+## annual total area of fires
+ataf <- as.station(zoo(Af$area[Af$Group.2],order.by=Af$Group.1[Af$Group.2]),loc='Southern France',param='area',unit='m^2',
+                  longname='burned area')
+plot(ataf,new=FALSE)
+```
+
+The number of wild fire events appears to have decreased over time and there burned area is characterised by a weak decline in years with moderate fire activity. There are also some exceptional years with large burned area, but the sample of these extreme cases is too small for a proper trend analysis.  The peak years in fire activity may suggest that the fire hazard is sensitive to certain factors or that increases abruptly when some factors exceed a critical threshold state. 
+
+The high sensitivity in the wild fire activity can be compared with the predictors if we take ln(Af) rather than using a linear relationship: 
+
+```{r}
+index(ataf) <- year(ataf)
+index(eof.dry) <- year(eof.dry)
+eof.dry <- subset(eof.dry,ip=1:4)
+ds.ataf.dry <- DS(log(ataf),eof.dry)
+ds.ataf.t2m <- DS(log(ataf),eof.t2m)
+ds.ataf.slp <- DS(ataf,eof.slp)
+```
+
+
+Examine the connection between the mean dry spell duration and the area of burned forest
+
+```{r, fig.height=8}
+plot(ds.ataf.dry,new=FALSE)
+```
+
+The regression results suggest a connection between the mean duration of the dry intervals and ln(Af) as the cross-validation correlation is 0.49. 
+
+Also examine the connection between high summer temperature and the burned area:
+
+
+```{r, fig.height=8}
+plot(ds.ataf.t2m,new=FALSE)
+```
+
+There is also a connection between ln(Af) and the summer temperature, and the cross-validation correlation is 0.4. 
+
+The same analysis repeated for the SLP fails to find a connection for ln(Af), but the linear relationship between SLP and Af captures a dependency
+
+
+```{r, fig.height=8}
+plot(ds.ataf.slp,new=FALSE)
+```
+
+The connection between SLP and burned area is weaker than for the the mean dry interval duration and summer temperature if we use ln(Af), with a cross-validation correlation of 0.35. It is particularly the peak years which are associated with high-pressure systems (often associated with dry conditions and heatwaves).  
+
+The time series suggest an increasing bias over time, which possibly can be explained by more efficient fire service since 1990. This can be checked to some extent by examining the budget of the fire services to see if there have been more efforts and resources devoted to firefighting over time. It is also possible that the vegetation has changed or that the landscape has been altered (e.g. more fields or more paved area) so that the potential for wild fires has been reduced. Also, once there has been a fire, the are is burned down and it takes time for it to recover so that new fires may occur.  
+
+### Projections of future wild fire activity
+
+We can combine the projections of the mean dry interval duration with the downscaling result using the same quantity as predictor. The dry duration statistics was downscaled using the SLP as predictor, so the SLP is in the equation.
+
+```{r, fig.height=8}
+## Convert the projected data into an EOF for the multi-model ensemble
+eof.dry.z <- as.eof(dse.mld.slp)
+## Use this EOF as input with the downscaling model calibrated with mean dry interval duration to make projections of ln(fire area)
+ds.Af <- exp(predict(ds.ataf.dry,newdata=eof.dry.z))
+plot(ds.Af,new=FALSE)
+```
+
+
+
+#### Simultaneos fires
+
+```{r}
+fevents <- data.frame(i=rep(1,length(fires$year)),area=as.numeric(as.character(fires$area)),year=fires$year,date=as.Date(fires$Alert))
+## Only include fires where more than 1 km^2 has burned down
+se <- aggregate(fevents$i,by=list(fevents$date,fevents$area > 100000),FUN=sum)
+
+## Examine the statistical distribution of simultaneous events
+hist(se$x, col='grey', main='Number of simultaneous wild fires')
+
+
+plot(year(se$Group.1),se$x,pch=19,col=rgb(1,0,0,0.2),main='Number of simultaneous wild fires by year',ylab='Simultaneous events',xlab='')
+points(year(se$Group.1),se$x,pch=21,col=rgb(0.5,0.5,0.5))
+grid()
+```
+

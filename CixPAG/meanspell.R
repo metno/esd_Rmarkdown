@@ -1,7 +1,7 @@
 ## Script that reads European temperature data and explores the connection between 
 ## the seasonal mean temperature and the mean length of the warm/cold spells 
 
-it <- 'jja'
+it <- 'djf'
 if (it =='djf') {
   cold <- TRUE
   threshold <- 0
@@ -98,3 +98,24 @@ plot(c(q.spell),c(q.geom),main='Spell length statistics & the geometric distribu
      xlab=expression(q[p]),ylab='qgeom(p,1/mean)')
 grid()
 lines(range(q.spell,q.geom,na.rm=TRUE),range(q.spell,q.geom,na.rm=TRUE),col='red')
+
+## Pick Oslo
+t2m <- subset(as.4seasons(station(ss[63,])),it=it)
+sl <- subset(as.4seasons(spell(station(ss[63,]),threshold=threshold)),is=is,it=it)
+t2msl <- zoo(exp(predict(fit,newdata=data.frame(x=coredata(t2m)))),order.by=index(t2m))
+
+xy <- merge(t2msl,sl)
+ok <- is.finite(xy$t2msl) & is.finite(xy$sl)
+r <- round(cor(coredata(xy$t2msl)[ok],coredata(xy$sl)[ok]),2)
+
+plot(coredata(xy$t2msl),coredata(xy$sl),main=paste('Correlation=',r))
+
+plot(xy,plot.type='single',lwd=3,
+     xlab='',ylab='days',sub=paste(loc(t2m),'correlation=',r),
+     main=paste('Mean',toupper(it),'length of intervals',
+                c('below','above')[c(cold,!cold)],threshold,'C'),
+     col=c(rgb(0.7,0,0.2,0.5),rgb(0,0.2,0.7,0.5)))
+grid()
+legend(as.Date('1997-01-01'),5.75,c('Predicted','Observed'),
+       col=c(rgb(0.7,0,0.2,0.5),rgb(0,0.2,0.7,0.5)),lty=1,lwd=3)
+
