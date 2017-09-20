@@ -1,6 +1,6 @@
-Worshop on ESD 4 NVE 
+R3 Workpackage 4 on Extension to hydrological simulations
 -----------------------------------
-title: "esd4nve_examples"
+title: "R3_WP4_Hydrological"
 author: "Abdelkader Mezghani"
 date: "March 11, 2016"
 output: html_document
@@ -10,14 +10,15 @@ This is a generated R Markdown document. Markdown is a simple formatting syntax 
 
 ---------------------------------
 
-## **Data & Structure**
+## Data Reading & Structure
 
-```{r "setup", include=FALSE}
+```{r "setup"}
 require("knitr")
-opts_knit$set(root.dir = "~/DATA/data_esd_2016/fwddataforr3workshopenom2uker")
+opts_knit$set(root.dir = "~/git/esd_Rmarkdown/R3/R3-WP4/")
+opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',echo=TRUE, warning=FALSE, message=FALSE) 
 ```
 
-## Require the following libraries
+### Require the following libraries
 ```{r required R packages,echo=FALSE}
 require(esd)
 require(leaflet)
@@ -26,7 +27,6 @@ require(rgdal)
 ```
 
 
-## R3 ESD & NVE
 ### Function for reading discharge data into the esd format
 
 ```{r readNVE,warning=FALSE}
@@ -49,7 +49,7 @@ readNVE <- function(file='/data_esd_2016/atnsjo.csv',loc='Atnsjo',lat='61',lon='
 }
 ```
 
-#### Read meta data from the shape file
+### Read meta data from the shape file
 
 ```{r}
 library(rgdal)
@@ -122,9 +122,9 @@ if (!file.exists('R3_WP4_Qdata_sep2017/q.nve.rda')) {
   load('R3_WP4_Qdata_sep2017/q.nve.rda')
 ```
 
-#### Q Data Analysis
+## Discharge Data Analysis
 ```{r data Analysis, warning=FALSE,eval=TRUE, eval=TRUE, warning=FALSE}
-setwd('~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017/')
+setwd('R3_WP4_Qdata_sep2017')
 load('q.nve.rda')
 library(leaflet)
 
@@ -167,19 +167,18 @@ leaflet() %>%
 
 ```
 
-
-## Downscaling monthly totals single discharge data @ Atnasjø
+### Downscaling monthly totals @ a single discharge station
 
 ```{r,warning=FALSE,eval= FALSE}
 library(esd)
-load('~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017/q.nve.rda')
+load('R3_WP4_Qdata_sep2017/q.nve.rda')
 selQ <- subset(q.nve,is = 1)
 ```
 
 ## Search the nearest meteorological station 
-```{r}
+```{r,eval = FALSE}
 # select nearest preciptiation stations
-path.data <- '~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017'
+path.data <- 'R3_WP4_Qdata_sep2017'
 
 ssP <- select.station(src='metnod',param=c('precip'))
 
@@ -199,8 +198,8 @@ if (!file.exists(file.path(path.data,'selNearPre.rda'))) {
 ```
 
 ### Select nearest temperature station
-```{r selNearT}
-path.data <- '~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017'
+```{r selNearT,eval = FALSE}
+path.data <- 'R3_WP4_Qdata_sep2017'
 
 ssT <- select.station(src='metnod',param=c('t2m'))
 
@@ -221,7 +220,7 @@ if (!file.exists(file.path(path.data,'selNearT2m.rda'))) {
 ```
 
 ### Produce map with all layers
-```{r selNearP}
+```{r selNearP, eval = TRUE}
 labq <- paste(sep = "<br/>", paste("<b><a>",loc(q.nve),"</a></b>"))
 labP <- paste(sep = "<br/>", paste("<b><a>", ssP$location,"</a></b>"))
 labT <- paste(sep = "<br/>", paste("<b><a>", ssT$location,"</a></b>"))
@@ -240,8 +239,10 @@ leaflet() %>%
   addLayersControl(overlayGroups = c("Discharge (red)","Raingauges (blue circles)","Thermometers (orange circles)","NVE catchments"), options = layersControlOptions(collapsed = FALSE))
 ```
 
+### Downscaling Examples
+#### Example of Downscaling Seasonal values 
 ```{r}
-load('~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017/q.nve.rda')
+load('R3_WP4_Qdata_sep2017/q.nve.rda')
 q1 <- subset(q.nve,is = 1)
 Pmm <- subset(as.4seasons(precip.ERAINT(lon = c(0,30), lat = c(50,85))),it = 'djf') 
 # use already defined predictors or download from https://climexp.knmi.nl/selectfield_rea.cgi?id=someone@somewhere
@@ -250,9 +251,9 @@ ds.uam <- DS(uam,EOF(Pmm))
 plot(ds.uam)
 ```
 
-
+#### Example of downscaling annual means using ERAINT precip as predictor
 ```{r}
-load('~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017/q.nve.rda')
+load('R3_WP4_Qdata_sep2017/q.nve.rda')
 q1 <- subset(q.nve,is = 1)
 Pmm <- subset(as.annual(subset(precip.ERAINT(lon = c(0,30), lat = c(50,85)),it = 'djf'),nmin=0),it = c(1979,2013)) 
 # use already defined predictors or download from https://climexp.knmi.nl/selectfield_rea.cgi?id=someone@somewhere
@@ -261,9 +262,9 @@ ds.uam <- DS(uam,EOF(Pmm))
 plot(ds.uam)
 ```
 
-
-```{r}
-load('~/DATA/data_esd_2016/fwddataforr3workshopenom2uker/R3_WP4_Qdata_sep2017/q.nve.rda')
+#### Example of downscaling annual means using ERAINT T2m as predictor
+```{r,eval = FALSE}
+load('R3_WP4_Qdata_sep2017/q.nve.rda')
 q1 <- subset(q.nve,is = 1)
 Pmm <- subset(as.annual(subset(t2m.ERAINT(lon = c(0,30), lat = c(50,85)),it = 'djf'),nmin=0),it = c(1979,2013)) 
 # use already defined predictors or download from https://climexp.knmi.nl/selectfield_rea.cgi?id=someone@somewhere
@@ -272,8 +273,9 @@ ds.uam <- DS(uam,EOF(Pmm))
 plot(ds.uam)
 ```
 
-```{r monthly flow prediction, eval = TRUE}
-# find and extract common dates 
+### Downscaling of monthly discharge values # OLD example not run
+```{r monthly flow prediction, eval = FALSE}
+# This is an old example, not working for now !!!
 
 # set the common time Period
 commonPeriod <- c("1979-01-01","2002-03-31")
@@ -373,13 +375,3 @@ dev2bitmap('hydroex-u.gt.30.png',res=150)
 
 ```
 
-```{r}
-PRE <- precip.ERAINT(lon = c(0,30),lat =c(50,80))
-Q <- subset(q.nve,is = 1)
-
-ds.Q <- DS(subset(annual(Q),it = c(1950,2015)), EOF(subset(annual(PRE),it=c(1950,2015))))
-plot(ds.Q)
-```
-```{r}
-cor(subset(annual(Q),it=c(1960,2010)), subset(annual(subset(PRE,is=1)),it = c(1960,2010)),use = 'complete.obs')
-```
