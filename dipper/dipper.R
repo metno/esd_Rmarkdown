@@ -5,6 +5,7 @@ library(ncdf4)
 
 examine <- FALSE
 
+print('read dipper data')
 dipper <- read.table('~/Dropbox/data/dipper.csv',header=TRUE)
 
 dipper <- zoo(x=dipper[[2]],order.by=dipper[[1]])
@@ -18,6 +19,7 @@ predictor <- retrieve("air.mon.mean.nc",lon=c(-1,17),lat=c(57,62))
 predictor <- aggregate(subset(predictor,it='djf'),year,FUN='mean')
 
 if (examine) {
+  print('dipper statistical distribution')
   ## Check the distribution
   n <- seq(0,150,by=10); mu <- mean(dipper)
   hist(coredata(dipper),breaks=n,freq=FALSE,col='grey')
@@ -32,7 +34,7 @@ if (examine) {
 ## Downscale the dipper population directly based on the large-scale
 ## annual mean temperature
 
-dev.new()
+print('Downscaled results')
 if (!file.exists('dipper.Z.rcp45.rda')) {
   Z.rcp45 <- DSensemble.annual(y,biascorrect=TRUE,
                                predictor=predictor,
@@ -57,6 +59,7 @@ if (!file.exists('dipper.Z.rcp26.rda')) {
   save(file='dipper.Z.rcp26.rda',Z.rcp26)
 } else load('dipper.Z.rcp26.rda')
 
+print('ensemble statistics')
 year <- year(Z.rcp45)
 ci90.rcp45 <- apply(coredata(Z.rcp45),1,quantile,
                     probs=c(0.05,0.95),na.rm=TRUE)
@@ -65,6 +68,8 @@ ci90.rcp26 <- apply(coredata(Z.rcp26),1,quantile,
 ci90.rcp85 <- apply(coredata(Z.rcp85),1,quantile,
                     probs=c(0.05,0.95),na.rm=TRUE)
 
+print('plotting')
+dev.new()
 par(bty='n')
 plot(range(year),range(ci90.rcp45,ci90.rcp26,ci90.rcp85,y),
      type='n',xlab='',ylab='Population',main='Dipper',

@@ -9,11 +9,10 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Introduction.
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This is an R Markdown document that explores some climate data with relevance to Mozambique. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r esd}
 library(esd)
@@ -32,11 +31,29 @@ sl.island <- read.table('http://www.psmsl.org/data/obtaining/met.monthly.data/10
 
 ```{r}
 if (!file.exists('mimoza.imilast.rda')) {
-  imilast.storms <- read.imilast('~/data/IMILAST/ERAinterim_0.75_SH_M07_19790101_20091231.txt',lon=c(30,90),lat=c(-50,-5))
+  imilast.storms <- subset(read.imilast('~/data/IMILAST/ERAinterim_0.75_SH_M07_19790101_20091231.txt'),
+                           is=list(lon=c(20,90),lat=c(-40,-5)))
+# imilast.storms <- subset(read.imilast('~/data/IMILAST/ERAinterim_1.5_SH_M03_19890101_20090331_ST.txt'),
+#                           is=list(lon=c(30,90),lat=c(-40,-5)))
   cyclones <- events2trajectory(imilast.storms)
   save(cyclones,file='mimoza.imilast.rda')
-} load('mimoza.imilast.rda')
+} else load('mimoza.imilast.rda')
+ii <- is.element(colnames(cyclones),'amp_z850')
+mi <- apply(cyclones[,ii],1,min)
+storms <- cyclones[mi < 10,]
+storms <- attrcp(cyclones,storms)
+class(storms) <- class(cyclones)
+col <- rgb(0,0,1,1-(mi-min(mi))/diff(range(mi)))
+map(storms,verbose=TRUE,lonR=30,latR=0,col=col,lwd=3)
 ```
+
+```{r}
+pca.storms <- PCA(storms,verbose=TRUE)
+plot(pca.storms[,1],type='l')
+plot(attr(pca.storms,'pattern')[,1],type='l')
+plot(attr(pca.storms,'eigenvalues'),type='b')
+```
+
 
 
 ## GHCND temperature and precipitation
@@ -51,7 +68,7 @@ if (!file.exists('mimoza.ghcnd.rda')) {
   ss <- select.station(lon=c(27,37),lat=c(-40,-10),src='ghcnd',nmin=30,param='tmin')
   tmin <- station(ss,verbose=TRUE)
   ## Daily precipitation
-  ss <- select.station(lon=c(27,37),lat=c(-40,-10),src='ghcnd',nmin=30,param='precip')
+  ss <- select.station(lon=c(31,37),lat=c(-40,-10),src='ghcnd',nmin=30,param='precip')
   precip <- station(ss,verbose=TRUE)
   ## Set bad (missing) data to NA
   z <- coredata(tmax); z[z < -20] <- NA; z[z > 70] <- NA; z -> coredata(tmax)
@@ -61,6 +78,75 @@ if (!file.exists('mimoza.ghcnd.rda')) {
   save(tmax,tmin,precip,file='mimoza.ghcnd.rda')
 } else load ('mimoza.ghcnd.rda')
 ```
+
+Maximum temperature - mean seasonal cycle
+
+```{r}
+plot(aggregate(tmax,month),new=FALSE)
+plot(aggregate(tmax,month,FUN='sd'),new=FALSE)
+```
+
+Minimum temperature - mean seasonal cycle
+
+```{r}
+plot(aggregate(tmin,month),new=FALSE)
+plot(aggregate(tmin,month,FUN='sd'),new=FALSE)
+```
+
+Precipitation - mean seasonal cycle
+
+```{r}
+plot(aggregate(precip,month,FUN='sum'),new=FALSE)
+plot(aggregate(precip,month,FUN='wetfreq'),new=FALSE)
+plot(aggregate(precip,month,FUN='wetmean'),new=FALSE)
+```
+
+Precipitation - long-term variations
+
+```{r}
+plot(annual(precip,FUN='sum'),new=FALSE); grid()
+plot(annual(precip,FUN='wetfreq'),new=FALSE); grid()
+plot(annual(precip,FUN='wetmean'),new=FALSE); grid()
+```
+
+Spatial patterns of variability in annual precipitation totals
+
+```{r, fig.height=8}
+Y <- subset(annual(precip,FUN='sum'),it=c(1950,1990))
+nv <- apply(coredata(Y),2,'nv')
+Y <- subset(Y,is=nv > 36)
+Y <- pcafill(Y)
+tp.pca<- PCA(Y)
+plot(tp.pca,new=FALSE)
+```
+
+Spatial patterns of variability in annual wet-day frequency
+
+
+```{r, fig.height=8}
+Y <- subset(annual(precip,FUN='wetfreq'),it=c(1950,1990))
+nv <- apply(coredata(Y),2,'nv')
+Y <- subset(Y,is=nv > 36)
+Y <- pcafill(Y)
+fw.pca<- PCA(Y)
+plot(fw.pca,new=FALSE)
+```
+
+Spatial patterns of variability in annual wet-day mean precipitation
+
+
+```{r, fig.height=8}
+Y <- subset(annual(precip,FUN='wetmean'),it=c(1950,1990))
+nv <- apply(coredata(Y),2,'nv')
+Y <- subset(Y,is=nv > 36)
+Y <- pcafill(Y)
+mu.pca<- PCA(Y)
+plot(mu.pca,new=FALSE)
+```
+
+## Copernicus land-cover information - 100m resolution over Africa
+
+<http://land.copernicus.eu/global/products/lc>
 
 
 

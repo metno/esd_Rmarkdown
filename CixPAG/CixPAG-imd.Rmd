@@ -21,7 +21,7 @@ library(esd)
 ## Reading data predictand: maximum temperature
 
 ```{r IMD_tx}
-tx <- retrieve('data/IMD/maxT_IMD.1951-2013.nc')
+tx <- retrieve('~/data/IMD/maxT_IMD.1951-2013.nc')
 attr(tx,'unit') <- 'degC'
 map(tx)
 ```
