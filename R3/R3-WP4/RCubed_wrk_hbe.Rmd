@@ -1,0 +1,85 @@
+---
+title: "RCubedwrk"
+author: "Helene B. Erlandsen"
+date: "November 16, 2017"
+output: html_document
+---
+
+##GCM Files
+downloaded from Norstore using python script .... and a modified version of ....py (provided by MP uib) to be compatible with Python version NN (a change in char byte-char handeling needed specification of utf8 format)
+
+##RCM Files
+9 years and one month of dynamically downscaled bias corrected NorESM-data have been downloaded and processed using cdo and nco (getRCMfiles.py) to provide files compatible with ESD retrieve.rcm. Note that the calender is noleap or 365day. The files are from the 3-hourly wrfxtrm-output, and has a res of about 4 km covering South Norway. 
+
+The processing includes extracting variables t2m,pr,u10,v10,q2,tskin,precip and aggregating to daily and montly means. For all variables but precip the monthly standard deviation is also stored. 
+
+Some cdo nco hacking is done to give the files 2-D latitude and longitude variables (cdo does not like wrf). 
+
+The daily precipitation is converted to mm per day, to allow aggregation to monthly wet-day mean and wet day frequence with a wet-day threshold of 1 mm/day. Remember weight by noleap month if aggregating from month to season.    
+
+The (nc4) RCM files:
+wrf_sub3hr_NorESM_BC_2000_2010.nc 16GB compressed,
+wrf_day_NorESM_BC_2000_2010.nc 2GB maybe comressed, do not remember
+wrf_mon_NorESM_BC_2000_2010.nc 228M uncompressed
+
+They are at lustre under A under my username
+
+## Data Reading & Structure cp from am
+ 
+```{r "setup"}
+#require("knitr")
+opts_knit$set(root.dir = "~/git/esd_Rmarkdown/R3/R3-WP4/")
+opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',echo=TRUE, warning=FALSE, message=FALSE) 
+```
+
+### Require the following libraries
+```{r required R packages,echo=FALSE}
+require(esd)
+#require(leaflet)
+#require(sp)
+#require(rgdal)
+```
+
+```{r setpath}
+#install.packages("~/git/esd",repos=NULL,type="source")
+library(esd)
+source('~/git/esd/R/retrieve.R')
+rcmdatapath <- '~/storah/RCubed/data/RCM'
+gcmdatapath <- '~/storah/RCubed/data/GCMraw'
+gcmbcdatapath <- '~/storah/RCubed/data/GCMBC'
+eraidatapath<-'~/storah/RCubed/data/ERAI'
+RCMmonp <- 'wrf_mon_NorESM_BC_2000_2010.nc' 
+GCMBCmon <- 'NorESM_BC4R3_esd_2000_2010.nc'
+GCMmon <- 'NorESM_nonBC4R3_esd_2000_2010.nc'
+ERApl <- 'EraI_pl_4_esd_mdfa_197901to201706.nc' 
+ERAsf <- 'EraI_sfc_4_esd_mdfa_197901to201706.nc'
+
+
+```
+
+
+
+```{r}
+gridn <- par(mfrow=c(4, 5))
+RCMt2m <- retrieve.rcm(ncfile=RCMmonp, path=rcmdatapath,param='T2MEAN',verbose = TRUE)
+# just testing
+map(RCMt2m,FUN ="mean")
+par(gridn)
+```
+
+```{r}
+RCMfw <- retrieve.rcm(ncfile=RCMmonp,path=rcmdatapath,param='fw',verbose = TRUE)
+gridn <- par(mfrow=c(4, 5))
+# just testing
+map(RCMfw,FUN ="mean")
+par(gridn)
+```
+
+
+```{r loadGMCBC}
+GCMBCt2m <- retrieve(ncfile=GCMBCmon, path=gcmbcdatapath,param='tas',verbose = TRUE)
+GCMBCt2m<-subset(GCMBCt2m,is=list(c(-20,15),c(45,72)),it=c("2000-12-01","2010-12-01"))
+#GCMBCt2 <- attr(psl.nobc,'units') <- 'Pa'
+map(GCMBCt2m,FUN ="mean")
+```
+
