@@ -2,18 +2,20 @@
 title: "RCubedwrk"
 author: "Helene B. Erlandsen"
 date: "November 16, 2017"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ##GCM Files
-downloaded from Norstore using python script .... and a modified version of ....py (provided by MP uib) to be compatible with Python version NN (a change in char byte-char handeling needed specification of utf8 format)
+downloaded from Norstore using python script .... and a modified version of *wps.py* (provided by MP, UiB) to be compatible with Python 3.6.3 (a change in char byte-char handeling needed specification of utf8-format)
 
 ##RCM Files
 9 years and one month of dynamically downscaled bias corrected NorESM-data have been downloaded and processed using cdo and nco (getRCMfiles.py) to provide files compatible with ESD retrieve.rcm. Note that the calender is noleap or 365day. The files are from the 3-hourly wrfxtrm-output, and has a res of about 4 km covering South Norway. 
 
 The processing includes extracting variables t2m,pr,u10,v10,q2,tskin,precip and aggregating to daily and montly means. For all variables but precip the monthly standard deviation is also stored. 
 
-Some cdo nco hacking is done to give the files 2-D latitude and longitude variables (cdo does not like wrf). 
+For the dynamically downscalled bias corrected NorESM WRF run some cdo nco hacking is done to give the files 2-D latitude and longitude variables and dimensions x,y, and CF-time (cdo does not like wrf). The same is done to the WRF file with the geograhical features (geo_em). The cdo and nco commands are stored in scripts saved for later.
 
 The daily precipitation is converted to mm per day, to allow aggregation to monthly wet-day mean and wet day frequence with a wet-day threshold of 1 mm/day. Remember weight by noleap month if aggregating from month to season.    
 
@@ -24,30 +26,45 @@ wrf_mon_NorESM_BC_2000_2010.nc 228M uncompressed
 
 They are at lustre under A under my username
 
-## Data Reading & Structure cp from am
+## Data Reading & Structure (copied parts from Abdelkader)
  
-```{r "setup"}
-#require("knitr")
+```{r setup, include=FALSE}
+require("knitr")
+knitr::opts_chunk$set(echo = TRUE)
 opts_knit$set(root.dir = "~/git/esd_Rmarkdown/R3/R3-WP4/")
 opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',echo=TRUE, warning=FALSE, message=FALSE) 
 ```
 
 ### Require the following libraries
+Also added a boolean for update esd (provided that a new version is pulled)
 ```{r required R packages,echo=FALSE}
-require(esd)
+needed<-c("ncdf4", "zoo")
+update_esd <- FALSE
+for (package in needed) { 
+  if (!require(package,character.only = TRUE, quietly = TRUE)) { 
+      install.packages(package);library(package,character.only = TRUE)
+    }
+}
+
+if ((!require('esd',character.only = TRUE, quietly = TRUE))| (update_esd) ){ 
+      install.packages("~/git/esd",repos=NULL,type="source");library('esd',character.only = TRUE)
+    }
+#require(esd)  
 #require(leaflet)
 #require(sp)
 #require(rgdal)
 ```
 
 ```{r setpath}
-#install.packages("~/git/esd",repos=NULL,type="source")
+#
 library(esd)
-source('~/git/esd/R/retrieve.R')
+#source('~/git/esd/R/retrieve.R')
 rcmdatapath <- '~/storah/RCubed/data/RCM'
+rcmgeopath <-'~/storah/RCubed/data/RCM/WRF_filetypes'
 gcmdatapath <- '~/storah/RCubed/data/GCMraw'
 gcmbcdatapath <- '~/storah/RCubed/data/GCMBC'
 eraidatapath<-'~/storah/RCubed/data/ERAI'
+RCMgeo<-'R3geo_emd03run1.nc'
 RCMmonp <- 'wrf_mon_NorESM_BC_2000_2010.nc' 
 GCMBCmon <- 'NorESM_BC4R3_esd_2000_2010.nc'
 GCMmon <- 'NorESM_nonBC4R3_esd_2000_2010.nc'
@@ -58,28 +75,183 @@ ERAsf <- 'EraI_sfc_4_esd_mdfa_197901to201706.nc'
 ```
 
 
-
-```{r}
+```{r, warning=FALSE}
 gridn <- par(mfrow=c(4, 5))
-RCMt2m <- retrieve.rcm(ncfile=RCMmonp, path=rcmdatapath,param='T2MEAN',verbose = TRUE)
+RCMt2m <- retrieve.rcm(ncfile=RCMmonp, path=rcmdatapath,param='T2MEAN',verbose = FALSE)
 # just testing
-map(RCMt2m,FUN ="mean")
+attr(RCMt2m,'greenwich')=TRUE
+RCM_oro <- retrieve.rcm(ncfile='geo_em_d03ED.nc',path=rcmgeopath,param='HGT_M',verbose = TRUE)
+
+#map.station(RCM_oro,FUN ="mean",cex=0.3,new=F, is=list(lon=c(3.75,15),lat=c(58,64)))
+
+attributes(RCM_oro) <- NULL
+attr(RCMt2m,'altitude') <- RCM_oro
+
+RCMt2m <- subset(RCMt2m, is=list(lon=c(3.75,15),lat=c(58,64)))
+map.station(RCMt2m,FUN ="mean",cex=0.3,new=F)
+par(gridn)
+
+
+#check later the stripes
+
+```
+
+```{r,warning=FALSE}
+RCMfw <- retrieve.rcm(ncfile=RCMmonp,path=rcmdatapath,param='fw',verbose = FALSE)
+RCMfw <- subset(RCMfw, is=list(lon=c(3.75,15),lat=c(58,64)))
+gridn <- par(mfrow=c(4, 5))
+# just testing
+map.station(RCMfw,FUN ="mean")
 par(gridn)
 ```
 
-```{r}
-RCMfw <- retrieve.rcm(ncfile=RCMmonp,path=rcmdatapath,param='fw',verbose = TRUE)
-gridn <- par(mfrow=c(4, 5))
-# just testing
-map(RCMfw,FUN ="mean")
-par(gridn)
+
+```{r loadGMCBC,warning=FALSE,fig.height=32}
+
+GCMBCt2m <- retrieve(ncfile=GCMBCmon, path=gcmbcdatapath,param='tas',verbose = FALSE)
+attr(GCMBCt2m,'Calendar') <- 'noleap'
+GCMBCt2m<-subset(GCMBCt2m,is=list(c(-10,15),c(45,72)),it=c("2000-12-01","2010-12-01"))
+
+map.field(GCMBCt2m,FUN ="mean", new=F)
+
+```
+
+```{r loadGMCnonBC,warning=FALSE}
+#loading non BC data
+GCMt2m <- retrieve(ncfile=GCMmon, path=gcmdatapath,param='tas',verbose = FALSE)
+attr(GCMt2m,'Calendar') <- 'noleap'
+GCMt2m<-subset(GCMt2m,is=list(c(-10,15),c(45,75)),it=c("2000-12-01","2010-12-01"))
+
+#map.field(GCMt2m,FUN ="mean", new=F)
+
 ```
 
 
-```{r loadGMCBC}
-GCMBCt2m <- retrieve(ncfile=GCMBCmon, path=gcmbcdatapath,param='tas',verbose = TRUE)
-GCMBCt2m<-subset(GCMBCt2m,is=list(c(-20,15),c(45,72)),it=c("2000-12-01","2010-12-01"))
+```{r loadERAI,warning=FALSE}
+
+ERAIt2m <- retrieve(ncfile=ERAsf, path=eraidatapath,param='t2m',verbose =FALSE)
+ERAIt2m<-subset(ERAIt2m,is=list(c(-10,15),c(45,72)),it=c("2000-12-01","2010-12-01"))
 #GCMBCt2 <- attr(psl.nobc,'units') <- 'Pa'
-map(GCMBCt2m,FUN ="mean")
+gridn <- par(mfrow=c(4, 5))
+map.field(ERAIt2m,FUN ="mean")
+par(gridn)
+```
+
+
+```{r corrfield test, warning=FALSE,eval=FALSE}
+# the station object : pca
+# the field object : eof
+# later check out https://github.com/metno/esd_Rmarkdown/blob/master/KSS/dse4KSS.R
+# 4 similar examples, there Y is station values
+# LTR try DS on EOF RCM predictand on EOF GCM predictor
+# bc EOFs contain pattern of variance biases in different GCMs not very important, and can try same model for all benestad or try leave on out as in Walton
+# latr try common eof append [Re-analysis or GCM-BC | GCM raw] -->time  to find common eofs
+#need to consider that we have a short time-series. maybe need monthly data 12*9, monthly anomalies, or seasonal 4*9
+
+#Regridding and making seasonal instead of monthly to look at EOF
+RCMt2m.regrid <- regrid.station(RCMt2m,is=list(lon=seq(4,15,by=0.1),lat=seq(58,64,by=0.25)),verbose=T)
+# OBS if loaded demos The following object is masked from ‘package:esd’: unit, that is why unit in regrid.station does not work
+RCMt2m.seasons.regrid <- as.4seasons(RCMt2m.regrid)
+# Make EOFs of the RCM 
+eof.test <- EOF(RCMt2m.seasons.regrid)
+plot(eof.test)
+# Make EOF of the seasonal anaomaly (monthly?)
+eof.test <- EOF(as.anomaly(RCMt2m.seasons.regrid))
+plot(eof.test)
+plot(EOF(GCMBCt2m))
+
+
+
+eof.gcm <- EOF(as.anomaly(GCMBCt2m))
+plot(eof.gcm)
+plot(eof.gcm,ip=2)
+ds <- DS(eof.test,eof.gcm)
+plot(ds) #r=0.79
+plot(ds,ip=2)
+plot(eof.test,ip=2)
+
+
+#Slightly better result from BC model (which is boundary for dyn-DS)
+#eof.gcmnoBC <- EOF(as.anomaly(GCMt2m))
+#dsnoBC <- DS(eof.test,eof.gcmnoBC)
+#plot(dsnoBC) #r=0.76
+
+
+#Also trying ERA-I  really bad bc not source of dyn RCM
+eof.eraI <- EOF(as.anomaly(ERAIt2m))
+#dsEra <- DS(eof.test,eof.eraI)
+#plot(dsEra) #r=0.3
+#dev.new(); plot.zoo(subset(pca.y,ip=1:4))
+#dev.new(); plot.zoo(subset(pca.y,ip=1:4))
+
+RCMt2m.seasons.eof <- EOF(subset(RCMt2m.seasons.regrid,it='djf'),n=3)
+plot(RCMt2m.seasons.eof,ip=1)
+
+
+```
+
+
+```{r pca_on_rcm_seasonal_anomalies}
+#Making seasonal and looking at PCA
+
+# Walton method was PCA on each of 60 warming patterns (not warming pattern here) with regional means removed
+RCMt2m.ses <-as.4seasons(as.monthly(RCMt2m))
+RCMt2m.ses.ano <-as.anomaly(RCMt2m.ses)
+RCMt2m.ses.anomaly.pca <- PCA(RCMt2m.ses.ano,n=3)
+plot.pca(RCMt2m.ses.anomaly.pca, new=F)
+plot.pca(RCMt2m.ses.anomaly.pca, new=F, ip=2)
+plot.pca(RCMt2m.ses.anomaly.pca, new=F, ip=3)
+attr(RCMt2m.ses.anomaly.pca,'greenwich')=TRUE
+#RCMtm.clim <- as.climatology(as.monthly(RCMt2m))
+```
+
+To do the converison of PCA to EOF we need to load some extra packages not loaded by defualt into *esd*. We call the demo-scripts for *esd* *gridmap* and *pca2eof* to load the packge *LatticeKrig*, *spam*, *grid*, *maps*, *fields* [*grid::unit* will replace the *esd*-function *unit*]
+
+```{r loadingaux, include=FALSE}
+
+#This this is based on a package from NCAR using kringing taking altitude into account, so need wrf-oro
+# since oro is lacking now making dummy oro
+
+#pca2eof uses etop5 min is around 8-10 km, lower than original grid of 4 km about does it matter?
+reload_auxpckg=F
+if (reload_auxpckg==TRUE){
+  demo(package='esd');demo(gridmap,ask=FALSE);demo(pca2eof,ask=FALSE)
+}
+
+```
+
+
+```{r rcmpca2eof_cca_gcm_eof}
+RCMt2m.seasons.eof.from.pca <- pca2eof(RCMt2m.ses.anomaly.pca) 
+#Compare not same bca regridding and dummy oro
+#dev.new()
+plot(RCMt2m.seasons.eof.from.pca)
+#dev.new()
+plot(RCMt2m.ses.anomaly.pca)
+
+#vis(RCMt2m.ses.anomaly.pca)
+#Compare
+#dev.new()
+#plot(RCMt2m.seasons.eof,ip=2)
+#dev.new()
+#plot(RCMt2m.seasons.pca,ip=2)
+
+eof.gcm <- EOF(as.anomaly(as.4seasons(GCMBCt2m)))
+cca <- CCA(RCMt2m.ses.anomaly.pca,eof.gcm)
+plot(cca,new=T) #RCMt2m.pca <- PCA(RCMt2m)
+
+
+```
+
+
+
+```{r test combine EI noresm}
+#know from before that ERAI has poor poor temporal covariance as expected with DS norESM
+comb <- combine(as.anomaly(as.4seasons(ERAIt2m)),as.anomaly(as.4seasons(GCMBCt2m)))
+ceof <- EOF(comb, n=5)
+plot(ceof,new=T)
+ds <- DS(RCMt2m.seasons.eof.from.pca,ceof)
+plot(ds, new=T)
+
 ```
 
